@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: mes-server
+  profiles:
+    active: dev
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Sa-Token 鉴权配置
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 86400
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+
+# MES 业务配置
+mes:
+  dispatch:
+    # 设备预约超时（分钟），默认 30
+    reserve-ttl-minutes: 30
+  recipe:
+    # true=TrackIn 强制要求配方绑定解析成功；默认 false
+    require-binding: false
+  step:
+    # off=不校验 | soft=有类型才校验 | force=加工站必须有类型且强制匹配
+    eqp-type-mode: soft
+  qtime:
+    enabled: true
+    default-on-violate: HOLD
+    alarm-only-block: true
+    fail-open: true
+    scan-ms: 30000
+  # 站内加工时长：开工计时，太短不让出站，太长出站后锁批
+  process-time:
+    enabled: true
+    # 超时除了锁批，要不要再推告警（末站锁不了批时一定会告警）
+    alarm-on-max-exceed: true

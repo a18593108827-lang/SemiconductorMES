@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: oklch(0.49 0.18 28);
+  --color-primary-hover: oklch(0.42 0.17 28);
+  --color-accent: oklch(0.58 0.12 230);
+  --color-success: oklch(0.62 0.14 145);
+  --color-warning: oklch(0.78 0.14 75);
+  --color-danger: oklch(0.55 0.2 25);
+  --color-bg: oklch(1 0 0);
+  --color-surface: oklch(0.97 0 0);
+  --color-surface-raised: oklch(1 0 0);
+  --color-border: oklch(0.9 0 0);
+  --color-ink: oklch(0.22 0.015 28);
+  --color-muted: oklch(0.48 0.01 28);
+  --color-field-bg: oklch(0.1 0 0);
+  --color-field-surface: oklch(0.16 0 0);
+  --color-field-border: oklch(0.28 0 0);
+  --color-field-ink: oklch(0.93 0 0);
+  --color-field-muted: oklch(0.65 0 0);
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-ink);
+    background: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+.theme-field {
+  --color-bg: var(--color-field-bg);
+  --color-surface: var(--color-field-surface);
+  --color-border: var(--color-field-border);
+  --color-ink: var(--color-field-ink);
+  --color-muted: var(--color-field-muted);
+  color: var(--color-ink);
+  background: var(--color-bg);
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.32 0 0) oklch(0.14 0 0);
+}
+
+.theme-field *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.theme-field *::-webkit-scrollbar-track {
+  background: oklch(0.14 0 0);
+}
+
+.theme-field *::-webkit-scrollbar-thumb {
+  background: oklch(0.32 0 0);
+  border-radius: 4px;
+  border: 2px solid oklch(0.14 0 0);
+}
+
+.theme-field *::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.42 0 0);
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-dot {
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}

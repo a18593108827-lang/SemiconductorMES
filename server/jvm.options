@@ -1,0 +1,8 @@
+# 生产启动：java @jvm.options -jar target/mes-server-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+
+# 堆内存（按机器调整）
+-Xms512m
+-Xmx1024m
+
+# GC 日志（JDK 21）
+-Xlog:gc*:file=logs/gc.log:time,level,tags:filecount=10,filesize=100m

@@ -1,0 +1,16 @@
+web/node_modules/
+web/dist/
+server/target/
+server/.idea/
+.idea/
+.vscode/
+.agents/
+.codex/
+.impeccable/
+_bmad/
+_bmad-output/
+*.env
+*.local
+.DS_Store
+*.iml
+*.log
