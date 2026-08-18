@@ -282,6 +282,7 @@ Created → Released → Wait → Reserved → Processing → Completed
 - Carrier / FOUP、Equipment Adapter（SECS/GEM）
 - **EDC（量测）**：设计已定，见 `docs/模块/EDC（量测）模块/`  
   - 一期：Param / Spec / Plan / 手录 / `EdcFacade` → TrackOut 门禁 T2-7  
+  - Facade 契约：`MES-EdcFacade接口设计.md`  
   - SPC / 自动回传后置；Track 不存点
 
 ---

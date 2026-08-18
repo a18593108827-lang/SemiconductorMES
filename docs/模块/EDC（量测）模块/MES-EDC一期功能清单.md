@@ -42,7 +42,7 @@
 | EDC-1 | DDL + Param/Spec CRUD + Spec 发布 | ✅ |
 | EDC-2 | Plan / PlanItem；step 显式 required | ✅ |
 | EDC-3 | Collection 提交 + 判定；按 visit 查询 | ✅ |
-| EDC-4 | `EdcFacade` + 权限种子 + 配置项 | ⏳ 权限种子已入 `migrate_edc.sql`；Facade / `mes.edc.gate-enabled` 未做 |
+| EDC-4 | `EdcFacade` + 权限种子 + 配置项 | ⏳ 设计：`MES-EdcFacade接口设计.md`；权限种子已入 `migrate_edc.sql`；Facade / `mes.edc.gate-enabled` 未做 |
 | EDC-5 | Admin `/app/edc` 最小 UI | ✅ 三 Tab；采集不在管理端 |
 | EDC-6 | T2-7a 钩子 + 错误码 | ⏳（见 Track 二期 §3.2） |
 | EDC-7 | T2-7b context + TrackPage 录入/拒出 | ⏳ 录入 ✅（加工中量测条 + 抽屉）；拒出未做 |
@@ -73,6 +73,7 @@
 ## 5. 关联
 
 - `MES-EDC功能文档.md`
+- `MES-EdcFacade接口设计.md`
 - `MES-EDC已完成功能.md`
 - `MES-EDC数据库设计.md`
 - `MES-EDC与SPC范围说明.md`

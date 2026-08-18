@@ -166,7 +166,7 @@
 ### 3.2 TrackOut EDC 门禁
 
 > **状态：⏸ 后续** — 主数据 / 手录 / 现场录入已齐；等 EDC-4 `EdcFacade` 后再做 T2-7 拒出（切片 EDC-6/7）。  
-> 契约：`docs/模块/EDC（量测）模块/MES-EDC功能文档.md` §5–6  
+> 契约：`docs/模块/EDC（量测）模块/MES-EdcFacade接口设计.md`；`MES-EDC功能文档.md` §5–6  
 > 禁止：Track 内自建假量测表冒充门禁。  
 > 注意：TrackPage 已能提交采集并看到 PASS/FAIL，**出站仍不校验**。
 
@@ -452,7 +452,8 @@ mes_tx_log
 - `MES-ProcessTime接口设计.md`
 - `MES-TrackAbort接口设计.md`
 - `MES-TrackMove接口设计.md`（P1 独立移站；T2-6）
-- `docs/模块/EDC（量测）模块/MES-EDC功能文档.md`（T2-7 契约 §5–6；⏸ 先 EDC）
+- `docs/模块/EDC（量测）模块/MES-EdcFacade接口设计.md`（T2-7 契约；⏸ 先 EDC-4）
+- `docs/模块/EDC（量测）模块/MES-EDC功能文档.md`（T2-7 背景 §5–6）
 - `docs/模块/EDC（量测）模块/MES-EDC一期功能清单.md`（EDC-6/7）
 - `docs/模块/EDC（量测）模块/MES-EDC与SPC范围说明.md`（SPC 可后置，不挡门禁）
 - `MES-QueueTime接口设计.md`（站间等待；与 Process Time 正交）

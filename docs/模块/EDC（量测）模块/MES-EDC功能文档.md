@@ -117,7 +117,8 @@ Lot/WIP = 不双写量测结果；qty/status 仍只由 Track 事务改
 
 ## 5. 门面契约
 
-包：`com.mes.edc.facade.EdcFacade`（实现 `EdcFacadeImpl`）。
+包：`com.mes.edc.facade.EdcFacade`（实现 `EdcFacadeImpl`）。  
+架构切片：`MES-EdcFacade接口设计.md`（EDC-4）。
 
 | 方法 | 消费方 | 说明 |
 |------|--------|------|
@@ -230,6 +231,7 @@ TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（�
 
 ## 12. 关联
 
+- `MES-EdcFacade接口设计.md`
 - `MES-EDC数据库设计.md`
 - `MES-EDC一期功能清单.md`
 - `MES-EDC与SPC范围说明.md`

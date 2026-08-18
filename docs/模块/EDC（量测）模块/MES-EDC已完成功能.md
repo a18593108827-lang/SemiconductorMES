@@ -51,3 +51,4 @@
 
 - `MES-EDC一期功能清单.md`
 - `MES-EDC功能文档.md`
+- `MES-EdcFacade接口设计.md`
