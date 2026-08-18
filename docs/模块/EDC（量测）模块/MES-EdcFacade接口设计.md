@@ -5,7 +5,7 @@
 > 产品口径：指定站必须采到**合格**数据，否则不许 TrackOut（防假过站）  
 > 对齐：`MES-EDC功能文档.md` §5–6；`MES-EDC一期功能清单.md` EDC-4；RecipeFacade 同构  
 > 前提：Param / Spec / Plan / 手录判定已落地；T2-7（EDC-6/7）消费本契约后才拒出  
-> 状态：**权限种子已入** `migrate_edc.sql`；Facade / `mes.edc.gate-enabled` **未做**  
+> 状态：**EDC-4 已落地**（`EdcFacadeImpl` + `GET /edc/gate` + `mes.edc.gate-enabled`）；无前端；T2-7 钩子未挂  
 > 更新：2026-08-18
 
 ---
@@ -255,7 +255,7 @@ EDC-7 context 建议（本切片可先在 `EdcGateResult` 备齐字段）：
 
 | 阶段 | 契约变化 |
 |------|----------|
-| EDC-4 | 本文件；Track 尚未调用 |
+| EDC-4 | 本文件已落地；Track 尚未调用 |
 | EDC-6 | TrackOut 一行调用；错误码不变 |
 | EDC-7 | context / 现场拒出；仍只调 Facade |
 | 二期 | 拒出后可选 Hold；bypass 新权限+审计；**不**把 bypass 做成 `gate-enabled` |
@@ -267,14 +267,24 @@ EDC-7 context 建议（本切片可先在 `EdcGateResult` 备齐字段）：
 
 ## 9. 验收（EDC-4）
 
-1. 存在 `EdcFacade` Bean；Track / 他模块无 EDC Mapper 注入  
-2. 无 Plan / `required=0`：`evaluateGate` → `required=false, clear=true`  
-3. `required=1` 无本趟采集：`clear=false, NO_DATA`；`assert*` 抛 `EDC_BLOCK_TRACK_OUT:`  
-4. 本趟最新 FAIL：`OOS`；最新 PASS：`clear=true`  
-5. `mes.edc.gate-enabled=false`：required 站 `clear=true, GATE_DISABLED`  
-6. `GET /edc/gate` 与 `evaluateGate` 结果一致  
-7. 权限码 253–256 行为不变  
-8. **本切片结束后 TrackOut 行为仍与现网一致**（钩子在 EDC-6）
+1. 存在 `EdcFacade` Bean；Track / 他模块无 EDC Mapper 注入 ✅  
+2. 无 Plan / `required=0`：`evaluateGate` → `required=false, clear=true` ✅  
+3. `required=1` 无本趟采集：`clear=false, NO_DATA`；`assert*` 抛 `EDC_BLOCK_TRACK_OUT:` ✅  
+4. 本趟最新 FAIL：`OOS`；最新 PASS：`clear=true` ✅  
+5. `mes.edc.gate-enabled=false`：required 站 `clear=true, GATE_DISABLED` ✅  
+6. `GET /edc/gate` 与 `evaluateGate` 结果一致 ✅  
+7. 权限码 253–256 行为不变 ✅  
+8. **本切片结束后 TrackOut 行为仍与现网一致**（钩子在 EDC-6）✅  
+9. 本切片无前端页 ✅  
+
+落地：
+
+| 项 | 路径 |
+|----|------|
+| 接口 | `com.mes.edc.facade.EdcFacade` |
+| 实现 | `com.mes.edc.facade.impl.EdcFacadeImpl` |
+| 预检 HTTP | `GET /edc/gate` → `MesEdcGateController` |
+| 配置 | `mes.edc.gate-enabled`（`application.yml`） |
 
 ---
 

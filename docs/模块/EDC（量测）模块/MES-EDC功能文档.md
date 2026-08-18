@@ -3,7 +3,7 @@
 > 定位：站级**量测真相** + **Spec 单笔判定** + 对 Track/SPC 的 **Facade**  
 > 产品一句话：指定站必须采到**合格**数据，否则不许 TrackOut（防假过站）  
 > 对齐：`docs/架构/半导MES架构设计.md`；`docs/业务清单/MES-半导体业务清单.md` §9；业界 Data Collection（CM）/ OOS 门禁（Camstar）/ Crawl→Walk（Applied）  
-> 一期状态：**主数据 + 手录判定 + 现场录入已落地；`EdcFacade` / TrackOut 门禁未接（FAIL 单仍可完工）**  
+> 一期状态：**主数据 + 手录判定 + 现场录入 + `EdcFacade` 已落地；TrackOut 门禁未接（FAIL 单仍可完工）**  
 > 更新：2026-08-18  
 > 查验（落地后）：`MES-EDC已完成功能.md`  
 > 范围边界：`MES-EDC与SPC范围说明.md`  
@@ -118,7 +118,7 @@ Lot/WIP = 不双写量测结果；qty/status 仍只由 Track 事务改
 ## 5. 门面契约
 
 包：`com.mes.edc.facade.EdcFacade`（实现 `EdcFacadeImpl`）。  
-架构切片：`MES-EdcFacade接口设计.md`（EDC-4）。
+架构切片：`MES-EdcFacade接口设计.md`（EDC-4 ✅）。
 
 | 方法 | 消费方 | 说明 |
 |------|--------|------|
@@ -134,6 +134,7 @@ EdcGateResult {
   String reasonCode;   // NONE / NO_DATA / OOS / GATE_DISABLED
   String message;
   Long collectionId;   // 命中时
+  Long trackInTxId;    // 本趟 In
 }
 ```
 
@@ -188,7 +189,7 @@ TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（�
 | GET | `/edc/collections` | view | 按 lot / step / trackInTxId / result 分页 |
 | GET | `/edc/collections/latest` | view | 同 visit 最新一条（含点值）；无则 `data=null` |
 | GET | `/edc/collections/{id}` | view | 详情 |
-| GET | `/edc/gate?lotId=&stepId=` | view 或 track:view | 门禁预检（未建） |
+| GET | `/edc/gate?lotId=&stepId=` | view 或 track:view | 门禁预检 ✅；无单独前端页 |
 
 统一 `{ code, msg, data }`；雪花 ID 前端禁止 `Number(id)`。
 
@@ -198,7 +199,7 @@ TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（�
 
 | 入口 | 说明 |
 |------|------|
-| Admin `/app/edc` | 特性 / 规格 / 站计划 三 Tab ✅ |
+| Admin `/app/edc` | 特性 / 规格 / 站计划 三 Tab ✅；EDC-4 无新页 |
 | 现场 TrackPage | 加工中且本站有启用计划：量测条 + 采集抽屉 ✅；拒出提示 ⏳ |
 | Track context | 综合 `canTrackOut`（ProcessTime ∧ EDC）— EDC 段未接 |
 
@@ -211,7 +212,7 @@ TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（�
 3. 本趟最新采集 FAIL（OOS）：拒 Out ⏳ **当前可完工**  
 4. 本趟最新 PASS：可 Out ⏳  
 5. 改 Spec 后，历史 collection 仍按落点时 `spec_id` 可追溯 ✅（落点有 `spec_id` + USL/LSL 快照）  
-6. 业务模块零直表；只走 Facade ⏳（录入已走 EDC API；TrackOut 尚未走 Facade）  
+6. 业务模块零直表；只走 Facade ⏳（Facade 已齐；TrackOut 尚未调用）  
 7. Track 库无量测明细表 ✅  
 
 ---

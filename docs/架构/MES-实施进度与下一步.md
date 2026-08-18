@@ -1,6 +1,6 @@
 # MES 实施进度与下一步
 
-> 更新：2026-08-13  
+> 更新：2026-08-18  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 
 ---
@@ -18,7 +18,7 @@
 | Equipment | ✅ 最小集前后端 | 主数据 CRUD / 改态 / TrackIn assertUsable / 现场选机；Adapter 后置 |
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
-| EDC | ⏸ 设计已定 · 实现未建 | 功能/库表/一期清单见 `docs/模块/EDC（量测）模块/`；T2-7 随后 |
+| EDC | ⏳ 主数据/手录/Facade 已齐 · 拒出未接 | 见 `docs/模块/EDC（量测）模块/`；下一步 T2-7 |
 | SPC | ⏸ 可后置 | 控制图/CPK/Alarm；**不挡** EDC 门禁；见 `MES-EDC与SPC范围说明.md` |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
@@ -35,7 +35,7 @@ Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.
 5. ~~**Equipment（最小集）**~~ ✅  
 6. ~~**Dispatch（最小集）**~~ ✅  
 7. ~~**Recipe（MES 内嵌最小集）**~~ ✅ →（可选）规则表 / What-Next；APS / 独立 RMS / Adapter 后置  
-8. **EDC 最小集**（后续）→ TrackOut EDC 门禁 T2-7  
+8. ~~**EDC 最小集**~~ ✅ Facade 已齐 → **TrackOut EDC 门禁 T2-7**（EDC-6/7）  
 9. **SPC**（再后置，可选同期规划）：控制图 / CPK；不挡 ⑧  
 
 

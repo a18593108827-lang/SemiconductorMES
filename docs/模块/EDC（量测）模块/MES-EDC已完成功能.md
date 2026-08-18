@@ -1,7 +1,7 @@
 # MES 量测采集（EDC）— 已完成功能（查验清单）
 
 > 对齐：`MES-EDC功能文档.md`
-> 现状：主数据 + 手录判定 + 现场录入已落地；Facade / TrackOut 门禁未接
+> 现状：主数据 + 手录判定 + 现场录入 + Facade 已落地；TrackOut 门禁未接
 > 更新：2026-08-18
 
 ---
@@ -31,8 +31,10 @@
 
 | 项 | 状态 |
 |----|------|
-| `EdcFacade.assertClearToTrackOut` | ⏳ |
-| `mes.edc.gate-enabled` | ⏳ |
+| `EdcFacade.evaluateGate` | ✅ 只读判定；不抛 |
+| `EdcFacade.assertClearToTrackOut` | ✅ Bean 已有；**TrackOut 未调用** |
+| `GET /edc/gate` | ✅ `edc:view` 或 `track:view`；无单独前端页 |
+| `mes.edc.gate-enabled` | ✅ `application.yml` 默认 true |
 | 未配站不挡 | ⏳（现网本就不挡；钩子未接） |
 | T2-7 TrackOut 钩子 | ⏳ |
 | TrackPage 拒出提示 | ⏳ **FAIL 单目前仍可完工** |
@@ -41,7 +43,7 @@
 
 | 项 | 状态 |
 |----|------|
-| Track 服务不直查 `mes_edc*` | ✅ 录入走 `/edc/*` HTTP |
+| Track 服务不直查 `mes_edc*` | ✅ 录入走 `/edc/*` HTTP；过站将走 Facade（未挂） |
 | Track 库无量测明细表 | ✅ 点在 `mes_edc_collection*` |
 | 权限 edc:view/edit/publish/collect | ✅ migrate_edc.sql 253–256 |
 
