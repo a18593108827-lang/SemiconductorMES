@@ -82,7 +82,7 @@
 | oper_user_name | VARCHAR(64) | Y | 冗余 |
 | create_time | DATETIME | N | 只追加，无 update |
 
-索引：`idx_tx_lot_time (lot_id, create_time)`、`idx_tx_type_time (tx_type, create_time)`。
+索引：`idx_tx_lot_time (lot_id, create_time)`、`idx_tx_type_time (tx_type, create_time)`、`idx_tx_eqp_time (eqp_id, create_time)`（设备反查；已有库 `migrate_history.sql`）。
 
 原则：**只插入不改删**（软删仅合规场景）。
 

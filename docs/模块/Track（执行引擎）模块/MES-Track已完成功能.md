@@ -23,7 +23,7 @@
 | Bonus 数量调整 | ✅ `POST /track/bonus` + reason-codes | ✅ 数量调整面板 + 二次确认 | `track:bonus` |
 | Abort 加工中止 | ✅ `POST /track/abort` + reason-codes | ✅ AbortPanel（回本站 wait，不 Hold） | `track:abort` |
 | 执行上下文查询 | ✅ context（含 canAbort / canMove / next*） | ✅ 现场台 | `track:view` |
-| 事务履历 mes_tx_log | ✅ `GET /lots/{id}/history` | ✅ 侧栏（含 SCRAP/BONUS/ABORT/MOVE） | `history:list` / `track:view` |
+| 事务履历 mes_tx_log | ✅ 写在 Track；读 `HistoryFacade`（`GET /lots/{id}/history` + `GET /history`） | ✅ 现场侧栏 + Admin `/app/history` 调查台 | `history:list` / `track:view` |
 | Hold 校验钩子 | ✅ `assertNoActive` | ✅ 现场锁批/解锁 | 见 Hold 模块 |
 | Process Time | ✅ In 开计时；&lt;min 拒 Out；&gt;max Out+Hold(8008) | ✅ 工序库 + Banner | 沿用 track-in/out |
 | Queue Time | ✅ 开窗/结算/到期自动 Hold+清窗 | ✅ Banner + QTIME 解锁备注 | 见 QueueTime 设计；Job=`@Scheduled` |

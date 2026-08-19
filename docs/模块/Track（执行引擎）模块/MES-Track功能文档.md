@@ -25,7 +25,7 @@ Route   = 工艺定义（版本步骤）
 Track   = 事务执行（Release / TrackIn / TrackOut / Abort / Split / Merge / Scrap / Bonus / Hold…）
 WIP     = 在制只读投影（来自 Track/Lot）
 Hold    = 拦截规则（Track 事务前强制校验）
-History = 事务履历 + 分合批谱系（只追加；Scrap/Bonus 仅履历）
+History = 事务履历只读调查（写在 Track；谱系归 Genealogy）
 ```
 
 **禁止**：
@@ -163,7 +163,9 @@ wait ──Scrap(全批)──► scrapped
 | GET | `/track/scrap/reason-codes` | `track:scrap` / `lot:list` | 报废原因码 |
 | POST | `/track/bonus` | `track:bonus` | 数量调整 |
 | GET | `/track/bonus/reason-codes` | `track:bonus` / `lot:list` | 调整原因码 |
-| GET | `/lots/{id}/history` | `history:list` 或 `track:view` | 事务履历 |
+| GET | `/lots/{id}/history` | `history:list` 或 `track:view` | 本 Lot 履历；委托 `HistoryFacade.listByLot` |
+| GET | `/history` | `history:list` | 调查分页；见 History 接口设计 |
+| GET | `/history/{txId}` | `history:list` | 单行详情 |
 
 统一响应：`{ code, msg, data }`；Token：Bearer。
 
@@ -183,6 +185,7 @@ wait ──Scrap(全批)──► scrapped
 | Lot | 持有快照与运行态字段；创建/改属性仍在 Lot |
 | Auth | 现场权限码已部分存在 |
 | Hold / Eqp / Dispatch | Track 校验钩子预留，模块后补 |
+| History | 写 `mes_tx_log`；调查读走 `HistoryFacade` |
 
 ---
 

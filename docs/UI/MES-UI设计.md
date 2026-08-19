@@ -20,7 +20,7 @@
 | Dispatch | 派工建议 / 确认 | P1 | Admin+Field |
 | Carrier | FOUP / Slot Map | P1 | Admin |
 | EDC | 量测录入 | P1 | Field 优先 |
-| History | 追溯时间线 | P0 | Admin |
+| History | 调查台（按日日志） | P0 | Admin |
 | Report | 报表导出 | P2 | Admin |
 | Auth | 用户 · 角色 · 权限 | P0 | Admin |
 
@@ -72,7 +72,9 @@
 - Alarm：级别排序；critical 顶栏常驻；确认/关闭走权限
 
 ### 3.7 History 追溯
-- 时间线（竖）+ 可筛事件类型；导出；ID 全程 Mono
+- Admin `/app/history`：工具栏一行（按批次/设备、搜索、时间、事务码）；主区按日密排日志；异常行加重；点行开抽屉；SPLIT/MERGE 跳谱系
+- ID / 时刻全程 Mono；禁止假圆点时间轴、禁止 9 列事务表
+- 现场 Track 侧栏：本 Lot 近流水，不改
 
 ### 3.8 登录
 - 极简；错误明确；已登录他处 → 顶号说明
