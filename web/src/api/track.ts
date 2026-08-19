@@ -59,6 +59,13 @@ export interface TrackProcessTime {
   willHoldOnOut?: boolean
 }
 
+export interface TrackEdc {
+  required: boolean
+  clear: boolean
+  reasonCode: string
+  message: string | null
+}
+
 export interface TrackContext {
   lotId: number | string
   lotNo: string
@@ -106,6 +113,8 @@ export interface TrackContext {
   queueTime?: TrackQueueTime | null
   /** Process Time 站内加工；无则 null */
   processTime?: TrackProcessTime | null
+  /** 量测门禁；非 processing 为 null */
+  edc?: TrackEdc | null
 }
 
 export interface TrackTxnResult {

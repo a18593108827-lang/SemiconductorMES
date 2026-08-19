@@ -31,7 +31,7 @@
 | P0     | 片级 Split / Scrap ⏸            | 事务入参扩 wafer 列表；qty 与片数一致（**依赖未齐，暂缓**） | Lot `mes_lot_wafer` |
 | P0     | Carrier TrackIn 校验 ⏸         | 可选强制已绑 FOUP；记 carrier_id（**依赖未齐，暂缓**） | Lot / Carrier       |
 | P1     | Move 独立接口 ✅                   | wait 站间合法移站（不经加工）                       | Route next          |
-| P1     | TrackOut EDC 门禁 ⏸             | 量测不合格拒 Out（**依赖 EDC，后续做**）         | EDC / SPC           |
+| P1     | TrackOut EDC 门禁 ✅             | 钩子拒 Out；完工旁提示（无新按钮）                 | EDC                 |
 | P1     | 并行站 / Batch ⏸                 | 同站多 Lot 共机；Batch 开/关（**依赖未齐，暂缓**）     | Eqp Chamber/Batch · Dispatch |
 | P1     | context 增强 ✅ / Carrier ⏸     | 按钮与计时已交付；`carrier*` 随 T2-3（**不单开收口轮**） | 现场台 / Carrier      |
 | P2     | 中途切 Route 版本 ⏸               | 切换点+新快照（**设计/审批未齐，暂缓**）              | Lot · 工艺变更审批        |
@@ -165,10 +165,10 @@
 
 ### 3.2 TrackOut EDC 门禁
 
-> **状态：⏸ 后续** — EDC-4 `EdcFacade` 已齐；T2-7 拒出待 EDC-6/7。  
+> **状态：✅** — EDC-6 钩子 + EDC-7 现场提示。  
 > 契约：`docs/模块/EDC（量测）模块/MES-EdcFacade接口设计.md`；`MES-EDC功能文档.md` §5–6  
 > 禁止：Track 内自建假量测表冒充门禁。  
-> 注意：TrackPage 已能提交采集并看到 PASS/FAIL，**出站仍不校验**。
+> 现场：仍是原「完工」按钮；`!edc.clear` 时灭 + 旁注原因；采合格后刷新再亮。
 
 | 项 | 说明 |
 | ---- | ---- |
@@ -176,11 +176,11 @@
 | 语义 | Plan.`required` 且本趟无 PASS 采集 / OOS → **拒 Out**（默认）；可选事后 Auto-Hold 二期 |
 | Track | 只调 `edcFacade.assertClearToTrackOut(...)`；错误码 `EDC_BLOCK_TRACK_OUT` |
 | 未配站 | `required=false` → 行为与现网一致 |
-| context | `edcRequired` / `edcClear` / `edcBlockReason`；现场台拒出提示 |
+| context | 嵌套 `edc`（required / clear / reasonCode / message）；现场台完工旁提示 |
 | 依赖 | EDC 主数据/录入/Spec；**不依赖 SPC** |
 | 权限 | 沿用 `track:track-out`；强行放行属 P2 |
 | 验收 | 未配站不变；不合格无 TRACK_OUT；Track 库无量测明细 |
-| 开工顺序 | ① EDC 最小集 + Facade ✅ → ② 本钩子 ⏳ → ③ 现场台录入 ✅ / 拒出 ⏳；SPC 再后置 |
+| 开工顺序 | ① EDC 最小集 + Facade ✅ → ② 本钩子 ✅ → ③ 现场台录入 / 拒出提示 ✅；SPC 再后置 |
 
 
 
@@ -391,7 +391,7 @@ mes_tx_log
 | ---------- | ------------------------------------------------ |
 | TrackPage  | Process Time Banner ✅；Abort ✅；Move ✅；Carrier 待 T2-3 |
 | TrackPage  | 片级 Split/Scrap 选片（Lot 片列表就绪后）                    |
-| TrackPage  | EDC 拒出提示 ⏸（随 T2-7）；Batch 开/关批 ⏸（随 T2-8）      |
+| TrackPage  | EDC 录入 ✅；拒出提示 ✅（原完工按钮）；Batch 开/关批 ⏸（随 T2-8） |
 | TrackPage  | 中途切 Route ⏸（随 T2-9 / 设计+审批就绪）                  |
 | TrackPage  | Change Product ⏸（随设计 + 切版规则；禁 PUT 已落地）           |
 | TrackPage  | EAP 联机态提示 ⏸（随 Adapter 最小集）                        |
@@ -414,7 +414,7 @@ mes_tx_log
 | T2-4 | 片级 Split/Scrap 扩参（依赖 `mes_lot_wafer`）       | ⏸ 暂缓 |
 | T2-5 | context：主路径（Abort/计时/Move）已并入 T2-1/2/6；Carrier 字段随 T2-3 | ✅ 主路径 / ⏸ Carrier |
 | T2-6 | Move 独立接口                                   | ✅ P1 |
-| T2-7 | TrackOut EDC 门禁                             | ⏸ 后续（先 EDC） |
+| T2-7 | TrackOut EDC 门禁                             | ✅ 钩子 + 现场提示 |
 | T2-8 | 并行 / Batch（依赖 Eqp Chamber/Batch 能力标签）       | ⏸ 暂缓 |
 | T2-9 | 切 Route / Change Product / EAP / Store（均 ⏸）…     | ⏳ P2（多项暂缓） |
 
@@ -452,7 +452,7 @@ mes_tx_log
 - `MES-ProcessTime接口设计.md`
 - `MES-TrackAbort接口设计.md`
 - `MES-TrackMove接口设计.md`（P1 独立移站；T2-6）
-- `docs/模块/EDC（量测）模块/MES-EdcFacade接口设计.md`（T2-7 契约；EDC-4 ✅，钩子 ⏸）
+- `docs/模块/EDC（量测）模块/MES-EdcFacade接口设计.md`（T2-7 契约；EDC-4/6/7 ✅）
 - `docs/模块/EDC（量测）模块/MES-EDC功能文档.md`（T2-7 背景 §5–6）
 - `docs/模块/EDC（量测）模块/MES-EDC一期功能清单.md`（EDC-6/7）
 - `docs/模块/EDC（量测）模块/MES-EDC与SPC范围说明.md`（SPC 可后置，不挡门禁）

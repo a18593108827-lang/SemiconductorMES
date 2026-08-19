@@ -5,8 +5,8 @@
 > 产品口径：指定站必须采到**合格**数据，否则不许 TrackOut（防假过站）  
 > 对齐：`MES-EDC功能文档.md` §5–6；`MES-EDC一期功能清单.md` EDC-4；RecipeFacade 同构  
 > 前提：Param / Spec / Plan / 手录判定已落地；T2-7（EDC-6/7）消费本契约后才拒出  
-> 状态：**EDC-4 已落地**（`EdcFacadeImpl` + `GET /edc/gate` + `mes.edc.gate-enabled`）；无前端；T2-7 钩子未挂  
-> 更新：2026-08-18
+> 状态：**EDC-4 / EDC-6 / EDC-7 已落地**  
+> 更新：2026-08-19
 
 ---
 
@@ -35,8 +35,8 @@ Abort   = 退回本站 wait；本趟采集对下次 In 作废（新 track_in_tx_
 
 **本切片不做什么**
 
-- 在 `TrackServiceImpl.trackOut` 挂钩（EDC-6 / T2-7a）
-- Track context / TrackPage 拒出黄条（EDC-7 / T2-7b）
+- 在 `TrackServiceImpl.trackOut` 挂钩（EDC-6 / T2-7a）✅  
+- Track context / TrackPage 拒出提示（EDC-7 / T2-7b）✅ 无新按钮
 - 新表、新事务码、Auto-Hold、bypass 旁路码
 - 重判 USL/LSL（认采集头 `result`，不在门面再算一遍）
 - SPC / OOC / 控制限
@@ -223,9 +223,9 @@ DDL：`migrate_edc.sql`（已合入 `schema.sql`）。
 
 ---
 
-## 7. 与 Track 的衔接（契约预留，本切片不改 Track）
+## 7. 与 Track 的衔接
 
-EDC-6 挂点（已拍板，禁止另选）：
+EDC-6 挂点（已落地）：
 
 ```
 hold.assertNoActive
@@ -238,16 +238,19 @@ hold.assertNoActive
 
 失败：事务回滚；**不插** `TRACK_OUT`；计时保留（与 `<min` 拒出一致）。
 
-EDC-7 context 建议（本切片可先在 `EdcGateResult` 备齐字段）：
+EDC-7 context（已落地，嵌套 `edc`，不是扁平 `edcRequired`）：
 
 | context 字段 | 来源 |
 |--------------|------|
-| `edcRequired` | `result.required` |
-| `edcClear` | `result.clear` |
-| `edcBlockReason` | `result.reasonCode` |
-| `canTrackOut` | 现有 processing ∧ ProcessTime 下限 ∧ **`edcClear`** |
+| `edc.required` | `result.required` |
+| `edc.clear` | `result.clear` |
+| `edc.reasonCode` | `result.reasonCode` |
+| `edc.message` | `result.message` |
+| `canTrackOut` | processing ∧ ProcessTime 下限 ∧ **`edc.clear`** |
 
-`GATE_DISABLED` 时 `edcClear=true` 且 `edcRequired=true`，现场可提示应急放行。
+`GATE_DISABLED` 时 `edc.clear=true` 且 `edc.required=true`，现场旁注「量测应急放行，完工不卡」。
+
+现场：仍用原「完工」按钮；`!clear` 灭按钮 + 完工旁人话（没采 / 超规）。采合格后刷新 context 再亮。
 
 ---
 
@@ -255,9 +258,9 @@ EDC-7 context 建议（本切片可先在 `EdcGateResult` 备齐字段）：
 
 | 阶段 | 契约变化 |
 |------|----------|
-| EDC-4 | 本文件已落地；Track 尚未调用 |
-| EDC-6 | TrackOut 一行调用；错误码不变 |
-| EDC-7 | context / 现场拒出；仍只调 Facade |
+| EDC-4 | Facade + 配置 + `GET /edc/gate` |
+| EDC-6 | `trackOut` 调用 `assertClearToTrackOut`；错误码不变 |
+| EDC-7 | context `edc` + 现场完工旁提示；仍只调 Facade ✅ |
 | 二期 | 拒出后可选 Hold；bypass 新权限+审计；**不**把 bypass 做成 `gate-enabled` |
 | 拆库 | Facade → HTTP/gRPC 客户端；方法签名保持 |
 
@@ -274,7 +277,7 @@ EDC-7 context 建议（本切片可先在 `EdcGateResult` 备齐字段）：
 5. `mes.edc.gate-enabled=false`：required 站 `clear=true, GATE_DISABLED` ✅  
 6. `GET /edc/gate` 与 `evaluateGate` 结果一致 ✅  
 7. 权限码 253–256 行为不变 ✅  
-8. **本切片结束后 TrackOut 行为仍与现网一致**（钩子在 EDC-6）✅  
+8. **本切片结束后 TrackOut 行为仍与现网一致**（钩子在 EDC-6；现已挂）✅   
 9. 本切片无前端页 ✅  
 
 落地：

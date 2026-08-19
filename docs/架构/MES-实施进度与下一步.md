@@ -1,6 +1,6 @@
 # MES 实施进度与下一步
 
-> 更新：2026-08-18  
+> 更新：2026-08-19  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 
 ---
@@ -12,13 +12,13 @@
 | 权限 / 用户 | ✅ 一期已完成 | 登录、RBAC、菜单、用户中心、申请审批 |
 | Route | ✅ 一期已完成 | 工序/路线/版本、草稿编辑、发布/升版、单草稿 |
 | Lot | ✅ 一期已完成 | 主数据 + 放行绑版本（兼容接口） |
-| Track | ✅ 一期+二期部分 | Release/In/Out/Move/Abort、Q-Time（到期自动 Hold+清窗）/ProcessTime；T2-7 EDC 门禁 ⏸ 后续（先 EDC） |
+| Track | ✅ 一期+二期部分 | Release/In/Out/Move/Abort、Q-Time / ProcessTime；T2-7 EDC 钩子 + 现场提示 ✅ |
 | WIP | ✅ 一期已完成 | 投影表 + 列表/按站汇总 + Admin 页 |
 | Hold | ✅ 最小集 + Future Hold P0 | 即时 Hold；预约锁批 FH-1～3；FH-4/FH-5 后置 |
 | Equipment | ✅ 最小集前后端 | 主数据 CRUD / 改态 / TrackIn assertUsable / 现场选机；Adapter 后置 |
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
-| EDC | ⏳ 主数据/手录/Facade 已齐 · 拒出未接 | 见 `docs/模块/EDC（量测）模块/`；下一步 T2-7 |
+| EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；见 `docs/模块/EDC（量测）模块/`；下一步 Auto-Hold / SPC |
 | SPC | ⏸ 可后置 | 控制图/CPK/Alarm；**不挡** EDC 门禁；见 `MES-EDC与SPC范围说明.md` |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
@@ -35,7 +35,7 @@ Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.
 5. ~~**Equipment（最小集）**~~ ✅  
 6. ~~**Dispatch（最小集）**~~ ✅  
 7. ~~**Recipe（MES 内嵌最小集）**~~ ✅ →（可选）规则表 / What-Next；APS / 独立 RMS / Adapter 后置  
-8. ~~**EDC 最小集**~~ ✅ Facade 已齐 → **TrackOut EDC 门禁 T2-7**（EDC-6/7）  
+8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示（原完工按钮，无新入口） → **P1 Auto-Hold（可选）**  
 9. **SPC**（再后置，可选同期规划）：控制图 / CPK；不挡 ⑧  
 
 

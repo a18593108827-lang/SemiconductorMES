@@ -13,7 +13,8 @@ import {
   type MesEdcPlanItem,
   type MesEdcSpecItem,
 } from '../../api/edc'
-import type { MesTxLogItem } from '../../api/track'
+import type { MesTxLogItem, TrackEdc } from '../../api/track'
+import { edcGateCopy } from './EdcGateHint'
 import { useAuth } from '../../auth/AuthContext'
 import { Button } from '../ui/Button'
 import { Drawer } from '../ui/Drawer'
@@ -28,6 +29,8 @@ type Props = {
   stepLabel: string
   productCode: string | null
   history: MesTxLogItem[]
+  gate?: TrackEdc | null
+  onSubmitted?: () => void
 }
 
 function toNum(v: number | string | null | undefined): number | null {
@@ -152,6 +155,8 @@ export function EdcCollectDock({
   stepLabel,
   productCode,
   history,
+  gate,
+  onSubmitted,
 }: Props) {
   const { hasPermission } = useAuth()
   const canView = hasPermission('edc:view') || hasPermission('edc:collect')
@@ -268,6 +273,7 @@ export function EdcCollectDock({
         items: payload,
       })
       setLatest(created)
+      onSubmitted?.()
       const el = resultRef.current
       if (el && motionMs() > 0) {
         gsap.fromTo(
@@ -309,13 +315,17 @@ export function EdcCollectDock({
   const fail = latest?.result === 'FAIL'
   const pass = latest?.result === 'PASS'
   const label = pending ? '待采' : fail ? 'FAIL' : 'PASS'
-  const hint = pending
-    ? plan.required === 1
-      ? '出门禁 · 尚未采集'
-      : '本站可采集'
-    : fail
-      ? '最新判定超限或缺必采'
-      : '本趟最新判定合格'
+  const gateCopy = edcGateCopy(gate)
+  const blocking = gate?.required === true && gate.clear === false
+  const hint = gateCopy
+    ? gateCopy.text
+    : pending
+      ? plan.required === 1
+        ? '先填才能完工'
+        : '本站可采集'
+      : fail
+        ? '超规，重采合格才能完工'
+        : '本趟合格'
 
   return (
     <>
@@ -324,18 +334,30 @@ export function EdcCollectDock({
         onClick={() => void openDrawer()}
         className={cn(
           'flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 text-left transition-colors duration-150',
-          fail
+          blocking && gate?.reasonCode === 'OOS'
             ? 'border-danger/40 bg-danger/10 hover:bg-danger/15'
-            : pass
-              ? 'border-success/40 bg-success/10 hover:bg-success/15'
-              : 'border-accent/30 bg-accent/10 hover:bg-accent/15',
+            : blocking
+              ? 'border-warning/40 bg-warning/10 hover:bg-warning/15'
+              : fail
+                ? 'border-danger/40 bg-danger/10 hover:bg-danger/15'
+                : pass
+                  ? 'border-success/40 bg-success/10 hover:bg-success/15'
+                  : 'border-accent/30 bg-accent/10 hover:bg-accent/15',
         )}
       >
         <span className="flex items-center gap-1.5 text-xs font-medium text-field-ink">
           <Ruler
             className={cn(
               'size-3.5',
-              fail ? 'text-danger' : pass ? 'text-success' : 'text-accent',
+              blocking && gate?.reasonCode === 'OOS'
+              ? 'text-danger'
+              : blocking
+                ? 'text-warning'
+                : fail
+                  ? 'text-danger'
+                  : pass
+                    ? 'text-success'
+                    : 'text-accent',
             )}
             aria-hidden
           />

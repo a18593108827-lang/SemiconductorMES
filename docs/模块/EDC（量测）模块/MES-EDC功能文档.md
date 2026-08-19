@@ -3,8 +3,8 @@
 > 定位：站级**量测真相** + **Spec 单笔判定** + 对 Track/SPC 的 **Facade**  
 > 产品一句话：指定站必须采到**合格**数据，否则不许 TrackOut（防假过站）  
 > 对齐：`docs/架构/半导MES架构设计.md`；`docs/业务清单/MES-半导体业务清单.md` §9；业界 Data Collection（CM）/ OOS 门禁（Camstar）/ Crawl→Walk（Applied）  
-> 一期状态：**主数据 + 手录判定 + 现场录入 + `EdcFacade` 已落地；TrackOut 门禁未接（FAIL 单仍可完工）**  
-> 更新：2026-08-18  
+> 一期状态：**主数据 + 手录判定 + 现场录入 + `EdcFacade` + TrackOut 钩子 + 现场拒出提示已落地**（完工仍是原按钮）  
+> 更新：2026-08-19  
 > 查验（落地后）：`MES-EDC已完成功能.md`  
 > 范围边界：`MES-EDC与SPC范围说明.md`  
 > Track 钩子：`docs/模块/Track（执行引擎）模块/MES-Track二期功能清单.md` §3.2 / T2-7  
@@ -146,7 +146,7 @@ EdcGateResult {
 
 ## 6. 与 Track 集成
 
-顺序（落地 T2-7 时）：
+顺序（EDC-6 已挂）：
 
 ```
 TrackOut 既有校验（processing / Hold / ProcessTime…）
@@ -155,7 +155,7 @@ TrackOut 既有校验（processing / Hold / ProcessTime…）
 ```
 
 - 失败：整笔回滚；**无** TRACK_OUT 履历  
-- context 透出：`edcRequired` / `edcClear` / `edcBlockReason`  
+- context 透出嵌套 `edc`：`required` / `clear` / `reasonCode` / `message`；`!clear` 时 `canTrackOut=false`（EDC-7 ✅）  
 - 采集动作本身：**不是**新 Track 事务码；可写 `mes_tx_log` 扩展类型 `EDC_COLLECT`（可选，一期建议写，便于审计）
 
 TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（或服务端按 Lot 当前 processing 自解析最近 TRACK_IN）。
@@ -200,20 +200,22 @@ TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（�
 | 入口 | 说明 |
 |------|------|
 | Admin `/app/edc` | 特性 / 规格 / 站计划 三 Tab ✅；EDC-4 无新页 |
-| 现场 TrackPage | 加工中且本站有启用计划：量测条 + 采集抽屉 ✅；拒出提示 ⏳ |
-| Track context | 综合 `canTrackOut`（ProcessTime ∧ EDC）— EDC 段未接 |
+| 现场 TrackPage | 加工中且本站有启用计划：量测条 + 采集抽屉 ✅；完工旁拒出提示 ✅（无新按钮） |
+| Track context | 综合 `canTrackOut`（ProcessTime ∧ EDC）✅ |
 
 ---
 
 ## 10. 验收要点（最小集）
 
-1. 无 Plan / `required=false`：TrackOut 与现网一致 ⏳（钩子未接，现网本就不挡）  
-2. `required=true` 且无本趟采集：拒 Out，无 TRACK_OUT ⏳  
-3. 本趟最新采集 FAIL（OOS）：拒 Out ⏳ **当前可完工**  
-4. 本趟最新 PASS：可 Out ⏳  
+1. 无 Plan / `required=false`：TrackOut 与现网一致 ✅  
+2. `required=true` 且无本趟采集：拒 Out，无 TRACK_OUT ✅  
+3. 本趟最新采集 FAIL（OOS）：拒 Out ✅  
+4. 本趟最新 PASS：可 Out ✅  
 5. 改 Spec 后，历史 collection 仍按落点时 `spec_id` 可追溯 ✅（落点有 `spec_id` + USL/LSL 快照）  
-6. 业务模块零直表；只走 Facade ⏳（Facade 已齐；TrackOut 尚未调用）  
+6. 业务模块零直表；只走 Facade ✅（TrackOut 调 `EdcFacade`）  
 7. Track 库无量测明细表 ✅  
+8. required 站未过门禁：完工灭；NO_DATA / OOS / GATE_DISABLED 人话旁注 ✅  
+9. 采合格后刷新 context，完工再亮 ✅  
 
 ---
 
@@ -221,7 +223,7 @@ TrackIn 成功后：现场可知 `track_in_tx_id`，录入 API 必带该 id（�
 
 | 阶段 | 能力 |
 |------|------|
-| 一期 | 手录 + Spec OOS + Facade +（紧随）T2-7 |
+| 一期 | 手录 + Spec OOS + Facade + T2-7（钩子 + 现场提示） ✅ |
 | 二期 | 拒出后可选 Auto-Hold；product 维 Spec；`EDC_COLLECT` 履历强化 |
 | 三期 | Adapter `source=AUTO`；Wafer/Slot 采数 |
 | 后置 | SPC 读点；独立 EDC 服务（契约不变） |

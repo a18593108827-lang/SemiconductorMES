@@ -86,6 +86,7 @@ import { motionMs } from '../lib/motion'
 import { QueueTimeBanner } from '../components/track/QueueTimeBanner'
 import { ProcessTimeBanner, useLiveProcessGate } from '../components/track/ProcessTimeBanner'
 import { EdcCollectDock } from '../components/track/EdcCollectDock'
+import { EdcGateHint } from '../components/track/EdcGateHint'
 import { AbortPanel } from '../components/track/AbortPanel'
 import { MovePanel } from '../components/track/MovePanel'
 
@@ -1631,6 +1632,8 @@ export function TrackPage() {
                     stepLabel={currentLabel}
                     productCode={lotProductCode}
                     history={history}
+                    gate={ctx.edc}
+                    onSubmitted={() => void loadLotById(ctx.lotId, { keepFeedback: true })}
                   />
                 ) : null}
               </div>
@@ -1758,6 +1761,9 @@ export function TrackPage() {
                   !ctx?.canTrackOut ||
                   !processGate.canTrackOutByTime ||
                   ((ctx.branchOptions?.length ?? 0) > 0 && !resultCode.trim())
+                }
+                aria-describedby={
+                  ctx?.edc?.required && !ctx.edc.clear ? 'edc-gate-hint' : undefined
                 }
                 loading={action === 'out'}
                 onClick={() => void runTrackOut()}
@@ -2016,6 +2022,7 @@ export function TrackPage() {
                 已超最大加工时间，可完工；出站后将自动锁批
               </p>
             ) : null}
+            <EdcGateHint edc={ctx?.edc} />
             {splitPanel && ctx?.canSplit ? (
               <div
                 ref={splitPanelRef}
