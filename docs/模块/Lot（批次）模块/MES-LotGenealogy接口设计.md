@@ -35,7 +35,7 @@
 | 边/事件 | 仅 `split` / `merge` | RELEASE / IN / OUT / HOLD / SCRAP / BONUS… |
 | 存储 | `mes_lot_genealogy` | `mes_tx_log` |
 | 写入口 | 仅 Track Split/Merge | 所有 Track 事务 |
-| UI | 家族简图（影响面 + 直系） | 事务时间线 |
+| UI | 家族简图（影响面 + 直系） | 调查台按日密排日志 |
 | Scrap/Bonus | **不写边** | **只写履历** |
 
 **原则：** 图归身份，线归履历。禁止把 Scrap/Bonus 画进谱系。
@@ -363,4 +363,5 @@ P0 前端固定请求 `both&depth=5`；深追用本地「展开」，不再做�
 - `MES-Track功能文档.md`  
 - `半导MES架构设计.md` §5.1  
 - `MES-半导体业务清单.md` §1 / §10  
+- `docs/模块/History（履历）模块/MES-History功能文档.md`（线归履历；本模块只做图）  
 - `PRODUCT.md` / `DESIGN.md`（Operate：工具可读，禁装饰动效）  

@@ -18,11 +18,13 @@
 | Equipment | ✅ 最小集前后端 | 主数据 CRUD / 改态 / TrackIn assertUsable / 现场选机；Adapter 后置 |
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
-| EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；见 `docs/模块/EDC（量测）模块/`；下一步 Auto-Hold / SPC |
+| EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；见 `docs/模块/EDC（量测）模块/`；Auto-Hold / SPC 后置 |
+| History | ✅ 一期 P0 | 写在 Track；`HistoryFacade` + `/app/history` 调查台 + 设备反查；见 `docs/模块/History（履历）模块/` |
 | SPC | ⏸ 可后置 | 控制图/CPK/Alarm；**不挡** EDC 门禁；见 `MES-EDC与SPC范围说明.md` |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
-Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。
+Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。  
+History 查验：`docs/模块/History（履历）模块/MES-History已完成功能.md`。
 
 ---
 
@@ -35,8 +37,9 @@ Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.
 5. ~~**Equipment（最小集）**~~ ✅  
 6. ~~**Dispatch（最小集）**~~ ✅  
 7. ~~**Recipe（MES 内嵌最小集）**~~ ✅ →（可选）规则表 / What-Next；APS / 独立 RMS / Adapter 后置  
-8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示（原完工按钮，无新入口） → **P1 Auto-Hold（可选）**  
-9. **SPC**（再后置，可选同期规划）：控制图 / CPK；不挡 ⑧  
+8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示（原完工按钮，无新入口） → P1 Auto-Hold 后置  
+9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；谱系已有不重做；P1 `EDC_COLLECT` / 客诉包后置  
+10. **SPC**（再后置）：控制图 / CPK；不挡 EDC 门禁  
 
 
 ---
@@ -50,7 +53,7 @@ Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.
 | WIP 只读投影 | 常见 | 架构已定 | 相符 |
 | 线性主路径先做 | 起步常见 | 一期不做分支 | 相符 |
 | Hold | MVP 常见 | 最小集 + Future Hold P0 已落地 | 相符 |
-| History（履历） | MVP 常见 | Track 一期已有 `mes_tx_log` | 相符（管理端页可后补） |
+| History（履历） | MVP 常见 | 写 + 调查台 + 设备反查已落地 | 相符；片级/客诉包后置 |
 | Eqp + Recipe + Dispatch | 量产必备 | Eqp/Dispatch/Recipe 最小集已落地 | 相符 |
 | 片级 / Send-ahead / Experiment | 前道标配 | 非一期 | 刻意不做 |
 | PCRB 级工艺变更板 | 大厂强 | 仅有权限申请 | 后补 |
@@ -74,6 +77,7 @@ Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.
 | Dispatch | `docs/模块/Dispatch（派工）模块/` |
 | Recipe | `docs/模块/Recipe（配方）模块/` |
 | EDC | `docs/模块/EDC（量测）模块/` |
+| History | `docs/模块/History（履历）模块/` |
 | WIP | `docs/模块/WIP（在制）模块/` |
 | 架构总册 | `docs/架构/半导MES架构设计.md` |
 | 定时任务 | `docs/架构/MES-SpringScheduled使用.md` |

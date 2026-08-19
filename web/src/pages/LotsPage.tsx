@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import gsap from 'gsap'
 import { Flame, GitBranch, PackagePlus, Pencil, Rocket } from 'lucide-react'
 import {
@@ -61,6 +62,8 @@ export function LotsPage() {
   const toast = useToast()
   const confirm = useConfirm()
   const rootRef = useRef<HTMLDivElement>(null)
+  const [searchParams] = useSearchParams()
+  const jumpTried = useRef(false)
 
   const [lots, setLots] = useState<MesLotItem[]>([])
   const [total, setTotal] = useState(0)
@@ -208,6 +211,15 @@ export function LotsPage() {
       toast.error(err instanceof ApiError ? err.message : '加载批次失败')
     }
   }
+
+  useEffect(() => {
+    const lotId = searchParams.get('lotId')
+    if (!lotId || jumpTried.current) return
+    jumpTried.current = true
+    void getLotApi(lotId)
+      .then((full) => openDetail(full))
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : '加载批次失败'))
+  }, [searchParams, toast])
 
   async function submitCreate() {
     const qty = Number(createForm.qty)

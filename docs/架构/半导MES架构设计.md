@@ -261,8 +261,13 @@ Created → Released → Wait → Reserved → Processing → Completed
 
 ### 5.10 History Management
 
-- 事务履历、状态变更、操作人、前后值；只追加
-- 关键同步写，明细异步；量大后分表或独立库
+- 事务履历、状态变更、操作人、前后值；**只追加**
+- **写**：Track 同事务插入 `mes_tx_log`（已落地）。本期**不**改异步写
+- **读**：`HistoryFacade` 只读（一期 P0 已落地）；管理端调查台 + 设备反查；现场侧栏兼容 `GET /lots/{id}/history`
+- 与 Genealogy 正交（图归谱系，线归履历）；片级 / 分表 / 独立只读库后置
+
+详设：`docs/模块/History（履历）模块/`  
+查验：`docs/模块/History（履历）模块/MES-History已完成功能.md`
 
 ### 5.11 Report Center
 
@@ -426,5 +431,7 @@ Report ◄──── History, WIP, Equipment（只读）
 | POST | /api/holds | 创建 Hold |
 | POST | /api/holds/{id}/release | 解锁 |
 | GET | /api/wip | 在制查询 |
-| GET | /api/lots/{id}/history | 履历 |
+| GET | /api/lots/{id}/history | 履历（现场兼容，委托 HistoryFacade） |
+| GET | /api/history | 调查分页（lotId 或 eqpId） |
+| GET | /api/history/{txId} | 履历单行 |
 | GET | /api/equipments | 设备列表 |
