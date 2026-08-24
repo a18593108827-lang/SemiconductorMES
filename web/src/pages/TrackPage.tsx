@@ -113,6 +113,7 @@ const TX_LABEL: Record<string, string> = {
   FUTURE_HOLD_ACTIVATE: '激活预约',
   QTIME_SUPERSEDED: 'QTime覆盖',
   QTIME_CLEARED: 'QTime清除',
+  EDC_COLLECT: '量测采集',
 }
 
 function prefersReducedMotion() {

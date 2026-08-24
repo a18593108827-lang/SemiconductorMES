@@ -30,7 +30,7 @@
 | P0 | 设备反查 + `idx_tx_eqp_time` | ✅ |
 | P0 | `/app/history` 调查台（异常加重、行详情、禁 mock） | ✅ |
 | P0 | SPLIT/MERGE 跳已有谱系 | ✅ |
-| P1 | `EDC_COLLECT` 履历；Recipe 展示增强 | 后置 |
+| P1 | `EDC_COLLECT` 履历；Recipe 展示增强 | ✅ 采集已写履历；Recipe 展示后置 |
 | P2 | 客诉包、片级、分表/独立只读库 | 后置 |
 
 ---
