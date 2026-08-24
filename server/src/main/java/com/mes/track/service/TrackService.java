@@ -12,7 +12,7 @@ import com.mes.track.vo.TrackScrapReasonVO;
 import com.mes.track.vo.TrackScrapResultVO;
 import com.mes.track.vo.TrackSplitResultVO;
 import com.mes.track.vo.TrackTxnResultVO;
-import com.mes.track.vo.MesTxLogVO;
+import com.mes.history.vo.HistoryTxVO;
 
 import java.util.List;
 
@@ -82,6 +82,6 @@ public interface TrackService {
     /** 执行上下文：当前站 / 下一站 / 可操作标记 */
     TrackContextVO context(Long lotId);
 
-    /** 按 Lot 查事务履历（时间升序） */
-    List<MesTxLogVO> history(Long lotId);
+    /** 按 Lot 查事务履历；只委托 HistoryFacade，禁止本类再查 mes_tx_log */
+    List<HistoryTxVO> history(Long lotId);
 }

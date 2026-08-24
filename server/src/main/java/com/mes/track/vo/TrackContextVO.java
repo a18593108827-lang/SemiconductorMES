@@ -56,4 +56,6 @@ public class TrackContextVO {
     private TrackQueueTimeVO queueTime;
     /** Process Time 站内加工；无则 null */
     private TrackProcessTimeVO processTime;
+    /** 量测门禁；非 processing 为 null */
+    private TrackEdcVO edc;
 }

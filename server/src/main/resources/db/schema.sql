@@ -612,7 +612,8 @@ CREATE TABLE IF NOT EXISTS mes_tx_log (
     create_time       DATETIME      NOT NULL COMMENT '????',
     PRIMARY KEY (id),
     KEY idx_tx_lot_time (lot_id, create_time),
-    KEY idx_tx_type_time (tx_type, create_time)
+    KEY idx_tx_type_time (tx_type, create_time),
+    KEY idx_tx_eqp_time (eqp_id, create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Track?????????';
 
 -- =========================

@@ -50,3 +50,6 @@ mes:
     enabled: true
     # 超时除了锁批，要不要再推告警（末站锁不了批时一定会告警）
     alarm-on-max-exceed: true
+  edc:
+    # false=应急关闸，required 站也放行；不删 Plan
+    gate-enabled: true

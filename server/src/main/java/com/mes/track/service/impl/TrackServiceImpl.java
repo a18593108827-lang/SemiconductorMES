@@ -14,6 +14,10 @@ import com.mes.equipment.service.MesEqpService;
 import com.mes.hold.service.FutureHoldService;
 import com.mes.hold.service.HoldService;
 import com.mes.hold.service.impl.FutureHoldServiceImpl;
+import com.mes.edc.facade.EdcFacade;
+import com.mes.edc.vo.EdcGateResult;
+import com.mes.history.facade.HistoryFacade;
+import com.mes.history.vo.HistoryTxVO;
 import com.mes.lot.entity.MesLot;
 import com.mes.lot.entity.MesLotGenealogy;
 import com.mes.lot.mapper.MesLotGenealogyMapper;
@@ -44,12 +48,12 @@ import com.mes.track.support.OffFlowCountStore;
 import com.mes.track.support.ProcessTimeSupport;
 import com.mes.track.support.QueueTimeSupport;
 import com.mes.track.support.ReworkCountStore;
-import com.mes.track.vo.MesTxLogVO;
 import com.mes.track.vo.TrackAbortReasonVO;
 import com.mes.track.vo.TrackBonusReasonVO;
 import com.mes.track.vo.TrackBonusResultVO;
 import com.mes.track.vo.TrackBranchOptionVO;
 import com.mes.track.vo.TrackContextVO;
+import com.mes.track.vo.TrackEdcVO;
 import com.mes.track.vo.TrackMergeCandidateVO;
 import com.mes.track.vo.TrackMergeResultVO;
 import com.mes.track.vo.TrackOffFlowOptionVO;
@@ -157,6 +161,8 @@ public class TrackServiceImpl implements TrackService {
     private final MesEqpMapper mesEqpMapper;
     private final DispatchService dispatchService;
     private final RecipeFacade recipeFacade;
+    private final EdcFacade edcFacade;
+    private final HistoryFacade historyFacade;
     private final RouteEdgeResolver routeEdgeResolver;
     private final ReworkCountStore reworkCountStore;
     private final OffFlowCountStore offFlowCountStore;
@@ -852,6 +858,9 @@ public class TrackServiceImpl implements TrackService {
 
         // 太短直接拒；太长只打标记，出站成功后再锁批
         ProcessTimeSupport.SettleResult ptSettle = processTimeSupport.assertOnTrackOut(lot, current);
+        // 这站要采但没合格，拦住，不写出站履历
+        edcFacade.assertClearToTrackOut(
+                lot.getId(), lot.getRouteVersionId(), lot.getCurrentSortNo(), current.getStepId());
 
         // 旁路末站无下一站：不完工，走 Resume 回锚点
         if (decision.isCompleted() && isOffFlow(lot)) {
@@ -1491,6 +1500,7 @@ public class TrackServiceImpl implements TrackService {
         vo.setPendingFutureHolds(futureHoldService.listPendingByLot(lotId));
         vo.setQueueTime(queueTimeSupport.toContextVo(lot));
         vo.setProcessTime(null); // 加工中才有倒计时，下面按当前站补
+        vo.setEdc(null);
 
         if (lot.getRouteVersionId() != null) {
             MesRouteVersion version = mesRouteVersionMapper.selectById(lot.getRouteVersionId());
@@ -1509,6 +1519,7 @@ public class TrackServiceImpl implements TrackService {
         }
         vo.setCurrentStep(toStepVo(current));
         vo.setProcessTime(processTimeSupport.toContextVo(lot, current));
+        fillEdcGate(vo, lot, current);
 
         MesRouteStep next = routeEdgeResolver.resolveDefaultNext(lot.getRouteVersionId(), current);
         if (next != null) {
@@ -1685,6 +1696,24 @@ public class TrackServiceImpl implements TrackService {
         return vo;
     }
 
+    /** 加工中才问量测：过不了就把完工按钮灭掉。 */
+    private void fillEdcGate(TrackContextVO vo, MesLot lot, MesRouteStep current) {
+        if (!STATUS_PROCESSING.equals(lot.getStatus()) || current == null || current.getStepId() == null) {
+            return;
+        }
+        EdcGateResult gate = edcFacade.evaluateGate(
+                lot.getId(), lot.getRouteVersionId(), lot.getCurrentSortNo(), current.getStepId());
+        TrackEdcVO edc = new TrackEdcVO();
+        edc.setRequired(gate.isRequired());
+        edc.setClear(gate.isClear());
+        edc.setReasonCode(gate.getReasonCode());
+        edc.setMessage(gate.getMessage());
+        vo.setEdc(edc);
+        if (Boolean.TRUE.equals(vo.getCanTrackOut()) && !gate.isClear()) {
+            vo.setCanTrackOut(false);
+        }
+    }
+
     private static void fillStepLabels(TrackBranchOptionVO opt, MesRouteStep target, Map<Long, MesStep> stepMap) {
         if (target == null) {
             return;
@@ -1707,53 +1736,10 @@ public class TrackServiceImpl implements TrackService {
         }
     }
 
+    /** 履历读路径已搬到 History；这里只转发，别再写第二套 SQL。 */
     @Override
-    public List<MesTxLogVO> history(Long lotId) {
-        MesLot lot = mesLotMapper.selectById(lotId);
-        AssertUtil.notNull(lot, "批次不存在");
-
-        List<MesTxLog> rows = mesTxLogMapper.selectList(new LambdaQueryWrapper<MesTxLog>()
-                .eq(MesTxLog::getLotId, lotId)
-                .orderByAsc(MesTxLog::getCreateTime)
-                .orderByAsc(MesTxLog::getId));
-        if (rows.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        Set<Long> stepIds = rows.stream()
-                .map(MesTxLog::getStepId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        Map<Long, String> stepNameMap = stepIds.isEmpty()
-                ? Collections.emptyMap()
-                : mesStepMapper.selectBatchIds(stepIds).stream()
-                .collect(Collectors.toMap(MesStep::getId, MesStep::getStepName, (a, b) -> a));
-
-        List<MesTxLogVO> list = new ArrayList<>(rows.size());
-        for (MesTxLog row : rows) {
-            MesTxLogVO item = new MesTxLogVO();
-            item.setId(row.getId());
-            item.setLotId(row.getLotId());
-            item.setLotNo(row.getLotNo());
-            item.setTxType(row.getTxType());
-            item.setFromStatus(row.getFromStatus());
-            item.setToStatus(row.getToStatus());
-            item.setFromSortNo(row.getFromSortNo());
-            item.setToSortNo(row.getToSortNo());
-            item.setStepId(row.getStepId());
-            item.setStepName(row.getStepId() != null ? stepNameMap.get(row.getStepId()) : null);
-            item.setEqpId(row.getEqpId());
-            item.setRecipeId(row.getRecipeId());
-            item.setRecipeVersionId(row.getRecipeVersionId());
-            item.setRouteVersionId(row.getRouteVersionId());
-            item.setRemark(row.getRemark());
-            item.setExtJson(row.getExtJson());
-            item.setOperUserId(row.getOperUserId());
-            item.setOperUserName(row.getOperUserName());
-            item.setCreateTime(row.getCreateTime());
-            list.add(item);
-        }
-        return list;
+    public List<HistoryTxVO> history(Long lotId) {
+        return historyFacade.listByLot(lotId);
     }
 
     private MesLotStepVO toStepVo(MesRouteStep row) {

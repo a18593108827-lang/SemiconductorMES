@@ -12,12 +12,12 @@ import com.mes.lot.service.MesLotService;
 import com.mes.lot.vo.MesLotCreateResultVO;
 import com.mes.lot.vo.MesLotGenealogyNodeVO;
 import com.mes.lot.vo.MesLotVO;
+import com.mes.history.facade.HistoryFacade;
+import com.mes.history.vo.HistoryTxVO;
 import com.mes.hold.service.FutureHoldService;
 import com.mes.hold.service.HoldService;
 import com.mes.hold.vo.MesFutureHoldVO;
 import com.mes.hold.vo.MesHoldVO;
-import com.mes.track.service.TrackService;
-import com.mes.track.vo.MesTxLogVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +40,7 @@ import java.util.List;
 public class MesLotController {
 
     private final MesLotService mesLotService;
-    private final TrackService trackService;
+    private final HistoryFacade historyFacade;
     private final HoldService holdService;
     private final FutureHoldService futureHoldService;
 
@@ -66,11 +66,11 @@ public class MesLotController {
         return R.ok(mesLotService.get(id));
     }
 
-    /** 事务履历 */
+    /** 本批事务履历（现场侧栏）；只读，委托 HistoryFacade，不改 Track 侧栏约定 */
     @SaCheckPermission(value = {"history:list", "track:view"}, mode = SaMode.OR)
     @GetMapping("/{id}/history")
-    public R<List<MesTxLogVO>> history(@PathVariable Long id) {
-        return R.ok(trackService.history(id));
+    public R<List<HistoryTxVO>> history(@PathVariable Long id) {
+        return R.ok(historyFacade.listByLot(id));
     }
 
     /** 某批锁批历史（含已解锁） */
