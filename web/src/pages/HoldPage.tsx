@@ -31,6 +31,10 @@ import { motionMs } from '../lib/motion'
 
 type MainTab = 'hold' | 'future'
 
+function requiresHoldReleaseRemark(code?: string | null) {
+  return code === 'QTIME_EXCEED' || code === 'EDC_OOS'
+}
+
 const HOLD_STATUS_FILTERS: Array<{ key: HoldStatus | 'all'; label: string }> = [
   { key: 'active', label: '生效中' },
   { key: 'released', label: '已解锁' },
@@ -359,8 +363,10 @@ export function HoldPage() {
 
   const submitRelease = async () => {
     if (!releaseTarget) return
-    if (releaseTarget.reasonCode === 'QTIME_EXCEED' && !releaseRemark.trim()) {
-      toast.error('Queue Time 解锁须填写备注')
+    if (requiresHoldReleaseRemark(releaseTarget.reasonCode) && !releaseRemark.trim()) {
+      toast.error(
+        releaseTarget.reasonCode === 'EDC_OOS' ? '量测超规解锁须填写备注' : 'Queue Time 解锁须填写备注',
+      )
       return
     }
     setReleasing(true)
@@ -949,10 +955,10 @@ export function HoldPage() {
               </div>
             </dl>
             <Field
-              label={releaseTarget.reasonCode === 'QTIME_EXCEED' ? '解锁备注（必填）' : '解锁备注'}
+              label={requiresHoldReleaseRemark(releaseTarget.reasonCode) ? '解锁备注（必填）' : '解锁备注'}
               value={releaseRemark}
               onChange={(e) => setReleaseRemark(e.target.value)}
-              placeholder={releaseTarget.reasonCode === 'QTIME_EXCEED' ? '说明放行原因' : '可选'}
+              placeholder={requiresHoldReleaseRemark(releaseTarget.reasonCode) ? '说明放行原因' : '可选'}
             />
           </div>
         ) : null}

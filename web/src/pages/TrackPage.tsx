@@ -128,6 +128,10 @@ function fmtRemain(expireTime: string | null | undefined) {
   return `${m}分${String(s).padStart(2, '0')}秒`
 }
 
+function requiresHoldReleaseRemark(code?: string | null) {
+  return code === 'QTIME_EXCEED' || code === 'EDC_OOS'
+}
+
 export function TrackPage() {
   const toast = useToast()
   const { hasPermission } = useAuth()
@@ -657,21 +661,24 @@ export function TrackPage() {
 
   async function runReleaseHold() {
     if (!ctx || !activeHold) return
-    if (activeHold.reasonCode === 'QTIME_EXCEED' && !releaseHoldPanel) {
+    if (requiresHoldReleaseRemark(activeHold.reasonCode) && !releaseHoldPanel) {
       setHoldPanel(false)
       setReleaseHoldRemark('')
       setReleaseHoldPanel(true)
       return
     }
-    if (activeHold.reasonCode === 'QTIME_EXCEED' && !releaseHoldRemark.trim()) {
-      flashFeedback({ type: 'err', text: 'Queue Time 解锁须填写备注' })
+    if (requiresHoldReleaseRemark(activeHold.reasonCode) && !releaseHoldRemark.trim()) {
+      flashFeedback({
+        type: 'err',
+        text: activeHold.reasonCode === 'EDC_OOS' ? '量测超规解锁须填写备注' : 'Queue Time 解锁须填写备注',
+      })
       return
     }
     setAction('release')
     try {
       await releaseHoldApi(
         activeHold.id,
-        activeHold.reasonCode === 'QTIME_EXCEED' ? releaseHoldRemark.trim() : undefined,
+        requiresHoldReleaseRemark(activeHold.reasonCode) ? releaseHoldRemark.trim() : undefined,
       )
       flashFeedback({ type: 'ok', text: `已解锁 · ${ctx.lotNo}` })
       setReleaseHoldPanel(false)
@@ -2664,7 +2671,11 @@ export function TrackPage() {
             {releaseHoldPanel && ctx && activeHold ? (
               <div className="mt-4 space-y-3 rounded-md border border-field-border bg-field-bg p-4">
                 <p className="text-sm font-medium">解锁 · {ctx.lotNo}</p>
-                <p className="text-xs text-field-muted">Queue Time 超时锁批，解锁即允许继续开工，须填写备注。</p>
+                <p className="text-xs text-field-muted">
+                  {activeHold.reasonCode === 'EDC_OOS'
+                    ? '量测超规锁批，解锁后须重采合格才能完工，须填写备注。'
+                    : 'Queue Time 超时锁批，解锁即允许继续开工，须填写备注。'}
+                </p>
                 <Field
                   label="解锁备注（必填）"
                   fieldSize="field"
