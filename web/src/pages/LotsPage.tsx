@@ -80,6 +80,7 @@ export function LotsPage() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(emptyCreate)
+  const createPriorityBeforeHot = useRef<string | null>(null)
   const [createError, setCreateError] = useState('')
   const [savingCreate, setSavingCreate] = useState(false)
 
@@ -334,6 +335,7 @@ export function LotsPage() {
               setCreateOpen(true)
               setCreateError('')
               setCreateForm(emptyCreate)
+              createPriorityBeforeHot.current = null
             }}
           >
             <PackagePlus className="size-4" aria-hidden />
@@ -589,12 +591,23 @@ export function LotsPage() {
                 const on = e.target.checked
                 setCreateForm((f) => {
                   const p = Number(f.priority)
+                  if (on) {
+                    const bump = Number.isFinite(p) && p < HOT_PRIORITY_FLOOR
+                    createPriorityBeforeHot.current = bump ? f.priority : null
+                    return {
+                      ...f,
+                      hotFlag: true,
+                      priority: bump ? String(HOT_PRIORITY_FLOOR) : f.priority,
+                    }
+                  }
+                  const restore = createPriorityBeforeHot.current
+                  createPriorityBeforeHot.current = null
                   return {
                     ...f,
-                    hotFlag: on,
+                    hotFlag: false,
                     priority:
-                      on && Number.isFinite(p) && p < HOT_PRIORITY_FLOOR
-                        ? String(HOT_PRIORITY_FLOOR)
+                      restore != null && f.priority === String(HOT_PRIORITY_FLOOR)
+                        ? restore
                         : f.priority,
                   }
                 })
