@@ -98,7 +98,8 @@
 | 报表中心 | Report Center | 报表、导出、数据服务 | P2 |
 | 用户权限 | User & Permission | 用户、角色、权限、Sa-Token | P0 |
 | 载具管理 | Carrier Management | FOUP/Carrier/Slot Map | P1（半导建议补） |
-| 量测采集 | EDC | 量测数据录入与校验 | P1（半导建议补） |
+| 量测采集 | EDC | 量测数据录入与规格门禁 | P1 |
+| 量测趋势 | SPC | 控制限 / 判异 / Alarm；不挡过站 | P1 |
 | 设备适配 | Equipment Adapter | SECS/GEM 协议桥 | P1 |
 
 ### 3.2 模块职责边界（关键）
@@ -113,6 +114,8 @@ Hold      = 「拦截」叠加在 Track 事务前校验
 Equipment = 「设备能力与状态」供 Dispatch / Track 使用
 Recipe    = 「参数版本」与 Step/Eqp 绑定
 History   = 「只追加」事件与履历
+EDC       = 「点真相 + Spec 门禁」
+SPC       = 「只读趋势 + OOC Alarm」；不问 TrackOut
 ```
 
 **禁止**：WIP 与 Track 各自维护一套「当前 Step / 状态」。
@@ -288,7 +291,7 @@ Created → Released → Wait → Reserved → Processing → Completed
 - **EDC（量测）**：设计已定，见 `docs/模块/EDC（量测）模块/`  
   - 一期：Param / Spec / Plan / 手录 / `EdcFacade` / TrackOut 钩子 / 现场拒出提示 ✅  
   - Facade 契约：`MES-EdcFacade接口设计.md`  
-  - SPC / 自动回传后置；Track 不存点
+  - SPC 趋势预警架构已定：`docs/模块/SPC（统计过程控制）模块/MES-SPC架构设计.md`；Track 不存点、不问 SPC；OOC 只 Alarm
 
 ---
 

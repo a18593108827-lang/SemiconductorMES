@@ -31,7 +31,7 @@
 | P0 | T2-7 TrackOut 钩子 + 现场拒出 | ✅ 钩子 + 完工旁提示 |
 | P1 | `EDC_COLLECT` 履历；product 维 Spec | ✅ 履历已写；Spec 已有 `product_code` |
 | P1 | 拒出后可选 Auto-Hold | ✅ OOS 采集挂；NO_DATA/缺必采不挂；开关默认关 |
-| P2 | AUTO 回传；Wafer 点；SPC | 后置 |
+| P2 | AUTO 回传；Wafer 点 | 后置 |
 
 ---
 
@@ -48,7 +48,7 @@
 | EDC-7 | T2-7b context + TrackPage 录入/拒出 | ✅ `ctx.edc` 进 context；`canTrackOut` 综合 EDC；完工旁提示；采完刷新 |
 
 建议顺序：EDC-1 → 2 → 3 → 4 → 5 → 6 → 7。
-一期 P0 齐。P1 Auto-Hold / `EDC_COLLECT` ✅。下一步：SPC 后置。
+一期 P0 齐。P1 Auto-Hold / `EDC_COLLECT` ✅。下一步：SPC-1～5，见 `docs/模块/SPC（统计过程控制）模块/MES-SPC一期功能清单.md`。
 **禁止**跳过 Facade 直接在 Track 写点表。
 
 ---

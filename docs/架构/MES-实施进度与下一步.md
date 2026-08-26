@@ -1,6 +1,6 @@
 # MES 实施进度与下一步
 
-> 更新：2026-08-19  
+> 更新：2026-08-24 
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 
 ---
@@ -18,9 +18,9 @@
 | Equipment | ✅ 最小集前后端 | 主数据 CRUD / 改态 / TrackIn assertUsable / 现场选机；Adapter 后置 |
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
-| EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；见 `docs/模块/EDC（量测）模块/`；Auto-Hold / SPC 后置 |
+| EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；OOS Auto-Hold / `EDC_COLLECT` 已做；见 `docs/模块/EDC（量测）模块/` |
 | History | ✅ 一期 P0 | 写在 Track；`HistoryFacade` + `/app/history` 调查台 + 设备反查；见 `docs/模块/History（履历）模块/` |
-| SPC | ⏸ 可后置 | 控制图/CPK/Alarm；**不挡** EDC 门禁；见 `MES-EDC与SPC范围说明.md` |
+| SPC | 📐 架构+清单已定 | SPC-1～5 待落地；见 `MES-SPC架构设计.md` · `MES-SPC一期功能清单.md` |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
 Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。  
@@ -37,9 +37,9 @@ History 查验：`docs/模块/History（履历）模块/MES-History已完成功�
 5. ~~**Equipment（最小集）**~~ ✅  
 6. ~~**Dispatch（最小集）**~~ ✅  
 7. ~~**Recipe（MES 内嵌最小集）**~~ ✅ →（可选）规则表 / What-Next；APS / 独立 RMS / Adapter 后置  
-8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示（原完工按钮，无新入口） → P1 Auto-Hold 后置  
-9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；谱系已有不重做；P1 `EDC_COLLECT` / 客诉包后置  
-10. **SPC**（再后置）：控制图 / CPK；不挡 EDC 门禁  
+8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示；P1 Auto-Hold / `EDC_COLLECT` ✅  
+9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；谱系已有不重做；客诉包后置  
+10. **SPC 趋势预警** 架构已定，待落地：I-MR + Alarm；不挡 TrackOut  
 
 
 ---
@@ -77,6 +77,7 @@ History 查验：`docs/模块/History（履历）模块/MES-History已完成功�
 | Dispatch | `docs/模块/Dispatch（派工）模块/` |
 | Recipe | `docs/模块/Recipe（配方）模块/` |
 | EDC | `docs/模块/EDC（量测）模块/` |
+| SPC | `docs/模块/SPC（统计过程控制）模块/MES-SPC架构设计.md` |
 | History | `docs/模块/History（履历）模块/` |
 | WIP | `docs/模块/WIP（在制）模块/` |
 | 架构总册 | `docs/架构/半导MES架构设计.md` |

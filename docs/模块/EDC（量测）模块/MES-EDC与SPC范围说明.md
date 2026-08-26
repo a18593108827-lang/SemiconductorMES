@@ -3,8 +3,9 @@
 > 用途：量测相关开工边界；避免把 SPC 当成 TrackOut 门禁前置  
 > 对齐：`docs/业务清单/MES-半导体业务清单.md` §9；Track T2-7 见 `MES-Track二期功能清单.md` §3.2  
 > EDC 详设：`MES-EDC功能文档.md` · `MES-EDC数据库设计.md` · `MES-EDC一期功能清单.md`  
-> 现状（2026-08-19）：**EDC 一期 P0 已齐（含现场拒出提示）**；SPC 未建  
-> 更新：2026-08-19  
+> 现状（2026-08-24）：**EDC 一期 P0 已齐**；SPC **架构已定、未落地**  
+> 更新：2026-08-24  
+> 架构：`docs/模块/SPC（统计过程控制）模块/MES-SPC架构设计.md` 
 
 ---
 
@@ -25,14 +26,14 @@
 ```
 ① EDC 最小集（站绑定 / 录入 / Spec 判规 / Facade）
     → ② TrackOut EDC 门禁 T2-7（拒不合格出站）
-        → ③ SPC（控制图 / CPK / 超规 Alarm·可 Hold）   ← 可再后置
+        → ③ SPC 趋势预警（I-MR / Alarm；不挡门禁、不自动 Hold）
 ```
 
 | 阶段 | 做不做 | 说明 |
 |------|--------|------|
 | EDC 最小集 | **要做**（上量测卡控前） | 门禁依赖 Facade |
 | TrackOut EDC 门禁 | **要做**（EDC 之后） | `MES-Track二期功能清单.md` §3.2 / T2-7 |
-| SPC | **半导量产建议做，但不挡门禁** | 可晚于 ①②；无 SPC 也能卡假过站 |
+| SPC | **架构已定** | 不挡门禁；OOC 只 Alarm；Hold/锁机后置 |
 | FDC / 量测机自动回传 | P2 | 与 SPC 分开排期 |
 
 **结论**：后续会做 SPC，但**不是** EDC / T2-7 的前置；先采得稳、卡得出站，再上统计监控。
@@ -43,9 +44,9 @@
 
 ```
 EDC   = 采集真相 + Spec 单笔判定 + 对 Track/SPC 的 Facade
-SPC   = 读 EDC 历史点 → 控制限 / 判异规则 → Alarm（可选 Hold）
-Track = 只调 EDC Facade 做 Out 门禁；不画图、不存点
-Hold  = Alarm/SPC 超规可调同一 HoldService（后置）
+SPC   = 读 EDC 历史点 → 控制限 / 判异 → Alarm（本期不 Hold）
+Track = 只调 EDC Facade 做 Out 门禁；不画图、不存点、不问 SPC
+Hold  = OOS 仍只在 EDC；OOC→Hold 后置
 ```
 
 **禁止**
@@ -56,16 +57,16 @@ Hold  = Alarm/SPC 超规可调同一 HoldService（后置）
 
 ---
 
-## 4. SPC 最小集（预留，真正开做时再拆设计）
+## 4. SPC 最小集
 
-| 项 | 说明 |
+以架构为准，不在本文件展开：`docs/模块/SPC（统计过程控制）模块/MES-SPC架构设计.md`。
+
+| 项 | 本期 |
 |----|------|
-| 输入 | EDC 已落库的合格/全量测点 + 特性（参数）定义 |
-| 能力 | Xbar-R（或 I-MR）控制图；CPK；OOC/OOS 规则子集 |
-| 输出 | 图/指标查询；超规 Alarm；可选自动 Hold |
-| 不做（首刀） | 全套 Western Electric 规则、多变量 SPC、与 FDC 合流 |
-
-详细接口设计：**开做 SPC 时再立** `MES-SPC接口设计.md`（本文件只定边界与顺序）。
+| 输入 | EDC 全量数值点（含 OOS） |
+| 能力 | I-MR；WE1；可选连跑；n≥25 才给 Cpk |
+| 输出 | Admin 趋势；`SPC_OOC` Alarm |
+| 不做 | Hold/锁机、X̄-R、WE 全集、FDC、现场新入口 |
 
 ---
 
@@ -77,4 +78,6 @@ Hold  = Alarm/SPC 超规可调同一 HoldService（后置）
 - `docs/业务清单/MES-半导体业务清单.md` §9  
 - `docs/模块/Track（执行引擎）模块/MES-Track二期功能清单.md` §3.2 / T2-7  
 - `docs/架构/MES-实施进度与下一步.md`  
-- `docs/架构/半导MES架构设计.md`（EDC / Alarm·SPC）  
+- `MES-SPC一期功能清单.md`  
+- `MES-SPC架构设计.md`  
+- `docs/架构/半导MES架构设计.md`（EDC / Alarm·SPC） 
