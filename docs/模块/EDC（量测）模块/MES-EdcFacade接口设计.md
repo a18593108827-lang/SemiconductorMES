@@ -5,8 +5,8 @@
 > 产品口径：指定站必须采到**合格**数据，否则不许 TrackOut（防假过站）  
 > 对齐：`MES-EDC功能文档.md` §5–6；`MES-EDC一期功能清单.md` EDC-4；RecipeFacade 同构  
 > 前提：Param / Spec / Plan / 手录判定已落地；T2-7（EDC-6/7）消费本契约后才拒出  
-> 状态：**EDC-4 / EDC-6 / EDC-7 已落地**  
-> 更新：2026-08-19
+> 状态：**EDC-4 / EDC-6 / EDC-7 已落地**；SPC 读点口 + 事件（SPC-1）✅  
+> 更新：2026-09-02
 
 ---
 
@@ -264,7 +264,7 @@ EDC-7 context（已落地，嵌套 `edc`，不是扁平 `edcRequired`）：
 | EDC-6 | `trackOut` 调用 `assertClearToTrackOut`；错误码不变 |
 | EDC-7 | context `edc` + 现场完工旁提示；仍只调 Facade ✅ |
 | 二期 | 拒出后可选 Hold；bypass 新权限+审计；**不**把 bypass 做成 `gate-enabled` |
-| SPC | `listSeries` / `getCollection`；采集提交后发 `EdcCollectedEvent`（EDC **不**依赖 SPC 包） |
+| SPC | `listSeries` / `getCollection`；采集提交后发 `EdcCollectedEvent`（EDC **不**依赖 SPC 包）✅ |
 | 拆库 | Facade → HTTP/gRPC 客户端；方法签名保持 |
 
 拆库条件：点量、团队或 SPC 独立部署。表前缀 `mes_edc*` 与本接口不变即可迁。
