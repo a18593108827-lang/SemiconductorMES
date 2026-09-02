@@ -3,7 +3,7 @@
 > 前提：EDC 一期 P0 已齐（点在 `mes_edc_collection*`；TrackOut 只认 OOS）；AlarmService.raise 已有  
 > 对齐：`MES-SPC架构设计.md` · `MES-EDC与SPC范围说明.md` · `MES-EdcFacade接口设计.md`  
 > 更新：2026-09-02  
-> 状态：**SPC-1～4 已落地**；SPC-5 未做
+> 状态：**SPC-1～5 已落地**
 
 ---
 
@@ -29,7 +29,7 @@
 | P0 | `SpcFacade`；WE1；可选连跑；OOC → `AlarmService.raise(SPC_OOC)` | ✅ |
 | P0 | 权限种子 `spc:view` / `spc:edit` | ✅ |
 | P0 | HTTP `/spc` | ✅ |
-| P0 | Admin `/app/spc` 图维护 + 趋势（工艺） | ⏳ |
+| P0 | Admin `/app/spc` 图维护 + 趋势（工艺） | ✅ |
 | P1 | n≥25 才返回 Cpk；规格限仅展示 | ✅（随 `getSeries`） |
 | P2 | OOC Hold/锁机、X̄-R、WE 全集、OCAP、独立服务、FDC | 后置；见架构 §9 |
 
@@ -43,7 +43,7 @@
 | SPC-2 | DDL `mes_spc_chart` / `mes_spc_eval`；权限 257/258；`mes.spc.enabled` | ✅ |
 | SPC-3 | `SpcFacade` + 监听 + I-MR 判异（WE1 / RUN）+ LEARNING 满 n 写限；OOC 写 eval + raise；吞异常 | ✅ |
 | SPC-4 | HTTP `/spc` 薄封装 Facade；**无前端** | ✅ |
-| SPC-5 | Admin `/app/spc`：图 CRUD / 改限 / 启停 / I 图+MR 图+点表；现场完工不改 | ⏳ |
+| SPC-5 | Admin `/app/spc`：图 CRUD / 改限 / 启停 / I 图+MR 图+点表；现场完工不改 | ✅ |
 
 建议顺序：SPC-1 → 2 → 3 → 4 → 5。  
 **禁止** SPC-3 先于 SPC-1（否则必注入 edc.mapper 或 EDC 依赖 SPC）。  
@@ -92,11 +92,13 @@
 
 落地：`MesSpcController`
 
-### SPC-5（工艺页）
+### SPC-5（工艺页）✅
 
-- `/app/spc`：按站/特性筛图；维护上下文、limitMode、learningN、runN、手填限、启停  
-- 趋势：I 图 + MR 图；规格限可画虚线但文案标明「规格，不判 OOC」；OOS 点标注；n<25 不展示 Cpk 数字  
-- **禁止** 改 TrackPage / context.edc / 完工按钮
+- `/app/spc`：左列表 + 右趋势；按站/特性筛图；Drawer 维护上下文、limitMode、learningN、runN、手填限、启停  
+- 趋势：I 图 + MR 图；规格限虚线「规格，不判 OOC」；OOS/OOC 标注；n<25 不展示 Cpk  
+- **禁止** 改 TrackPage / context.edc / 完工按钮  
+
+落地：`web/src/pages/SpcPage.tsx` · `web/src/api/spc.ts` · `web/src/components/spc/SpcTrendCharts.tsx`
 
 ---
 

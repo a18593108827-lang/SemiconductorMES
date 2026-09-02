@@ -20,7 +20,7 @@
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
 | EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；OOS Auto-Hold / `EDC_COLLECT` 已做；见 `docs/模块/EDC（量测）模块/` |
 | History | ✅ 一期 P0 | 写在 Track；`HistoryFacade` + `/app/history` 调查台 + 设备反查；见 `docs/模块/History（履历）模块/` |
-| SPC | 🔧 SPC-1～4 已落地 | 读点/表/判异/HTTP 已齐；待 SPC-5 工艺页；见 `MES-SPC已完成功能.md` |
+| SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
 Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。  
@@ -39,7 +39,7 @@ History 查验：`docs/模块/History（履历）模块/MES-History已完成功�
 7. ~~**Recipe（MES 内嵌最小集）**~~ ✅ →（可选）规则表 / What-Next；APS / 独立 RMS / Adapter 后置  
 8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示；P1 Auto-Hold / `EDC_COLLECT` ✅  
 9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；谱系已有不重做；客诉包后置  
-10. **SPC 趋势预警** SPC-1～4 ✅；下一步 SPC-5 `/app/spc`；不挡 TrackOut  
+10. **SPC 趋势预警** SPC-1～5 ✅；`/app/spc` 左列表+右趋势；不挡 TrackOut  
 
 
 ---

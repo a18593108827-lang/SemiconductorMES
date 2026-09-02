@@ -13,12 +13,7 @@
 | SPC-2 | `mes_spc_chart` / `mes_spc_eval`；权限 257/258；`mes.spc.enabled` |
 | SPC-3 | `SpcFacade` + `SpcCollectedListener`；I-MR / WE1 / RUN；LEARNING 写限；OOC → eval + `SPC_OOC` |
 | SPC-4 | HTTP `/spc`；查 `spc:view`，写 `spc:edit` |
-
-## 未做
-
-| 切片 | 说明 |
-|------|------|
-| SPC-5 | Admin `/app/spc` |
+| SPC-5 | Admin `/app/spc`：左列表 + 右 I/MR/点表；Drawer 维护 |
 
 ## 关键路径
 
@@ -29,6 +24,7 @@
 | 监听 | `com.mes.spc.listener.SpcCollectedListener` |
 | I-MR | `com.mes.spc.support.SpcImr` |
 | HTTP | `com.mes.spc.controller.MesSpcController` |
+| Admin | `web/src/pages/SpcPage.tsx` · `web/src/api/spc.ts` |
 | DDL | `server/src/main/resources/db/migrate_spc.sql` |
 | 配置 | `mes.spc.enabled`（`application.yml`） |
 
