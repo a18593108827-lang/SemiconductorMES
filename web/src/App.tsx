@@ -20,6 +20,7 @@ import { LoginPage } from './pages/LoginPage'
 import { LotsPage } from './pages/LotsPage'
 import { EdcPage } from './pages/EdcPage'
 import { RecipePage } from './pages/RecipePage'
+import { SpcPage } from './pages/SpcPage'
 import { RoutePage } from './pages/RoutePage'
 import { TrackPage } from './pages/TrackPage'
 import { WipPage } from './pages/WipPage'
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="dispatch" element={<DispatchPage />} />
         <Route path="recipe" element={<RecipePage />} />
         <Route path="edc" element={<EdcPage />} />
+        <Route path="spc" element={<SpcPage />} />
         <Route path="route" element={<RoutePage />} />
         <Route path="hold" element={<HoldPage />} />
         <Route path="alarm" element={<AlarmPage />} />

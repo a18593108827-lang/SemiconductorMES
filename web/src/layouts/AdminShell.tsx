@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  Activity,
   Bell,
   Boxes,
   ChevronDown,
@@ -45,6 +46,7 @@ const iconMap: Record<string, LucideIcon> = {
   'flask-conical': FlaskConical,
   'clipboard-list': ClipboardList,
   ruler: Ruler,
+  activity: Activity,
 }
 
 function resolveIcon(name: string | null | undefined): LucideIcon {
