@@ -185,10 +185,15 @@ INSERT INTO sys_permission (id, parent_id, perm_type, perm_code, perm_name, path
 (254, 253, 3, 'edc:edit',        '????', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
 (255, 253, 3, 'edc:publish',     '????', NULL,              NULL,               2,  1, NOW(), NOW(), 0),
 (256, 253, 3, 'edc:collect',     '????', NULL,              NULL,               3,  1, NOW(), NOW(), 0),
+(257, 200, 2, 'spc:view',        '趋势',     '/app/spc',        'activity',         165,1, NOW(), NOW(), 0),
+(258, 257, 3, 'spc:edit',        '趋势编辑', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
 (260, 200, 2, 'hold:list',       '??',     '/app/hold',       'pause-circle',     16, 1, NOW(), NOW(), 0),
 (261, 260, 3, 'hold:create',     '????', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
 (262, 260, 3, 'hold:release',    '??',     NULL,              NULL,               2,  1, NOW(), NOW(), 0),
-(270, 200, 2, 'alarm:list',      '??',     '/app/alarm',      'bell',             17, 1, NOW(), NOW(), 0),
+(270, 200, 2, 'alarm:view',      '报警',     '/app/alarm',      'bell',             17, 1, NOW(), NOW(), 0),
+(271, 270, 3, 'alarm:ack',       '报警确认', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
+(272, 270, 3, 'alarm:clear',     '报警关闭', NULL,              NULL,               2,  1, NOW(), NOW(), 0),
+(273, 270, 3, 'alarm:edit',      '报警码维护', NULL,            NULL,               3,  1, NOW(), NOW(), 0),
 (280, 200, 2, 'history:list',    '??',     '/app/history',    'history',          18, 1, NOW(), NOW(), 0),
 (290, 200, 2, 'track:view',      '???',   '/track',          'lock',             19, 1, NOW(), NOW(), 0),
 (291, 290, 3, 'track:track-in',  'Track In', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
@@ -302,7 +307,12 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1138, 1, 253, NOW()),
 (1139, 1, 254, NOW()),
 (1140, 1, 255, NOW()),
-(1141, 1, 256, NOW())
+(1141, 1, 256, NOW()),
+(1142, 1, 257, NOW()),
+(1143, 1, 258, NOW()),
+(1144, 1, 271, NOW()),
+(1145, 1, 272, NOW()),
+(1146, 1, 273, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- supervisor????? + ????
@@ -318,6 +328,8 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1404, 4, 261, NOW()),
 (1405, 4, 262, NOW()),
 (1406, 4, 270, NOW()),
+(1424, 4, 271, NOW()),
+(1425, 4, 272, NOW()),
 (1407, 4, 100, NOW()),
 (1408, 4, 240, NOW()),
 (1409, 4, 243, NOW()),
@@ -333,7 +345,10 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1419, 4, 301, NOW()),
 (1420, 4, 302, NOW()),
 (1421, 4, 294, NOW()),
-(1422, 4, 253, NOW())
+(1422, 4, 253, NOW()),
+(1423, 4, 257, NOW()),
+(1424, 4, 271, NOW()),
+(1425, 4, 272, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- operator??? + ??
@@ -387,6 +402,11 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1334, 3, 254, NOW()),
 (1335, 3, 255, NOW()),
 (1336, 3, 256, NOW()),
+(1337, 3, 257, NOW()),
+(1338, 3, 258, NOW()),
+(1339, 3, 271, NOW()),
+(1340, 3, 272, NOW()),
+(1341, 3, 273, NOW()),
 (1305, 3, 250, NOW()),
 (1309, 3, 251, NOW()),
 (1310, 3, 252, NOW()),
@@ -713,7 +733,8 @@ INSERT INTO mes_hold_reason (
 (8005, 'C_REQUEST',  '????',     'customer', 1, '??',       NOW(), NOW(), 0),
 (8006, 'OTHER',      '??',         'other',    1, '????',   NOW(), NOW(), 0),
 (8007, 'QTIME_EXCEED', 'Queue Time超时', 'quality', 1, '站间等待超限', NOW(), NOW(), 0),
-(8008, 'PROCESS_TIME_EXCEED', 'Process Time超时', 'quality', 1, '站内加工超上限，出站后锁批', NOW(), NOW(), 0)
+(8008, 'PROCESS_TIME_EXCEED', 'Process Time超时', 'quality', 1, '站内加工超上限，出站后锁批', NOW(), NOW(), 0),
+(8009, 'EDC_OOS', '量测超规', 'quality', 1, '采集OOS后锁批，解锁后须重采合格才能完工', NOW(), NOW(), 0)
 ON DUPLICATE KEY UPDATE
   reason_name = VALUES(reason_name),
   category = VALUES(category),
@@ -992,7 +1013,8 @@ CREATE TABLE IF NOT EXISTS mes_edc_collection (
     deleted            TINYINT      NOT NULL DEFAULT 0 COMMENT 'soft delete',
     PRIMARY KEY (id),
     KEY idx_edc_col_visit (lot_id, track_in_tx_id, collected_at),
-    KEY idx_edc_col_lot_step (lot_id, step_id, collected_at)
+    KEY idx_edc_col_lot_step (lot_id, step_id, collected_at),
+    KEY idx_edc_col_step_time (step_id, collected_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='edc collection';
 
 CREATE TABLE IF NOT EXISTS mes_edc_collection_item (
@@ -1009,3 +1031,96 @@ CREATE TABLE IF NOT EXISTS mes_edc_collection_item (
     PRIMARY KEY (id),
     KEY idx_edc_col_item (collection_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='edc collection item';
+
+CREATE TABLE IF NOT EXISTS mes_spc_chart (
+    id            BIGINT         NOT NULL COMMENT 'PK',
+    param_id      BIGINT         NOT NULL COMMENT 'param id',
+    step_id       BIGINT         NOT NULL COMMENT 'step id',
+    eqp_id        BIGINT         NOT NULL DEFAULT 0 COMMENT 'eqp; 0=all eqp at step',
+    chart_type    VARCHAR(16)    NOT NULL DEFAULT 'IMR' COMMENT 'IMR',
+    limit_mode    VARCHAR(16)    NOT NULL COMMENT 'MANUAL/LEARNING',
+    learning_n    INT            NOT NULL DEFAULT 25 COMMENT 'learning sample n',
+    ucl           DECIMAL(20,8)           COMMENT 'ucl',
+    cl            DECIMAL(20,8)           COMMENT 'cl',
+    lcl           DECIMAL(20,8)           COMMENT 'lcl',
+    run_n         INT            NOT NULL DEFAULT 7 COMMENT 'run rule n; 0=off',
+    enabled       TINYINT        NOT NULL DEFAULT 1 COMMENT '1 enabled',
+    version       INT            NOT NULL DEFAULT 0 COMMENT 'optimistic lock',
+    create_by     BIGINT                  COMMENT 'create by',
+    update_by     BIGINT                  COMMENT 'update by',
+    create_time   DATETIME                COMMENT 'create time',
+    update_time   DATETIME                COMMENT 'update time',
+    deleted       TINYINT        NOT NULL DEFAULT 0 COMMENT 'soft delete',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_spc_chart_ctx (param_id, step_id, eqp_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='spc chart';
+
+CREATE TABLE IF NOT EXISTS mes_spc_eval (
+    id                   BIGINT         NOT NULL COMMENT 'PK',
+    chart_id             BIGINT         NOT NULL COMMENT 'chart id',
+    collection_item_id   BIGINT         NOT NULL COMMENT 'edc item id',
+    ooc                  TINYINT        NOT NULL COMMENT '0/1',
+    rule_code            VARCHAR(16)    NOT NULL COMMENT 'WE1/RUN',
+    ucl_snap             DECIMAL(20,8)           COMMENT 'ucl snap',
+    cl_snap              DECIMAL(20,8)           COMMENT 'cl snap',
+    lcl_snap             DECIMAL(20,8)           COMMENT 'lcl snap',
+    create_time          DATETIME                COMMENT 'create time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_spc_eval_item (chart_id, collection_item_id),
+    KEY idx_spc_eval_chart_time (chart_id, create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='spc eval';
+
+CREATE TABLE IF NOT EXISTS mes_alarm_code (
+    code               VARCHAR(64)    NOT NULL COMMENT 'alarm code PK',
+    name               VARCHAR(128)   NOT NULL COMMENT 'display name',
+    level              VARCHAR(16)    NOT NULL COMMENT 'CRITICAL/WARNING/INFO',
+    on_raise           VARCHAR(16)    NOT NULL DEFAULT 'NONE' COMMENT 'NONE/HOLD_LOT',
+    hold_reason_code   VARCHAR(32)             COMMENT 'hold reason when HOLD_LOT',
+    enabled            TINYINT        NOT NULL DEFAULT 1 COMMENT '1 enabled',
+    remark             VARCHAR(256)            COMMENT 'remark',
+    create_time        DATETIME                COMMENT 'create time',
+    update_time        DATETIME                COMMENT 'update time',
+    deleted            TINYINT        NOT NULL DEFAULT 0 COMMENT 'soft delete',
+    PRIMARY KEY (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='alarm code';
+
+INSERT INTO mes_alarm_code (code, name, level, on_raise, hold_reason_code, enabled, remark, create_time, update_time, deleted) VALUES
+('SPC_OOC',                 'SPC失控',           'WARNING', 'NONE', NULL, 1, '控制限判异', NOW(), NOW(), 0),
+('QTIME_EXCEED',            'Queue Time超时',    'WARNING', 'NONE', NULL, 1, 'Hold 由 QTime 自挂', NOW(), NOW(), 0),
+('QTIME_OPEN_FAIL',         'Queue Time开窗失败', 'WARNING', 'NONE', NULL, 1, NULL, NOW(), NOW(), 0),
+('PROCESS_TIME_VIOLATION',  'Process Time违规',  'WARNING', 'NONE', NULL, 1, '超 max Hold 由 ProcessTime 自挂', NOW(), NOW(), 0)
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  level = VALUES(level),
+  on_raise = VALUES(on_raise),
+  enabled = VALUES(enabled),
+  remark = VALUES(remark),
+  update_time = NOW();
+
+CREATE TABLE IF NOT EXISTS mes_alarm (
+    id                 BIGINT         NOT NULL COMMENT 'PK',
+    code               VARCHAR(64)    NOT NULL COMMENT 'alarm code',
+    level              VARCHAR(16)    NOT NULL COMMENT 'level snap',
+    status             VARCHAR(16)    NOT NULL COMMENT 'OPEN/ACK/CLEARED',
+    message            VARCHAR(512)            COMMENT 'message',
+    entity_type        VARCHAR(16)    NOT NULL DEFAULT 'NONE' COMMENT 'LOT/EQP/CHART/NONE',
+    entity_id          BIGINT         NOT NULL DEFAULT 0 COMMENT 'entity id; 0 if none',
+    dedupe_key         VARCHAR(128)   NOT NULL COMMENT 'code|type|id',
+    payload_json       TEXT                    COMMENT 'payload JSON',
+    raise_count        INT            NOT NULL DEFAULT 1 COMMENT 'bump on OPEN',
+    first_raise_at     DATETIME       NOT NULL COMMENT 'first raise',
+    last_raise_at      DATETIME       NOT NULL COMMENT 'last raise',
+    ack_by             BIGINT                  COMMENT 'ack user',
+    ack_at             DATETIME                COMMENT 'ack time',
+    ack_remark         VARCHAR(256)            COMMENT 'ack remark',
+    clear_by           BIGINT                  COMMENT 'clear user',
+    clear_at           DATETIME                COMMENT 'clear time',
+    clear_remark       VARCHAR(256)            COMMENT 'clear remark',
+    create_time        DATETIME                COMMENT 'create time',
+    update_time        DATETIME                COMMENT 'update time',
+    deleted            TINYINT        NOT NULL DEFAULT 0 COMMENT 'soft delete',
+    PRIMARY KEY (id),
+    KEY idx_alarm_dedupe_status (dedupe_key, status),
+    KEY idx_alarm_status_level_time (status, level, last_raise_at),
+    KEY idx_alarm_entity (entity_type, entity_id, last_raise_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='alarm instance';

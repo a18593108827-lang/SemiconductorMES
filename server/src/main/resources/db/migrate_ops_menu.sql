@@ -19,7 +19,10 @@ INSERT INTO sys_permission (id, parent_id, perm_type, perm_code, perm_name, path
 (260, 200, 2, 'hold:list',       '锁批',     '/app/hold',       'pause-circle',     16, 1, NOW(), NOW(), 0),
 (261, 260, 3, 'hold:create',     '发起锁批', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
 (262, 260, 3, 'hold:release',    '解锁',     NULL,              NULL,               2,  1, NOW(), NOW(), 0),
-(270, 200, 2, 'alarm:list',      '报警',     '/app/alarm',      'bell',             17, 1, NOW(), NOW(), 0),
+(270, 200, 2, 'alarm:view',      '报警',     '/app/alarm',      'bell',             17, 1, NOW(), NOW(), 0),
+(271, 270, 3, 'alarm:ack',       '报警确认', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
+(272, 270, 3, 'alarm:clear',     '报警关闭', NULL,              NULL,               2,  1, NOW(), NOW(), 0),
+(273, 270, 3, 'alarm:edit',      '报警码维护', NULL,            NULL,               3,  1, NOW(), NOW(), 0),
 (280, 200, 2, 'history:list',    '追溯',     '/app/history',    'history',          18, 1, NOW(), NOW(), 0),
 (290, 200, 2, 'track:view',      '现场台',   '/track',          'lock',             19, 1, NOW(), NOW(), 0),
 (291, 290, 3, 'track:track-in',  'Track In', NULL,              NULL,               1,  1, NOW(), NOW(), 0),
@@ -47,6 +50,9 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1107, 1, 261, NOW()),
 (1108, 1, 262, NOW()),
 (1109, 1, 270, NOW()),
+(1144, 1, 271, NOW()),
+(1145, 1, 272, NOW()),
+(1146, 1, 273, NOW()),
 (1110, 1, 280, NOW()),
 (1111, 1, 290, NOW()),
 (1112, 1, 291, NOW()),
@@ -73,6 +79,9 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1305, 3, 250, NOW()),
 (1306, 3, 260, NOW()),
 (1307, 3, 270, NOW()),
+(1339, 3, 271, NOW()),
+(1340, 3, 272, NOW()),
+(1341, 3, 273, NOW()),
 (1308, 3, 280, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
@@ -85,5 +94,7 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1404, 4, 261, NOW()),
 (1405, 4, 262, NOW()),
 (1406, 4, 270, NOW()),
+(1424, 4, 271, NOW()),
+(1425, 4, 272, NOW()),
 (1407, 4, 100, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
