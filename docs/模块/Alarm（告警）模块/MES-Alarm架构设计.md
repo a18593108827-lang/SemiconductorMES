@@ -5,7 +5,7 @@
 > 产品口径：工艺/班组长看见该响的、认领严重项；不是 Applied AMS / 独立 fab Alarm Hub  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.8 / §7；SPC D9；Hold 边界；业务清单 §8  
 > 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用（今日只打日志）  
-> 状态：**架构已定 · Alarm-1～2 已落地**（表 + raise 落库）；HTTP/前端未开  
+> 状态：**架构已定 · Alarm-1～3 已落地**（表 + raise + HTTP）；前端/WS 未开  
 > 更新：2026-09-04
 
 ---

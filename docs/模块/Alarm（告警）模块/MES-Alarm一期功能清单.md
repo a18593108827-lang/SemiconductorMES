@@ -3,7 +3,7 @@
 > 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用（今日只打日志）；Hold 最小集已齐  
 > 对齐：`MES-Alarm架构设计.md` · `docs/架构/半导MES架构设计.md` §5.8  
 > 更新：2026-09-02  
-> 状态：**Alarm-1～2 已落地**；Alarm-3～4 未开
+> 状态：**Alarm-1～3 已落地**；Alarm-4 未开
 
 ---
 
@@ -26,8 +26,8 @@
 |--------|------|------|
 | P0 | 码表 `mes_alarm_code` + 实例 `mes_alarm`；种子码 | ✅ |
 | P0 | `raise` 落库 + 去重 + `mes.alarm.enabled` | ✅ |
-| P0 | ACK / CLEAR；权限 `alarm:view` / `ack` / `clear` | ⬜（权限种子 ✅；逻辑 Alarm-3） |
-| P0 | HTTP `/alarm` | ⬜ |
+| P0 | ACK / CLEAR；权限 `alarm:view` / `ack` / `clear` | ✅（逻辑 + 权限；前端 Alarm-4） |
+| P0 | HTTP `/alarm` | ✅ |
 | P0 | Admin `/app/alarm` 真列表 + CRITICAL 未 ACK 顶栏 | ⬜ |
 | P0 | WS `alarm.active` | ⬜ |
 | P1 | `on_raise=HOLD_LOT`；未 ACK 升级；禁派钩子 | 后置；见架构 §9 |
@@ -41,7 +41,7 @@
 |------|------|------|
 | Alarm-1 | DDL 码表/实例；权限种子；`mes.alarm.enabled`；种子码 | ✅ |
 | Alarm-2 | `raise` 落库去重 + 实体解析；吞异常；**调用方零改签名** | ✅ |
-| Alarm-3 | 查询门面 + HTTP `/alarm`（list/get/ack/clear/顶栏） | ⬜ |
+| Alarm-3 | 查询门面 + HTTP `/alarm`（list/get/ack/clear/顶栏） | ✅ |
 | Alarm-4 | Admin 换 mock；顶栏严重条；WS `alarm.active` | ⬜ |
 
 建议顺序：Alarm-1 → 2 → 3 → 4。  
@@ -72,14 +72,14 @@
 
 落地：`AlarmServiceImpl`
 
-### Alarm-3（HTTP）⬜
+### Alarm-3（HTTP）✅
 
-- 前缀 `/alarm`；list/get 要 `alarm:view`；ack 要 `alarm:ack`；clear 要 `alarm:clear`  
-- 读路径走查询门面；写 ACK/CLEAR 不鉴权进 Service 内由 Controller 鉴权  
-- `listActiveCritical`：status∈(OPEN,ACK) 且 level=CRITICAL（一期种子无 CRITICAL 时可返回空，接口仍在）  
+- 前缀 `/alarm`；list/get/critical 要 `alarm:view`；ack 要 `alarm:ack`；clear 要 `alarm:clear`  
+- 读路径走 `AlarmFacade`；写 ACK/CLEAR 鉴权在 Controller  
+- `GET /alarm/critical`：status∈(OPEN,ACK) 且 level=CRITICAL（一期种子无 CRITICAL 时可空）  
 - 无旁路 SQL；无前端  
 
-落地：`AlarmFacade`（或等价）· `MesAlarmController`
+落地：`AlarmFacade` · `AlarmFacadeImpl` · `MesAlarmController` · `AlarmVO` / `AlarmQuery`
 
 ### Alarm-4（Admin + WS）⬜
 
