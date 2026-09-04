@@ -3,7 +3,7 @@
 > 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用（今日只打日志）；Hold 最小集已齐  
 > 对齐：`MES-Alarm架构设计.md` · `docs/架构/半导MES架构设计.md` §5.8  
 > 更新：2026-09-02  
-> 状态：**Alarm-1 已落地**；Alarm-2～4 未开
+> 状态：**Alarm-1～2 已落地**；Alarm-3～4 未开
 
 ---
 
@@ -25,7 +25,7 @@
 | 优先级 | 能力 | 状态 |
 |--------|------|------|
 | P0 | 码表 `mes_alarm_code` + 实例 `mes_alarm`；种子码 | ✅ |
-| P0 | `raise` 落库 + 去重 + `mes.alarm.enabled` | ⬜（配置已加；落库属 Alarm-2） |
+| P0 | `raise` 落库 + 去重 + `mes.alarm.enabled` | ✅ |
 | P0 | ACK / CLEAR；权限 `alarm:view` / `ack` / `clear` | ⬜（权限种子 ✅；逻辑 Alarm-3） |
 | P0 | HTTP `/alarm` | ⬜ |
 | P0 | Admin `/app/alarm` 真列表 + CRITICAL 未 ACK 顶栏 | ⬜ |
@@ -40,7 +40,7 @@
 | 切片 | 交付 | 状态 |
 |------|------|------|
 | Alarm-1 | DDL 码表/实例；权限种子；`mes.alarm.enabled`；种子码 | ✅ |
-| Alarm-2 | `raise` 落库去重 + 实体解析；吞异常；**调用方零改签名** | ⬜ |
+| Alarm-2 | `raise` 落库去重 + 实体解析；吞异常；**调用方零改签名** | ✅ |
 | Alarm-3 | 查询门面 + HTTP `/alarm`（list/get/ack/clear/顶栏） | ⬜ |
 | Alarm-4 | Admin 换 mock；顶栏严重条；WS `alarm.active` | ⬜ |
 
@@ -61,16 +61,16 @@
 - 本切片 **无** raise 改行为（仍打日志）、无前端换 mock  
 
 落地：`migrate_alarm.sql` · `schema.sql` · `MesAlarmCode` / `MesAlarm` · Mapper · `application.yml`
-### Alarm-2（raise 成真）⬜
+### Alarm-2（raise 成真）✅
 
 - 替换 `AlarmServiceImpl` 日志 stub → 落库  
 - 行为锁死架构 §6：enabled 阀、未知码仍落、OPEN bump、ACK 后再 raise 新开 OPEN  
 - 从 payload 解析 `entity_type` / `entity_id`（有 `lotId`→LOT；有 `eqpId`→EQP；有 `chartId`→CHART；否则 NONE/0）  
 - **不**调 Hold；**不**改 QTime / ProcessTime / SPC 调用点签名  
-- 异常 catch 打日志，不抛回调用方  
-- 本切片可先无 HTTP（单测 / 打日志验库）  
+- `REQUIRES_NEW` + 吞异常；采集 / TrackOut 不因 raise 失败  
+- 本切片无 HTTP  
 
-落地：`AlarmServiceImpl` + 去重写路径
+落地：`AlarmServiceImpl`
 
 ### Alarm-3（HTTP）⬜
 
