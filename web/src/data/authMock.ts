@@ -156,7 +156,7 @@ export const authPerms: AuthPerm[] = [
   { id: 'b-dispatch-reserve', parentId: 'm-dispatch', permType: 3, permCode: 'dispatch:reserve', permName: '设备预约', sortNo: 1451, status: 1 },
   { id: 'm-route', parentId: 'd-ops', permType: 2, permCode: 'route:list', permName: '路线', path: '/app/route', sortNo: 15, status: 1 },
   { id: 'm-hold', parentId: 'd-ops', permType: 2, permCode: 'hold:list', permName: '锁批', path: '/app/hold', sortNo: 16, status: 1 },
-  { id: 'm-alarm', parentId: 'd-ops', permType: 2, permCode: 'alarm:list', permName: '报警', path: '/app/alarm', sortNo: 17, status: 1 },
+  { id: 'm-alarm', parentId: 'd-ops', permType: 2, permCode: 'alarm:view', permName: '报警', path: '/app/alarm', sortNo: 17, status: 1 },
   { id: 'm-hist', parentId: 'd-ops', permType: 2, permCode: 'history:list', permName: '追溯', path: '/app/history', sortNo: 18, status: 1 },
   { id: 'm-track', parentId: 'd-ops', permType: 2, permCode: 'track:view', permName: '现场台', path: '/track', sortNo: 19, status: 1 },
   { id: 'b-track-in', parentId: 'm-track', permType: 3, permCode: 'track:track-in', permName: 'Track In', sortNo: 191, status: 1 },

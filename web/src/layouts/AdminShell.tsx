@@ -215,7 +215,7 @@ export function AdminShell() {
               ⌘K
             </kbd>
           </div>
-          {user?.permissions?.includes('alarm:list') ? (
+          {user?.permissions?.includes('alarm:view') ? (
             <button
               type="button"
               className="relative rounded-md p-2 text-muted transition-colors duration-150 hover:bg-surface hover:text-ink"

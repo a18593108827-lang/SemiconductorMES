@@ -247,8 +247,11 @@ Created → Released → Wait → Reserved → Processing → Completed
 
 ### 5.8 Alarm Management
 
-- 业务报警：超时、违规事务、设备 DOWN
+- 业务报警：超时、违规事务、设备 DOWN（GEM/Adapter 后置）
 - 质量报警：对接 EDC/SPC；确认 / 关闭 / 升级通知
+- **架构已定**：`docs/模块/Alarm（告警）模块/MES-Alarm架构设计.md`  
+  - 统一 `raise` 落库 + OPEN/ACK/CLEAR + 去重；不挡 TrackOut；锁批只调 Hold  
+  - 一期不做独立 AMS / OCAP / GEM 进仓；现 stub（日志）+ 前端 mock，待按该文档落地
 
 ### 5.9 Hold Management
 
