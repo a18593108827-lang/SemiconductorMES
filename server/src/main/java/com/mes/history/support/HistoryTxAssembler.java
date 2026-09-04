@@ -93,16 +93,32 @@ public class HistoryTxAssembler {
         item.setRemark(row.getRemark());
         item.setExtJson(row.getExtJson());
         item.setExt(parseExt(row.getExtJson()));
-        item.setSeverity(severity(row.getTxType()));
+        item.setSeverity(severity(row));
         item.setOperUserId(row.getOperUserId());
         item.setOperUserName(row.getOperUserName());
         item.setCreateTime(row.getCreateTime());
         return item;
     }
 
-    /** 未知事务码当 info，原样把码留给前端，别把行吃掉。 */
-    private static String severity(String txType) {
+    /** 调查台颜色：锁批/报废红，中止这类黄。量测单独看结果，不合格才黄，合格当普通流水。不认识的码别丢掉，当普通。 */
+    private static String severity(MesTxLog row) {
+        String txType = row.getTxType();
         if (txType == null) {
+            return "info";
+        }
+        if ("EDC_COLLECT".equals(txType)) {
+            String json = row.getExtJson();
+            if (json == null || json.isBlank()) {
+                return "info";
+            }
+            try {
+                String result = JSONUtil.parseObj(json).getStr("result");
+                if ("FAIL".equals(result)) {
+                    return "warning";
+                }
+            } catch (Exception ignored) {
+                return "info";
+            }
             return "info";
         }
         if (SEVERITY_DANGER.contains(txType)) {

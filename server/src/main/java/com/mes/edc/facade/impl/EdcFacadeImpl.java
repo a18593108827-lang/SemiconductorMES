@@ -8,6 +8,7 @@ import com.mes.edc.mapper.MesEdcPlanMapper;
 import com.mes.edc.service.MesEdcCollectionService;
 import com.mes.edc.service.MesEdcPlanService;
 import com.mes.edc.vo.EdcGateResult;
+import com.mes.edc.vo.EdcSeriesPoint;
 import com.mes.edc.vo.MesEdcCollectionVO;
 import com.mes.edc.vo.MesEdcPlanVO;
 import com.mes.lot.entity.MesLot;
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -102,6 +105,19 @@ public class EdcFacadeImpl implements EdcFacade {
             return null;
         }
         return mesEdcCollectionService.getLatest(lotId, trackInTxId);
+    }
+
+    /** 给 SPC 拉某站某特性最近一串点。超规的也带，别把过程画好看了。机台空着就不过滤。 */
+    @Override
+    public List<EdcSeriesPoint> listSeries(Long paramId, Long stepId, Long eqpId,
+                                           LocalDateTime from, LocalDateTime to, Integer limit) {
+        return mesEdcCollectionService.listSeries(paramId, stepId, eqpId, from, to, limit);
+    }
+
+    /** 按单号把头和点一起拿回来。没有就空，不抛错，给采集后监听用。 */
+    @Override
+    public MesEdcCollectionVO getCollection(Long collectionId) {
+        return mesEdcCollectionService.find(collectionId);
     }
 
     /** 找这站正在用的采集计划。一站只有一份。 */

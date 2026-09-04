@@ -46,6 +46,7 @@ public class HoldServiceImpl implements HoldService {
     public static final String TX_RELEASE_HOLD = "RELEASE_HOLD";
     public static final String REASON_OTHER = "OTHER";
     public static final String REASON_QTIME_EXCEED = "QTIME_EXCEED";
+    public static final String REASON_EDC_OOS = "EDC_OOS";
     private static final String SYSTEM_USER_NAME = "SYSTEM";
 
     private final MesHoldMapper mesHoldMapper;
@@ -160,8 +161,9 @@ public class HoldServiceImpl implements HoldService {
         MesLot lot = mesLotMapper.selectById(hold.getLotId());
         AssertUtil.notNull(lot, "批次不存在");
         AssertUtil.isTrue(STATUS_HELD.equals(lot.getStatus()), "批次当前非锁批状态");
-        if (REASON_QTIME_EXCEED.equals(hold.getReasonCode())) {
-            AssertUtil.isTrue(StringUtils.hasText(remark), "Queue Time 解锁须填写备注");
+        if (REASON_QTIME_EXCEED.equals(hold.getReasonCode()) || REASON_EDC_OOS.equals(hold.getReasonCode())) {
+            AssertUtil.isTrue(StringUtils.hasText(remark),
+                    REASON_EDC_OOS.equals(hold.getReasonCode()) ? "量测超规解锁须填写备注" : "Queue Time 解锁须填写备注");
         }
 
         Long userId = resolveOperUserId();
