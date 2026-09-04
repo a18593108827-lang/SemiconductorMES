@@ -21,7 +21,7 @@
 | EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；OOS Auto-Hold / `EDC_COLLECT` 已做；见 `docs/模块/EDC（量测）模块/` |
 | History | ✅ 一期 P0 | 写在 Track；`HistoryFacade` + `/app/history` 调查台 + 设备反查；见 `docs/模块/History（履历）模块/` |
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
-| Alarm | 📐 Alarm-1～3 ✅ · 4 未开 | raise+HTTP 已齐；Admin 仍 mock；见一期清单 |
+| Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
 Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。  

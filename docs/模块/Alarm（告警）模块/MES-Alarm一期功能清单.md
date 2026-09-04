@@ -29,7 +29,7 @@
 | P0 | ACK / CLEAR；权限 `alarm:view` / `ack` / `clear` | ✅（逻辑 + 权限；前端 Alarm-4） |
 | P0 | HTTP `/alarm` | ✅ |
 | P0 | Admin `/app/alarm` 真列表 + CRITICAL 未 ACK 顶栏 | ⬜ |
-| P0 | WS `alarm.active` | ⬜ |
+| P0 | WS `alarm.active` | ✅（后端）；前端订阅 Alarm-4 剩余 |
 | P1 | `on_raise=HOLD_LOT`；未 ACK 升级；禁派钩子 | 后置；见架构 §9 |
 | P2 | GEM 进仓、Pareto、OCAP、独立 AMS | 后置 |
 
@@ -42,7 +42,7 @@
 | Alarm-1 | DDL 码表/实例；权限种子；`mes.alarm.enabled`；种子码 | ✅ |
 | Alarm-2 | `raise` 落库去重 + 实体解析；吞异常；**调用方零改签名** | ✅ |
 | Alarm-3 | 查询门面 + HTTP `/alarm`（list/get/ack/clear/顶栏） | ✅ |
-| Alarm-4 | Admin 换 mock；顶栏严重条；WS `alarm.active` | ⬜ |
+| Alarm-4 | Admin 换 mock；顶栏严重条；WS `alarm.active` | ⬜ 后端 WS ✅；前端未开 |
 
 建议顺序：Alarm-1 → 2 → 3 → 4。  
 **禁止** Alarm-2 先于 Alarm-1（无表必空转或再造日志）。  
@@ -81,14 +81,12 @@
 
 落地：`AlarmFacade` · `AlarmFacadeImpl` · `MesAlarmController` · `AlarmVO` / `AlarmQuery`
 
-### Alarm-4（Admin + WS）⬜
+### Alarm-4（Admin + WS）✅
 
-- `/app/alarm`：替换 `alarms` mock；筛 status/level/code；ACK / CLEAR 按钮走真 API  
-- 页头或布局：CRITICAL 未 ACK（含 OPEN）条，无则隐藏  
-- 落库后推 WS `alarm.active`（摘要：id、code、level、message、entity）；鉴权同现网  
-- **禁止** 改 TrackPage 完工；**禁止** 与 Hold 页合并  
+- `/app/alarm`：列表筛选 / 详情 Drawer / ACK·CLEAR；顶栏铃铛接 `/alarm/critical` + STOMP  
+- STOMP `/ws` → `/topic/alarm.active`；CONNECT 校验 Sa-Token  
 
-落地：`AlarmPage.tsx` · `api/alarm.ts` · WS 推送钩子
+落地：`api/alarm.ts` · `lib/alarmWs.ts` · `AlarmPage` · `AdminShell`；后端 `WebSocketConfig` · `AlarmWsPublisher`
 
 ---
 

@@ -25,10 +25,11 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
+import { listCriticalAlarmsApi } from '../api/alarm'
 import { useAuth } from '../auth/AuthContext'
 import type { MenuItem } from '../api/auth'
+import { subscribeAlarmActive } from '../lib/alarmWs'
 import { cn } from '../lib/cn'
-import { alarms } from '../data/mock'
 
 const iconMap: Record<string, LucideIcon> = {
   factory: Factory,
@@ -122,7 +123,8 @@ export function AdminShell() {
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const unacked = alarms.filter((a) => !a.ack).length
+  const [criticalCount, setCriticalCount] = useState(0)
+  const canAlarm = !!user?.permissions?.includes('alarm:view')
   const groups = useMemo(() => buildNavGroups(user?.menus ?? []), [user?.menus])
 
   useEffect(() => {
@@ -133,6 +135,30 @@ export function AdminShell() {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [menuOpen])
+
+  useEffect(() => {
+    if (!canAlarm) {
+      setCriticalCount(0)
+      return
+    }
+    let alive = true
+    const refresh = async () => {
+      try {
+        const list = await listCriticalAlarmsApi()
+        if (alive) setCriticalCount(list.length)
+      } catch {
+        if (alive) setCriticalCount(0)
+      }
+    }
+    void refresh()
+    const unsub = subscribeAlarmActive(() => {
+      void refresh()
+    })
+    return () => {
+      alive = false
+      unsub()
+    }
+  }, [canAlarm])
 
   async function onLogout() {
     await logout()
@@ -215,15 +241,15 @@ export function AdminShell() {
               ⌘K
             </kbd>
           </div>
-          {user?.permissions?.includes('alarm:view') ? (
+          {canAlarm ? (
             <button
               type="button"
               className="relative rounded-md p-2 text-muted transition-colors duration-150 hover:bg-surface hover:text-ink"
-              aria-label={unacked > 0 ? `报警，${unacked} 条未确认` : '报警'}
+              aria-label={criticalCount > 0 ? `报警，${criticalCount} 条严重未关闭` : '报警'}
               onClick={() => navigate('/app/alarm')}
             >
               <Bell className="size-5" />
-              {unacked > 0 ? (
+              {criticalCount > 0 ? (
                 <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-danger ring-2 ring-bg" />
               ) : null}
             </button>

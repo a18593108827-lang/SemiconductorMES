@@ -85,6 +85,11 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
         </dependency>
+        <!-- WebSocket：告警实时推送等 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
         <!-- Lombok：@Data、@Getter 等，减少样板代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
