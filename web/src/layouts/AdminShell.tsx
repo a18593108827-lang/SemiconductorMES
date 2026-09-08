@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
   Bell,
@@ -122,10 +122,12 @@ export function AdminShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuth()
   const [criticalCount, setCriticalCount] = useState(0)
   const canAlarm = !!user?.permissions?.includes('alarm:view')
   const groups = useMemo(() => buildNavGroups(user?.menus ?? []), [user?.menus])
+  const isDashboard = location.pathname === '/app/dashboard'
 
   useEffect(() => {
     if (!menuOpen) return
@@ -308,7 +310,14 @@ export function AdminShell() {
             ) : null}
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-auto bg-bg p-4 md:p-5">
+        <main
+          className={cn(
+            'min-h-0 flex-1 bg-bg',
+            isDashboard
+              ? 'flex flex-col overflow-hidden p-3'
+              : 'overflow-auto p-4 md:p-5',
+          )}
+        >
           <Outlet />
         </main>
       </div>
