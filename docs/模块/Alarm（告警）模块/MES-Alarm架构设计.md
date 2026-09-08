@@ -4,8 +4,8 @@
 > 范式：**各域只 `raise`，Alarm 管生命周期**；锁批仍只走 `HoldService`  
 > 产品口径：工艺/班组长看见该响的、认领严重项；不是 Applied AMS / 独立 fab Alarm Hub  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.8 / §7；SPC D9；Hold 边界；业务清单 §8  
-> 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用（今日只打日志）  
-> 状态：**架构已定 · Alarm-1～3 已落地**（表 + raise + HTTP）；前端/WS 未开  
+> 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用  
+> 状态：**P0 已完成**（Alarm-1～4：表 / raise / HTTP / Admin / STOMP）；P1/P2 后置  
 > 更新：2026-09-04
 
 ---
@@ -69,7 +69,7 @@ FDC/OCAP= 另一条线；禁止进本包
 | D8 | 实体 | `entity_type`+`entity_id`：`LOT` / `EQP` / `CHART` / `NONE` | payload 可冗余编码字段 |
 | D9 | 策略 | 码表 `on_raise`：`NONE` \| `HOLD_LOT`（P1）；默认 `NONE` | SPC_OOC 默认 NONE |
 | D10 | 推送 | 落库后发 WS `alarm.active`（或域内事件再推）；MQ topic 后置 | 架构已留口 |
-| D11 | 调用契约 | `raise` 吞异常、只打日志；返回 void 或 alarmId（不强制调用方处理） | 同 SPC 对 raise 的假设 |
+| D11 | 调用契约 | `raise` 吞异常、不回滚调用方；返回 void 或 alarmId（不强制调用方处理） | 同 SPC 对 raise 的假设 |
 | D12 | 权限 | HTTP 鉴权；`AlarmService.raise` **不**鉴权（系统调用） | 同 EdcFacade / Hold 系统挂 |
 | D13 | 应急阀 | `mes.alarm.enabled` 默认 true；false 时 raise 空操作（仍可查历史） | 风暴时止血 |
 | D14 | 前端 | 替换 mock；Admin 告警台；现场可只读严重条（可选） | UI 设计已列 P1 |
@@ -226,7 +226,7 @@ WebSocket：`alarm.active` 推送 OPEN 变更摘要（id、code、level、messag
 | **P1** | `on_raise=HOLD_LOT`；未 ACK 升级（定时或班次）；Dispatch 可读 critical 禁派钩子 | OCAP、邮件网关 |
 | **P2** | Adapter→raise 设备码；Pareto；与 OCAP/知识库挂接 | 独立 AMS 产品形态 |
 
-切片锁定：`MES-Alarm一期功能清单.md`（Alarm-1～4 = 本期 P0；策略 Hold = P1）。
+切片锁定：`MES-Alarm一期功能清单.md`（Alarm-1～4 = P0 ✅；策略 Hold = P1）。
 
 ---
 

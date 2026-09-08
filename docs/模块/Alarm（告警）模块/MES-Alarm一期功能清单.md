@@ -1,9 +1,9 @@
 # MES 告警（Alarm）— 一期功能清单
 
-> 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用（今日只打日志）；Hold 最小集已齐  
+> 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用；Hold 最小集已齐  
 > 对齐：`MES-Alarm架构设计.md` · `docs/架构/半导MES架构设计.md` §5.8  
-> 更新：2026-09-02  
-> 状态：**Alarm-1～3 已落地**；Alarm-4 未开
+> 更新：2026-09-04  
+> 状态：**一期 P0（Alarm-1～4）已完成**；P1/P2 后置
 
 ---
 
@@ -26,10 +26,10 @@
 |--------|------|------|
 | P0 | 码表 `mes_alarm_code` + 实例 `mes_alarm`；种子码 | ✅ |
 | P0 | `raise` 落库 + 去重 + `mes.alarm.enabled` | ✅ |
-| P0 | ACK / CLEAR；权限 `alarm:view` / `ack` / `clear` | ✅（逻辑 + 权限；前端 Alarm-4） |
+| P0 | ACK / CLEAR；权限 `alarm:view` / `ack` / `clear` | ✅ |
 | P0 | HTTP `/alarm` | ✅ |
-| P0 | Admin `/app/alarm` 真列表 + CRITICAL 未 ACK 顶栏 | ⬜ |
-| P0 | WS `alarm.active` | ✅（后端）；前端订阅 Alarm-4 剩余 |
+| P0 | Admin `/app/alarm` 真列表 + CRITICAL 顶栏 | ✅ |
+| P0 | WS `alarm.active`（后端推 + 前端订） | ✅ |
 | P1 | `on_raise=HOLD_LOT`；未 ACK 升级；禁派钩子 | 后置；见架构 §9 |
 | P2 | GEM 进仓、Pareto、OCAP、独立 AMS | 后置 |
 
@@ -42,7 +42,7 @@
 | Alarm-1 | DDL 码表/实例；权限种子；`mes.alarm.enabled`；种子码 | ✅ |
 | Alarm-2 | `raise` 落库去重 + 实体解析；吞异常；**调用方零改签名** | ✅ |
 | Alarm-3 | 查询门面 + HTTP `/alarm`（list/get/ack/clear/顶栏） | ✅ |
-| Alarm-4 | Admin 换 mock；顶栏严重条；WS `alarm.active` | ⬜ 后端 WS ✅；前端未开 |
+| Alarm-4 | Admin 换 mock；顶栏严重条；WS `alarm.active` | ✅ |
 
 建议顺序：Alarm-1 → 2 → 3 → 4。  
 **禁止** Alarm-2 先于 Alarm-1（无表必空转或再造日志）。  
@@ -58,7 +58,7 @@
 - 权限：`270 alarm:view`（原 `alarm:list`）；`271 alarm:ack`；`272 alarm:clear`；`273 alarm:edit`  
 - `mes.alarm.enabled` 默认 true  
 - 种子码：`SPC_OOC` / `QTIME_EXCEED` / `QTIME_OPEN_FAIL` / `PROCESS_TIME_VIOLATION`；级别 WARNING；`on_raise=NONE`  
-- 本切片 **无** raise 改行为（仍打日志）、无前端换 mock  
+- 本切片 **无** raise 改行为（由 Alarm-2 换真）、无前端换 mock  
 
 落地：`migrate_alarm.sql` · `schema.sql` · `MesAlarmCode` / `MesAlarm` · Mapper · `application.yml`
 ### Alarm-2（raise 成真）✅

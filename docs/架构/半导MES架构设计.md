@@ -193,6 +193,14 @@ Created → Released → Wait → Reserved → Processing → Completed
 - `docs/模块/WIP（在制）模块/MES-WIP数据库设计.md`
 - `docs/模块/WIP（在制）模块/MES-WIP已完成功能.md`（查验清单）
 
+### 5.2.1 Dashboard（生产看板）
+
+- **定位**：班次执行指挥屏；只读聚合 WIP / Hold / Alarm / Eqp + TrackOut 日趋势
+- **不做**：真 OEE、Yield 顶卡、Report 明细、写业务状态
+- **形态**：`GET /dashboard/overview` 单接口；前端轮询；可复用 `alarm.active`
+- 详设：`docs/模块/Dashboard（看板）模块/MES-Dashboard架构设计.md`  
+  清单：`docs/模块/Dashboard（看板）模块/MES-Dashboard一期功能清单.md`
+
 ### 5.3 Route Management
 
 - Route / RouteStep 定义与版本
@@ -249,9 +257,9 @@ Created → Released → Wait → Reserved → Processing → Completed
 
 - 业务报警：超时、违规事务、设备 DOWN（GEM/Adapter 后置）
 - 质量报警：对接 EDC/SPC；确认 / 关闭 / 升级通知
-- **架构已定**：`docs/模块/Alarm（告警）模块/MES-Alarm架构设计.md`  
-  - 统一 `raise` 落库 + OPEN/ACK/CLEAR + 去重；不挡 TrackOut；锁批只调 Hold  
-  - 一期不做独立 AMS / OCAP / GEM 进仓；现 stub（日志）+ 前端 mock，待按该文档落地
+- **一期 P0 已落地**：`docs/模块/Alarm（告警）模块/MES-Alarm架构设计.md` · `MES-Alarm一期功能清单.md`  
+  - 统一 `raise` 落库 + OPEN/ACK/CLEAR + 去重 + Admin/STOMP；不挡 TrackOut；锁批只调 Hold  
+  - 不做独立 AMS / OCAP / GEM 进仓（P1/P2）
 
 ### 5.9 Hold Management
 
