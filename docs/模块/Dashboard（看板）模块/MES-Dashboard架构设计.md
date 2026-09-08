@@ -5,8 +5,8 @@
 > 产品口径：班组长/生产管控「现在哪里堵/坏/锁」；不是 BI、不是真 OEE、不是 Yield 调查台  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.2 / §5.8；业务清单 §11；`docs/UI/MES-UI设计.md` §3.1；实施进度「Dashboard 真数」  
 > 前提：WIP / Hold / Equipment / Alarm / Track→`mes_tx_log` 一期已齐；前端 `/app/dashboard` 现为 mock  
-> 状态：**待落地**（Dash-1～4）  
-> 更新：2026-09-07
+> 状态：**Dash-1～4 一期已完成**  
+> 更新：2026-09-08
 
 ---
 
@@ -152,12 +152,30 @@ HTTP：
 
 ## 7. 切片（落地顺序）
 
-| 切片 | 交付 |
-|------|------|
-| Dash-1 | Facade + `GET /dashboard/overview`；KPI 四卡真数（含趋势空或占位） |
-| Dash-2 | 设备矩阵 + 报警流接真 |
-| Dash-3 | TrackOut 近 7 日趋势；缺日补 0 |
-| Dash-4 | 前端换 mock；轮询 + 暂停；可选订 alarm.active |
+| 切片 | 交付 | 状态 |
+|------|------|------|
+| Dash-1 | Facade + `GET /dashboard/overview`；KPI 四卡真数 | ✅ |
+| Dash-2 | 设备矩阵 + 报警流接真；未清=OPEN+ACK；当前批反查 WIP | ✅ |
+| Dash-3 | TrackOut 近 7 日趋势；缺日补 0 | ✅ |
+| Dash-4 | 前端换 mock；轮询 + 暂停；可选订 alarm.active | ✅ |
+
+### 7.1 Dash-2 架构要点（矩阵 + 报警流）
+
+**问题**：KPI 只有个数，班组长无法定位「哪台 Down、哪条报警还挂着」。
+
+**决策**
+
+| # | 选择 | 理由 |
+|---|------|------|
+| D2-1 | 矩阵状态 = Eqp 主数据 status，不另造看板态 | 单一真相；改态仍在 Equipment |
+| D2-2 | `currentLotNo` 由 WIP `currentEqpId` 反查 | Eqp 表不存当前批，避免双写 |
+| D2-3 | 未清告警 = OPEN+ACK；与流同一 Facade 方法族 | 顶卡与列表对得上，避免「数是 5 流里只有 OPEN」 |
+| D2-4 | 看板只读流；ACK/CLEAR 仍 Alarm 页 | 指挥屏 ≠ 处置台 |
+| D2-5 | 域失败 isolation（partial） | 投屏：设备挂了报警还能看 |
+
+**不做**：看板改态、看板 ACK、GEM 态、独立子资源 URL、显示名解析服务。
+
+明细与验收：`MES-Dashboard一期功能清单.md` §Dash-2。
 
 建议：1 → 2 → 3 → 4。  
 **禁止** Dash-4 先于 1（再造前端假聚合）。  

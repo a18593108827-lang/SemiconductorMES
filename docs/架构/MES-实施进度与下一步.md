@@ -21,7 +21,7 @@
 | History | ✅ 一期 P0 | 写在 Track；`HistoryFacade` + `/app/history` 调查台 + 设备反查；见 `docs/模块/History（履历）模块/` |
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 | Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
-| Dashboard | 📐 下一步 | 现 mock；接 WIP/Hold/Alarm/Eqp 真数 + TrackOut 近 7 日；不做真 OEE；见 `docs/模块/Dashboard（看板）模块/` |
+| Dashboard | ✅ 一期已完成 | overview 真数 + Admin Dark 看板；见 `docs/模块/Dashboard（看板）模块/` |
 | Report | 📐 下一步（Dashboard 后） | Move 过站 / Hold 分布最小集；Yield·导出后置 |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
@@ -43,8 +43,8 @@ History 查验：`docs/模块/History（履历）模块/MES-History已完成功�
 9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；谱系已有不重做；客诉包后置  
 10. ~~**SPC 趋势预警**~~ ✅ SPC-1～5；`/app/spc`；不挡 TrackOut  
 11. ~~**Alarm 告警台**~~ ✅ Alarm-1～4；见 `MES-Alarm一期功能清单.md`；P1 Hold 策略 / P2 GEM 后置  
-12. **Dashboard 看板真数** ← 当前下一块（换 mock；KPI + 设备矩阵 + 报警流 + TrackOut 趋势）  
-13. **Report 基础报表** ← Dashboard 之后（Move / Hold；Yield·Excel·预聚合后置）  
+12. ~~**Dashboard 看板真数**~~ ✅ KPI + 设备矩阵 + 报警流 + TrackOut 趋势；Admin Dark 投屏风；见 Dashboard 清单  
+13. **Report 基础报表** ← 当前下一块（Move / Hold；Yield·Excel·预聚合后置）  
 
 Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**。
 ## 3. 与业界预期（对照摘要）
