@@ -3,7 +3,7 @@
 > 前提：History / Hold / Dashboard 一期已齐；尚无 `/app/report`  
 > 对齐：`MES-Report架构设计.md` §0 · 业务清单 §12 · 实施进度 · 总册 §5.11  
 > 更新：2026-09-09  
-> 状态：**Rep-1 ✅ · Rep-2～4 未开工**
+> 状态：**Rep-1～2 ✅ · Rep-3～4 未开工**
 
 ---
 
@@ -28,7 +28,7 @@
 |--------|------|------|
 | P0 | `ReportFacade` + `GET /report/move` | ✅ |
 | P0 | Move 按日 TRACK_OUT；缺日补 0 | ✅ |
-| P0 | Move 按站；未归属桶 | ⬚ |
+| P0 | Move 按站；未归属桶 | ✅ |
 | P0 | `GET /report/hold`；按 reasonCode | ⬚ |
 | P0 | Hold 计数 + 时长口径锁死 | ⬚ |
 | P0 | 权限 `report:view` | ✅ |
@@ -45,7 +45,7 @@
 | 切片 | 交付 | 状态 |
 |------|------|------|
 | Rep-1 | Facade + `/report/move` 按日；`report:view` 种子；byStep 可空 | ✅ |
-| Rep-2 | Move `byStep` + step 显示名 | ⬚ |
+| Rep-2 | Move `byStep` + step 显示名 | ✅ |
 | Rep-3 | `/report/hold` 按原因 + 时长 | ⬚ |
 | Rep-4 | 前端页 + **复盘/报表**菜单 + 可选链入 | ⬚ |
 
@@ -103,13 +103,15 @@ ReportFacade.moveSummary
 
 ---
 
-### Rep-2（Move 按站）
+### Rep-2（Move 按站）✅
 
 #### 2.1 交付
 
-- `byStep[]`：`stepId` / `stepCode?` / `stepName?` / `trackOutCount`
-- 按 count 降序；`step_id` 为空 → `stepId=null`，名称「未归属」
-- `byDay` 与 `byStep` 合计必须相等（同一过滤）
+- `byStep[]`：`stepId` / `stepCode?` / `stepName?` / `trackOutCount` ✅
+- 按 count 降序；`step_id` 为空 → `stepId=null`，名称「未归属」 ✅
+- `byDay` 与 `byStep` 合计须相等（同一 TRACK_OUT 窗；联调勾）
+
+落地：`HistoryFacade#countByStepAndTxType` · `ReportFacadeImpl#fillByStep`
 
 #### 2.2 口径
 
@@ -121,9 +123,9 @@ ReportFacade.moveSummary
 
 #### 2.3 验收（Rep-2）
 
-- [ ] 两站各出站 → byStep 两行计数正确
-- [ ] sum(byStep) == totalTrackOut == sum(byDay)
-- [ ] 无 step_id 的历史行进「未归属」，不丢数
+- [ ] 两站各出站 → byStep 两行计数正确（联调）
+- [ ] sum(byStep) == totalTrackOut == sum(byDay)（联调）
+- [x] 无 step_id 的历史行进「未归属」，不丢数（实现口径）
 
 ---
 
