@@ -195,7 +195,7 @@ HTTP：
 | P1 短 TTL 缓存 | 多投屏打同一 overview |
 | P2 真 OEE | 依赖 Adapter + 停机原因码治理 |
 | P2 全量 WS | overview 推送或域事件合并 |
-| Report | Move/Hold 分布与导出 |
+| Report | Move/Hold 分布与导出；详设见 `docs/模块/Report（报表）模块/` |
 
 ---
 

@@ -1,7 +1,7 @@
 # MES 菜单权限方案
 
 > 状态：已落地种子 + `/auth/info` 菜单树 + 侧栏/Tab 按权限显隐 + 账号设置入口  
-> 更新：2026-07-24
+> 更新：2026-09-09（增补「复盘 / 报表」规划，落地随 Report Rep-4）
 
 ---
 
@@ -10,7 +10,12 @@
 ```
 生产执行（目录，perm_code=NULL）
  ├─ 看板 / 批次 / 在制 / 设备 / 路线 / 锁批 / 报警 / 追溯 / 现场台
+ ├─ …（派工 / 配方 / 量测 / 趋势等既有项）
  └─ 按钮：Track In/Out、发起锁批、解锁
+
+复盘（目录，perm_code=NULL 或 review）← Report 一期新增
+ └─ 报表 report:view → /app/report
+    （禁止挂到「生产执行」下）
 
 系统管理（目录，perm_code=system）
  ├─ 用户管理 system:user → /app/auth/users

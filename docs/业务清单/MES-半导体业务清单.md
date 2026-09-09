@@ -297,7 +297,7 @@
 | Lot / WIP / Track / Route / Hold / Equipment / Alarm / History / Auth / Dashboard | 已有页面与产品定义 | 做深做稳，状态机与权限闭环 |
 | Dispatch / Recipe | 架构 P1 | 补齐选机与配方版本 |
 | Carrier / EDC / SECS Adapter | 架构建议 | 半导量产必补 |
-| Report | 架构 P2 | 先 Lot 时间线 + Move/Yield |
+| Report | 架构已定 · 一期待实现 | 先 Move/Hold；见 `docs/模块/Report（报表）模块/`；Yield 后置 |
 | 数采分析 / AI / RAG | 已有方案文档 | 不挡主路径，并行演进 |
 | 通用 MES 的 IQC/WMS/安灯/能源等 | 非目标 | 不纳入本清单主路径 |
 
