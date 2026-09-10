@@ -3,7 +3,7 @@
 > 前提：History / Hold / Dashboard 一期已齐；尚无 `/app/report`  
 > 对齐：`MES-Report架构设计.md` §0 · 业务清单 §12 · 实施进度 · 总册 §5.11  
 > 更新：2026-09-09  
-> 状态：**Rep-1～2 ✅ · Rep-3～4 未开工**
+> 状态：**Rep-1～3 ✅ · Rep-4 未开工**
 
 ---
 
@@ -29,8 +29,8 @@
 | P0 | `ReportFacade` + `GET /report/move` | ✅ |
 | P0 | Move 按日 TRACK_OUT；缺日补 0 | ✅ |
 | P0 | Move 按站；未归属桶 | ✅ |
-| P0 | `GET /report/hold`；按 reasonCode | ⬚ |
-| P0 | Hold 计数 + 时长口径锁死 | ⬚ |
+| P0 | `GET /report/hold`；按 reasonCode | ✅ |
+| P0 | Hold 计数 + 时长口径锁死 | ✅ |
 | P0 | 权限 `report:view` | ✅ |
 | P0 | Admin `/app/report` | ⬚ |
 | P0 | 菜单：复盘 → 报表（不进生产执行） | ⬚ |
@@ -46,7 +46,7 @@
 |------|------|------|
 | Rep-1 | Facade + `/report/move` 按日；`report:view` 种子；byStep 可空 | ✅ |
 | Rep-2 | Move `byStep` + step 显示名 | ✅ |
-| Rep-3 | `/report/hold` 按原因 + 时长 | ⬚ |
+| Rep-3 | `/report/hold` 按原因 + 时长 | ✅ |
 | Rep-4 | 前端页 + **复盘/报表**菜单 + 可选链入 | ⬚ |
 
 顺序：Rep-1 → 2 → 3 → 4。  
@@ -129,13 +129,13 @@ ReportFacade.moveSummary
 
 ---
 
-### Rep-3（Hold 分布）
+### Rep-3（Hold 分布）✅
 
 #### 3.1 交付
 
-- `GET /report/hold?from=&to=`
-- `byReason[]`：`reasonCode` / `reasonName` / `holdCount` / `activeCount` / `avgDurationMinutes`
-- `totalHold`；时间窗规则同 Move
+- `GET /report/hold?from=&to=` ✅
+- `byReason[]`：`reasonCode` / `reasonName` / `holdCount` / `activeCount` / `avgDurationMinutes` ✅
+- `totalHold`；时间窗规则同 Move ✅
 
 #### 3.2 口径锁死
 
