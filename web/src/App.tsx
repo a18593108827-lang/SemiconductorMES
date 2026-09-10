@@ -16,6 +16,7 @@ import { DispatchPage } from './pages/DispatchPage'
 import { EquipmentPage } from './pages/EquipmentPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { HoldPage } from './pages/HoldPage'
+import { ReportPage } from './pages/ReportPage'
 import { LoginPage } from './pages/LoginPage'
 import { LotsPage } from './pages/LotsPage'
 import { EdcPage } from './pages/EdcPage'
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="hold" element={<HoldPage />} />
         <Route path="alarm" element={<AlarmPage />} />
         <Route path="history" element={<HistoryPage />} />
+        <Route path="report" element={<ReportPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="auth" element={<AuthLayout />}>
           <Route index element={<Navigate to="users" replace />} />

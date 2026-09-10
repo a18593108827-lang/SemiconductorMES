@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import {
   ArrowRightLeft,
@@ -474,13 +474,20 @@ export function HistoryPage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <header className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">履历追溯</h1>
-        {queried ? (
-          <p className="font-mono text-xs tabular-nums text-muted">
-            {visibleRows.length} 笔{alertCount > 0 ? ` / 异常 ${alertCount}` : ''}
-            {total > 0 ? ` / 共 ${total}` : ''}
-          </p>
-        ) : null}
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">履历追溯</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link to="/app/report" className="text-xs text-accent hover:underline">
+            打开报表
+          </Link>
+          {queried ? (
+            <p className="font-mono text-xs tabular-nums text-muted">
+              {visibleRows.length} 笔{alertCount > 0 ? ` / 异常 ${alertCount}` : ''}
+              {total > 0 ? ` / 共 ${total}` : ''}
+            </p>
+          ) : null}
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">

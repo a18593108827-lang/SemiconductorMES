@@ -260,8 +260,15 @@ export function DashboardPage() {
       </div>
 
       <section className="flex h-[24vh] min-h-[160px] max-h-[260px] shrink-0 flex-col rounded-md border border-border bg-surface">
-        <header className="shrink-0 border-b border-border px-3 py-2 text-sm font-medium text-ink">
-          产出趋势（TrackOut · 近 7 日）
+        <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+          <span className="text-sm font-medium text-ink">产出趋势（TrackOut · 近 7 日）</span>
+          <button
+            type="button"
+            className="text-xs text-accent hover:underline"
+            onClick={() => navigate('/app/report')}
+          >
+            打开报表
+          </button>
         </header>
         <div className="min-h-0 flex-1 p-1.5">
           {loading && !data ? (

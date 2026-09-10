@@ -159,6 +159,8 @@ export const authPerms: AuthPerm[] = [
   { id: 'm-alarm', parentId: 'd-ops', permType: 2, permCode: 'alarm:view', permName: '报警', path: '/app/alarm', sortNo: 17, status: 1 },
   { id: 'm-hist', parentId: 'd-ops', permType: 2, permCode: 'history:list', permName: '追溯', path: '/app/history', sortNo: 18, status: 1 },
   { id: 'm-track', parentId: 'd-ops', permType: 2, permCode: 'track:view', permName: '现场台', path: '/track', sortNo: 19, status: 1 },
+  { id: 'd-review', parentId: '0', permType: 1, permCode: '', permName: '复盘', sortNo: 50, status: 1 },
+  { id: 'm-report', parentId: 'd-review', permType: 2, permCode: 'report:view', permName: '报表', path: '/app/report', sortNo: 10, status: 1 },
   { id: 'b-track-in', parentId: 'm-track', permType: 3, permCode: 'track:track-in', permName: 'Track In', sortNo: 191, status: 1 },
   { id: 'b-track-out', parentId: 'm-track', permType: 3, permCode: 'track:track-out', permName: 'Track Out', sortNo: 192, status: 1 },
   { id: 'b-hold', parentId: 'm-hold', permType: 3, permCode: 'hold:create', permName: '发起锁批', sortNo: 161, status: 1 },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
+  BarChart2,
   Bell,
   Boxes,
   ChevronDown,
@@ -48,6 +49,7 @@ const iconMap: Record<string, LucideIcon> = {
   'clipboard-list': ClipboardList,
   ruler: Ruler,
   activity: Activity,
+  'bar-chart-2': BarChart2,
 }
 
 function resolveIcon(name: string | null | undefined): LucideIcon {
