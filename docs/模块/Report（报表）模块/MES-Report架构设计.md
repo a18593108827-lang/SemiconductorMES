@@ -214,7 +214,7 @@ HTTP：
 | Rep-1 | Facade + `GET /report/move`；按日 TRACK_OUT；`report:view` 权限种子 | ✅ |
 | Rep-2 | Move 按站；step 显示名 | ✅ |
 | Rep-3 | `GET /report/hold`；按原因；计数 + 时长口径 | ⬚ |
-| Rep-4 | Admin `/app/report` + **复盘/报表**菜单种子 + 可选看板/履历链入 | ⬚ |
+| Rep-4 | Admin `/app/report` + **复盘/报表**菜单种子 + 可选看板/履历链入 | ✅ |
 
 建议：1 → 2 → 3 → 4。  
 **禁止** Rep-4 先于 Rep-1（再造前端假表）。  

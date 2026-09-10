@@ -22,7 +22,7 @@
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 | Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
 | Dashboard | ✅ 一期已完成 | overview 真数 + Admin 看板（铺满视口）；见 `docs/模块/Dashboard（看板）模块/` |
-| Report | 📐 架构已定 · 下一步实现 | Move / Hold；侧栏「复盘→报表」；见 Report 模块文档；Yield·导出后置 |
+| Report | ✅ 一期已完成 | Move/Hold API + `/app/report` + 侧栏「复盘→报表」；Yield·导出后置 |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
 Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。  
@@ -44,7 +44,7 @@ History 查验：`docs/模块/History（履历）模块/MES-History已完成功�
 10. ~~**SPC 趋势预警**~~ ✅ SPC-1～5；`/app/spc`；不挡 TrackOut  
 11. ~~**Alarm 告警台**~~ ✅ Alarm-1～4；见 `MES-Alarm一期功能清单.md`；P1 Hold 策略 / P2 GEM 后置  
 12. ~~**Dashboard 看板真数**~~ ✅ KPI + 设备矩阵 + 报警流 + TrackOut 趋势；见 Dashboard 清单  
-13. **Report 基础报表** ← 当前下一块（Rep-1～4：Move → Hold → Admin 页 + **复盘/报表**侧栏；不进生产执行）  
+13. ~~**Report 基础报表**~~ ✅ Rep-1～4（Move/Hold + Admin + 复盘/报表侧栏）  
 
 Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**。
 ## 3. 与业界预期（对照摘要）

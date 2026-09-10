@@ -3,7 +3,7 @@
 > 前提：History / Hold / Dashboard 一期已齐；尚无 `/app/report`  
 > 对齐：`MES-Report架构设计.md` §0 · 业务清单 §12 · 实施进度 · 总册 §5.11  
 > 更新：2026-09-09  
-> 状态：**Rep-1～3 ✅ · Rep-4 未开工**
+> 状态：**Rep-1～4 ✅**
 
 ---
 
@@ -32,9 +32,9 @@
 | P0 | `GET /report/hold`；按 reasonCode | ✅ |
 | P0 | Hold 计数 + 时长口径锁死 | ✅ |
 | P0 | 权限 `report:view` | ✅ |
-| P0 | Admin `/app/report` | ⬚ |
-| P0 | 菜单：复盘 → 报表（不进生产执行） | ⬚ |
-| P0 | 可选：看板 / 履历文字链 | ⬚ |
+| P0 | Admin `/app/report` | ✅ |
+| P0 | 菜单：复盘 → 报表（不进生产执行） | ✅ |
+| P0 | 可选：看板 / 履历文字链 | ✅ |
 | P1 | Hold 按站；深链；导出；班次 | 后置 |
 | P2 | Yield / OEE / 预聚合 / 自助 BI | 后置 |
 
@@ -47,7 +47,7 @@
 | Rep-1 | Facade + `/report/move` 按日；`report:view` 种子；byStep 可空 | ✅ |
 | Rep-2 | Move `byStep` + step 显示名 | ✅ |
 | Rep-3 | `/report/hold` 按原因 + 时长 | ✅ |
-| Rep-4 | 前端页 + **复盘/报表**菜单 + 可选链入 | ⬚ |
+| Rep-4 | 前端页 + **复盘/报表**菜单 + 可选链入 | ✅ |
 
 顺序：Rep-1 → 2 → 3 → 4。  
 **禁止** Rep-4 先于 Rep-1。  
@@ -170,20 +170,20 @@ ReportFacade.holdSummary
 
 ---
 
-### Rep-4（前端 + 菜单）
+### Rep-4（前端 + 菜单）✅
 
 #### 4.1 交付
 
-- `web/src/api/report.ts`
-- `web/src/pages/ReportPage.tsx`；路由 `/app/report`
-- 日期范围 + 查询；Move：按日图 + 按站表；Hold：原因表（可简单条形）
-- 文案禁止「良率」「稼动」
-- `partial` / 错误提示；链到 History、Hold
-- **菜单种子**（新库 schema / 已有库 migrate）：
+- `web/src/api/report.ts` ✅
+- `web/src/pages/ReportPage.tsx`；路由 `/app/report` ✅
+- 日期范围 + 查询；Move：按日图 + 按站表；Hold：原因表（可简单条形） ✅
+- 文案禁止「良率」「稼动」 ✅
+- `partial` / 错误提示；链到 History、Hold ✅
+- **菜单种子**（新库 schema / 已有库 migrate）： ✅
   - 目录：`复盘`（`perm_type=目录`，`perm_code` 空或 `review`）
   - 菜单：`报表` · `report:view` · path `/app/report` · 排序在「生产执行」与「系统管理」之间
-- **禁止** parent = 生产执行
-- 可选：看板趋势区 / 履历页「打开报表」文字链
+- **禁止** parent = 生产执行 ✅
+- 可选：看板趋势区 / 履历页「打开报表」文字链 ✅
 
 #### 4.2 验收（Rep-4）
 
