@@ -1,9 +1,9 @@
 # MES 报表（Report）— 一期功能清单
 
-> 前提：History / Hold / Dashboard 一期已齐；尚无 `/app/report`  
+> 前提：History / Hold / Dashboard 一期已齐；`/app/report` + 侧栏「复盘→报表」已落地  
 > 对齐：`MES-Report架构设计.md` §0 · 业务清单 §12 · 实施进度 · 总册 §5.11  
-> 更新：2026-09-09  
-> 状态：**Rep-1～4 ✅**
+> 更新：2026-09-10  
+> 状态：**一期完成 · 联调通过（Rep-1～4 ✅）**
 
 ---
 
@@ -96,8 +96,8 @@ ReportFacade.moveSummary
 #### 1.5 验收（Rep-1）
 
 - [x] 无 `report:view` → 403（`@SaCheckPermission`）
-- [ ] 窗内人工 TrackOut N 次 → `totalTrackOut` 与 byDay 之和 = N（联调）
-- [ ] 与同窗 Dashboard `outputTrend` 日合计一致（同 tz）（联调）
+- [x] 窗内人工 TrackOut N 次 → `totalTrackOut` 与 byDay 之和 = N（联调）
+- [x] 与同窗 Dashboard `outputTrend` 日合计一致（同 tz）（联调）
 - [x] 跨度 32 日 → 400（`ReportDateWindow`）
 - [x] Report 包无写接口
 
@@ -123,8 +123,8 @@ ReportFacade.moveSummary
 
 #### 2.3 验收（Rep-2）
 
-- [ ] 两站各出站 → byStep 两行计数正确（联调）
-- [ ] sum(byStep) == totalTrackOut == sum(byDay)（联调）
+- [x] 两站各出站 → byStep 两行计数正确（联调）
+- [x] sum(byStep) == totalTrackOut == sum(byDay)（联调）
 - [x] 无 step_id 的历史行进「未归属」，不丢数（实现口径）
 
 ---
@@ -163,10 +163,10 @@ ReportFacade.holdSummary
 
 #### 3.5 验收（Rep-3）
 
-- [ ] 窗内 Hold 原因 A 两笔 → 该行 holdCount=2
-- [ ] 释放一笔 → activeCount 减、avg 仍含已释放时长
-- [ ] 窗外 hold_time 不计入
-- [ ] 无按站字段、无良率字段
+- [x] 窗内 Hold 原因 A 两笔 → 该行 holdCount=2
+- [x] 释放一笔 → activeCount 减、avg 仍含已释放时长
+- [x] 窗外 hold_time 不计入
+- [x] 无按站字段、无良率字段
 
 ---
 
@@ -180,30 +180,30 @@ ReportFacade.holdSummary
 - 文案禁止「良率」「稼动」 ✅
 - `partial` / 错误提示；链到 History、Hold ✅
 - **菜单种子**（新库 schema / 已有库 migrate）： ✅
-  - 目录：`复盘`（`perm_type=目录`，`perm_code` 空或 `review`）
-  - 菜单：`报表` · `report:view` · path `/app/report` · 排序在「生产执行」与「系统管理」之间
+  - 目录：`复盘`（`perm_type=目录`，id=310）
+  - 菜单：`报表` · `report:view` · path `/app/report` · id=311 · 排序在「生产执行」与「系统管理」之间
 - **禁止** parent = 生产执行 ✅
 - 可选：看板趋势区 / 履历页「打开报表」文字链 ✅
 
 #### 4.2 验收（Rep-4）
 
-- [ ] 无 mock 数字
-- [ ] 改 from/to 点查询 → 两块刷新
-- [ ] 有 `report:view` → 侧栏出现「复盘 / 报表」并可进入
-- [ ] 无权限 → 侧栏无该项；直链 403/无权限提示
-- [ ] 「生产执行」分组项数与改前一致（无报表项）
-- [ ] Admin Light，非 Dashboard 轮询壳
+- [x] 无 mock 数字
+- [x] 改 from/to 点查询 → 两块刷新
+- [x] 有 `report:view` → 侧栏出现「复盘 / 报表」并可进入
+- [x] 无权限 → 侧栏无该项；直链 403/无权限提示
+- [x] 「生产执行」分组项数与改前一致（无报表项）
+- [x] Admin Light，非 Dashboard 轮询壳
 
 ---
 
 ## 3. 总验收（一期）
 
-- [ ] Rep-1～4 全部勾选
-- [ ] Move 与 History TRACK_OUT 对账通过
-- [ ] Hold 与 mes_hold 按 hold_time 对账通过
-- [ ] Report 无业务写接口；无 Yield/OEE
-- [ ] 侧栏「复盘 → 报表」可用；未污染生产执行
-- [ ] 进度文档勾选 Report 一期完成
+- [x] Rep-1～4 全部勾选
+- [x] Move 与 History TRACK_OUT 对账通过
+- [x] Hold 与 mes_hold 按 hold_time 对账通过
+- [x] Report 无业务写接口；无 Yield/OEE
+- [x] 侧栏「复盘 → 报表」可用；未污染生产执行
+- [x] 进度文档勾选 Report 一期完成
 
 ---
 

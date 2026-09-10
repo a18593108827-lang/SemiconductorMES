@@ -5,8 +5,8 @@
 > 产品口径：制造主管 / IE「昨天过了多少、锁在哪类原因」；不是指挥屏、不是 YMS、不是真 OEE  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.11；业务清单 §12；实施进度「Report 基础报表」；业界分层（MES 运营报表 ≠ YMS）  
 > 前提：Track→`mes_tx_log`、Hold、History 调查台、Dashboard 一期已齐  
-> 状态：**架构已定 · 一期未开工**  
-> 更新：2026-09-09
+> 状态：**一期已完成 · 联调通过（Rep-1～4）**  
+> 更新：2026-09-10
 
 ---
 
@@ -213,7 +213,7 @@ HTTP：
 |------|------|------|
 | Rep-1 | Facade + `GET /report/move`；按日 TRACK_OUT；`report:view` 权限种子 | ✅ |
 | Rep-2 | Move 按站；step 显示名 | ✅ |
-| Rep-3 | `GET /report/hold`；按原因；计数 + 时长口径 | ⬚ |
+| Rep-3 | `GET /report/hold`；按原因；计数 + 时长口径 | ✅ |
 | Rep-4 | Admin `/app/report` + **复盘/报表**菜单种子 + 可选看板/履历链入 | ✅ |
 
 建议：1 → 2 → 3 → 4。  
@@ -243,12 +243,12 @@ HTTP：
 
 ## 9. 验收口径（架构）
 
-- 窗内 TrackOut 次数与 History 按类型筛选可对上（允许按站「未归属」）
-- 新 Hold 一条且 `hold_time` 在窗内 → 对应 `reasonCode` 计数 +1
-- Report 包无写库业务表；无 Yield/稼动文案
-- `report:view` 可查；无权限 403；无权限时侧栏不显示「报表」
-- 侧栏可见「复盘 → 报表」；**生产执行**分组内无「报表」
-- 与 Dashboard 近 7 日 TrackOut **同口径**（同 tx_type、同时区）时合计一致
+- [x] 窗内 TrackOut 次数与 History 按类型筛选可对上（允许按站「未归属」）
+- [x] 新 Hold 一条且 `hold_time` 在窗内 → 对应 `reasonCode` 计数 +1
+- [x] Report 包无写库业务表；无 Yield/稼动文案
+- [x] `report:view` 可查；无权限 403；无权限时侧栏不显示「报表」
+- [x] 侧栏可见「复盘 → 报表」；**生产执行**分组内无「报表」
+- [x] 与 Dashboard 近 7 日 TrackOut **同口径**（同 tx_type、同时区）时合计一致
 
 ---
 
@@ -258,6 +258,7 @@ HTTP：
 |------|------|
 | 本设计 | `docs/模块/Report（报表）模块/MES-Report架构设计.md` |
 | 一期清单 | `docs/模块/Report（报表）模块/MES-Report一期功能清单.md` |
+| 已完成查验 | `docs/模块/Report（报表）模块/MES-Report已完成功能.md` |
 | Dashboard（对照） | `docs/模块/Dashboard（看板）模块/MES-Dashboard架构设计.md` |
 | History | `docs/模块/History（履历）模块/` |
 | 进度 | `docs/架构/MES-实施进度与下一步.md` |

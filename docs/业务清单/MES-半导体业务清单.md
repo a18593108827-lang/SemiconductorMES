@@ -191,14 +191,17 @@
 
 ## 12. 报表与分析（Report）— P1/P2
 
+> **一期已落地**：Move 过站（按日/按站）+ Hold 原因分布 + `/app/report` + 侧栏「复盘→报表」。见模块文档。  
+> 下表其余项（Yield / OEE / 导出等）仍后置。
+
 | 业务 | 优先级 | 说明 |
 |------|--------|------|
-| Move 报表 | P1 | 过站量 |
+| Move 报表 | ✅ 一期 | 过站量（TRACK_OUT） |
+| Hold 分析 | ✅ 一期 | 原因分布、平均时长 |
 | Yield 报表 | P1 | 站良率 / 累积良率 |
-| Hold 分析 | P1 | 原因分布、时长 |
 | 设备 OEE / WPH | P1 | 效率 |
 | Scrap 分析 | P1 | 报废原因 |
-| Lot 历史时间线 | P0 | 单 Lot 全程 |
+| Lot 历史时间线 | P0 | 单 Lot 全程（History） |
 | 自定义导出 | P2 | Excel / API |
 
 ---
@@ -297,7 +300,7 @@
 | Lot / WIP / Track / Route / Hold / Equipment / Alarm / History / Auth / Dashboard | 已有页面与产品定义 | 做深做稳，状态机与权限闭环 |
 | Dispatch / Recipe | 架构 P1 | 补齐选机与配方版本 |
 | Carrier / EDC / SECS Adapter | 架构建议 | 半导量产必补 |
-| Report | 架构已定 · 一期待实现 | 先 Move/Hold；见 `docs/模块/Report（报表）模块/`；Yield 后置 |
+| Report | ✅ 一期完成（Move/Hold + 复盘页） | Yield / 导出 / 预聚合后置；见 `docs/模块/Report（报表）模块/` |
 | 数采分析 / AI / RAG | 已有方案文档 | 不挡主路径，并行演进 |
 | 通用 MES 的 IQC/WMS/安灯/能源等 | 非目标 | 不纳入本清单主路径 |
 

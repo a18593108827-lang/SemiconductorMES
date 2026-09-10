@@ -58,6 +58,21 @@ function fmtMinutes(v: number | null | undefined) {
   return m === 0 ? `${h} 时` : `${h} 时 ${m} 分`
 }
 
+const MAX_SPAN_DAYS = 31
+const RANGE_HINT = `当前最多查询 ${MAX_SPAN_DAYS} 天，请缩小范围或点「近7天 / 近30天」`
+
+function spanDays(fromStr: string, toStr: string): number | null {
+  if (!fromStr || !toStr) return null
+  const a = new Date(`${fromStr}T00:00:00`)
+  const b = new Date(`${toStr}T00:00:00`)
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null
+  return Math.floor((b.getTime() - a.getTime()) / 86_400_000) + 1
+}
+
+function isRangeLimitError(msg: string) {
+  return /最多查询|跨度|超过\s*\d+\s*天/.test(msg)
+}
+
 export function ReportPage() {
   const { hasPermission } = useAuth()
   const canView = hasPermission('report:view')
@@ -67,6 +82,7 @@ export function ReportPage() {
   const [from, setFrom] = useState(init.from)
   const [to, setTo] = useState(init.to)
   const [applied, setApplied] = useState(init)
+  const [rangeHint, setRangeHint] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
@@ -79,6 +95,7 @@ export function ReportPage() {
     setLoading(true)
     setFailed(false)
     setErrMsg('')
+    setRangeHint('')
     try {
       const [m, h] = await Promise.all([
         fetchReportMoveApi(applied.from, applied.to),
@@ -87,10 +104,16 @@ export function ReportPage() {
       setMove(m)
       setHold(h)
     } catch (e) {
-      setFailed(true)
-      setErrMsg(e instanceof ApiError ? e.message : '加载失败')
-      setMove(null)
-      setHold(null)
+      const msg = e instanceof ApiError ? e.message : '加载失败'
+      if (isRangeLimitError(msg)) {
+        setRangeHint(msg.includes('最多查询') ? `${msg}，请缩小范围或点「近7天 / 近30天」` : RANGE_HINT)
+        setFailed(false)
+      } else {
+        setFailed(true)
+        setErrMsg(msg)
+        setMove(null)
+        setHold(null)
+      }
     } finally {
       setLoading(false)
     }
@@ -119,12 +142,23 @@ export function ReportPage() {
 
   function applyPreset(days: number) {
     const r = defaultRange(days)
+    setRangeHint('')
     setFrom(r.from)
     setTo(r.to)
     setApplied(r)
   }
 
   function onQuery() {
+    const span = spanDays(from, to)
+    if (span != null && span < 1) {
+      setRangeHint('结束日期不能早于开始日期')
+      return
+    }
+    if (span != null && span > MAX_SPAN_DAYS) {
+      setRangeHint(RANGE_HINT)
+      return
+    }
+    setRangeHint('')
     setApplied({ from, to })
   }
 
@@ -180,46 +214,59 @@ export function ReportPage() {
         </div>
       </header>
 
-      <div className="report-block flex flex-wrap items-end gap-2 rounded-md border border-border bg-surface p-3">
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          起
-          <input
-            type="date"
-            className="h-9 rounded-md border border-border bg-bg px-2 font-mono text-sm text-ink"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-muted">
-          止
-          <input
-            type="date"
-            className="h-9 rounded-md border border-border bg-bg px-2 font-mono text-sm text-ink"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </label>
-        <div className="flex gap-1 pb-0.5">
-          <Button type="button" variant="secondary" className="h-9 min-w-0 px-2.5 text-xs" onClick={() => applyPreset(7)}>
-            近7天
+      <div className="report-block space-y-2 rounded-md border border-border bg-surface p-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            起
+            <input
+              type="date"
+              className="h-9 rounded-md border border-border bg-bg px-2 font-mono text-sm text-ink"
+              value={from}
+              onChange={(e) => {
+                setRangeHint('')
+                setFrom(e.target.value)
+              }}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            止
+            <input
+              type="date"
+              className="h-9 rounded-md border border-border bg-bg px-2 font-mono text-sm text-ink"
+              value={to}
+              onChange={(e) => {
+                setRangeHint('')
+                setTo(e.target.value)
+              }}
+            />
+          </label>
+          <div className="flex gap-1 pb-0.5">
+            <Button type="button" variant="secondary" className="h-9 min-w-0 px-2.5 text-xs" onClick={() => applyPreset(7)}>
+              近7天
+            </Button>
+            <Button type="button" variant="secondary" className="h-9 min-w-0 px-2.5 text-xs" onClick={() => applyPreset(30)}>
+              近30天
+            </Button>
+          </div>
+          <Button type="button" className="h-9" loading={loading} onClick={onQuery}>
+            查询
           </Button>
-          <Button type="button" variant="secondary" className="h-9 min-w-0 px-2.5 text-xs" onClick={() => applyPreset(30)}>
-            近30天
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-9 min-w-0 px-2.5"
+            disabled={loading}
+            onClick={() => void load()}
+            aria-label="刷新"
+          >
+            <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
           </Button>
         </div>
-        <Button type="button" className="h-9" loading={loading} onClick={onQuery}>
-          查询
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="h-9 min-w-0 px-2.5"
-          disabled={loading}
-          onClick={() => void load()}
-          aria-label="刷新"
-        >
-          <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
-        </Button>
+        {rangeHint ? (
+          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-ink" role="status">
+            {rangeHint}
+          </p>
+        ) : null}
       </div>
 
       {partial && partialErrors.length > 0 && (

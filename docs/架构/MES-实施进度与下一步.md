@@ -1,6 +1,6 @@
 # MES 实施进度与下一步
 
-> 更新：2026-09-08  
+> 更新：2026-09-10  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 ---
 
@@ -22,11 +22,12 @@
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 | Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
 | Dashboard | ✅ 一期已完成 | overview 真数 + Admin 看板（铺满视口）；见 `docs/模块/Dashboard（看板）模块/` |
-| Report | ✅ 一期已完成 | Move/Hold API + `/app/report` + 侧栏「复盘→报表」；Yield·导出后置 |
+| Report | ✅ 一期已完成 | Move/Hold API + `/app/report` + 侧栏「复盘→报表」；联调通过；Yield·导出后置 |
 
 契约：Route 快照 ✅；Track 一期见 `docs/模块/Track（执行引擎）模块/`。  
 Recipe 查验：`docs/模块/Recipe（配方）模块/MES-Recipe已完成功能.md`。  
-History 查验：`docs/模块/History（履历）模块/MES-History已完成功能.md`。
+History 查验：`docs/模块/History（履历）模块/MES-History已完成功能.md`。  
+Report 查验：`docs/模块/Report（报表）模块/MES-Report已完成功能.md`。
 
 ---
 

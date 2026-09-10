@@ -21,7 +21,7 @@
 | Carrier | FOUP / Slot Map | P1 | Admin |
 | EDC | 量测录入 | P1 | Field 优先 |
 | History | 调查台（按日日志） | P0 | Admin |
-| Report | 报表导出 | P2 | Admin |
+| Report | 复盘页（Move/Hold）；导出后置 | ✅ 一期 | Admin |
 | Auth | 用户 · 角色 · 权限 | P0 | Admin |
 
 ## 2. 壳层

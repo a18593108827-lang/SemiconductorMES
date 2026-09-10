@@ -286,12 +286,13 @@ Created → Released → Wait → Reserved → Processing → Completed
 ### 5.11 Report Center
 
 - **定位**：事后复盘（Move 过站 / Hold 分布）；只读聚合；**不是** Dashboard，**不是** YMS
-- **一期**：`ReportFacade` + `GET /report/move` · `GET /report/hold`；Admin `/app/report`；权限 `report:view`
+- **一期**：✅ `ReportFacade` + `GET /report/move` · `GET /report/hold`；Admin `/app/report`；权限 `report:view`
 - **入口**：侧栏独立分组 **「复盘 → 报表」**；**禁止**挂进「生产执行」；看板/履历链入为辅
 - **口径**：过站 = `TRACK_OUT`（与 Dashboard 趋势同源）；Hold 按 `hold_time` 窗 + `reason_code`
 - **不做（一期）**：Yield 顶卡、真 OEE、Excel、预聚合日表、Hold 按站
 - 详设：`docs/模块/Report（报表）模块/MES-Report架构设计.md`  
-  清单：`docs/模块/Report（报表）模块/MES-Report一期功能清单.md`
+  清单：`docs/模块/Report（报表）模块/MES-Report一期功能清单.md`  
+  查验：`docs/模块/Report（报表）模块/MES-Report已完成功能.md`
 
 ### 5.12 User & Permission（Sa-Token）
 
