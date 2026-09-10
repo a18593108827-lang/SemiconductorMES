@@ -305,7 +305,10 @@ Created → Released → Wait → Reserved → Processing → Completed
 
 ### 5.13 补充模块（半导建议）
 
-- Carrier / FOUP、Equipment Adapter（SECS/GEM）
+- **Carrier / FOUP**：架构稿已立 — `docs/模块/Carrier（载具）模块/MES-Carrier架构设计.md`  
+  - 一期刻度：台账 + 一 Lot 一盒绑定 + TrackIn 载具闸（L1）；不宣称 E87/AMHS  
+  - 契约：只暴露 `CarrierFacade`；Track 只读校验；绑解悲观锁 Lot→Carrier + 双唯一约束  
+- Equipment Adapter（SECS/GEM）后置  
 - **EDC（量测）**：设计已定，见 `docs/模块/EDC（量测）模块/`  
   - 一期：Param / Spec / Plan / 手录 / `EdcFacade` / TrackOut 钩子 / 现场拒出提示 ✅  
   - Facade 契约：`MES-EdcFacade接口设计.md`  

@@ -47,7 +47,7 @@ Report 查验：`docs/模块/Report（报表）模块/MES-Report已完成功能.
 12. ~~**Dashboard 看板真数**~~ ✅ KPI + 设备矩阵 + 报警流 + TrackOut 趋势；见 Dashboard 清单  
 13. ~~**Report 基础报表**~~ ✅ Rep-1～4（Move/Hold + Admin + 复盘/报表侧栏）  
 
-Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**。
+Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**（Carrier 架构稿已立：`docs/模块/Carrier（载具）模块/MES-Carrier架构设计.md`）。
 ## 3. 与业界预期（对照摘要）
 
 | 能力 | 大厂常见 | 本项目预期 | 结论 |
@@ -85,7 +85,9 @@ Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**。
 | Alarm | `docs/模块/Alarm（告警）模块/MES-Alarm架构设计.md` |
 | Dashboard | `docs/模块/Dashboard（看板）模块/`（架构 · 一期清单） |
 | Report | `docs/模块/Report（报表）模块/`（架构 · 一期清单） |
-| History | `docs/模块/History（履历）模块/` || WIP | `docs/模块/WIP（在制）模块/` |
+| Carrier | `docs/模块/Carrier（载具）模块/`（架构 · 一期清单；**Car-1 ✅**） |
+| History | `docs/模块/History（履历）模块/` |
+| WIP | `docs/模块/WIP（在制）模块/` |
 | 架构总册 | `docs/架构/半导MES架构设计.md` |
 | 定时任务 | `docs/架构/MES-SpringScheduled使用.md` |
 | 业务总单 | `docs/业务清单/MES-半导体业务清单.md` |
