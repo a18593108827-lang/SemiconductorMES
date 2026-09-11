@@ -115,6 +115,12 @@ export interface TrackContext {
   processTime?: TrackProcessTime | null
   /** 量测门禁；非 processing 为 null */
   edc?: TrackEdc | null
+  /** 当前载具 ID */
+  carrierId?: number | string | null
+  /** 当前载具编码 */
+  carrierCode?: string | null
+  /** TrackIn 是否强制已绑 */
+  carrierRequired?: boolean | null
 }
 
 export interface TrackTxnResult {

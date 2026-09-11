@@ -85,7 +85,7 @@ Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**（Carrier 架构
 | Alarm | `docs/模块/Alarm（告警）模块/MES-Alarm架构设计.md` |
 | Dashboard | `docs/模块/Dashboard（看板）模块/`（架构 · 一期清单） |
 | Report | `docs/模块/Report（报表）模块/`（架构 · 一期清单） |
-| Carrier | `docs/模块/Carrier（载具）模块/`（架构 · 一期清单；**Car-1～4 ✅**） |
+| Carrier | `docs/模块/Carrier（载具）模块/`（架构 · 一期清单；**Car-1～5 ✅**） |
 | History | `docs/模块/History（履历）模块/` |
 | WIP | `docs/模块/WIP（在制）模块/` |
 | 架构总册 | `docs/架构/半导MES架构设计.md` |

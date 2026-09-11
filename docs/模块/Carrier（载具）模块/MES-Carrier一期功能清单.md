@@ -3,7 +3,7 @@
 > 前提：Lot / Track / History 一期已齐；片级 Wafer、SECS Adapter、MCS **未齐**  
 > 对齐：`MES-Carrier架构设计.md` · 业务清单 §7 · Lot L2-7 · Track T2-3 / T2-5b · 总册 §5.13  
 > 更新：2026-09-10  
-> 状态：**Car-1～4 ✅；Car-5 ⏳**
+> 状态：**Car-1～5 ✅**
 
 ---
 
@@ -31,8 +31,8 @@
 | P0 | `CarrierFacade` 台账 CRUD / 改态 | ✅ |
 | P0 | bind / unbind；同步 Lot.`carrier_id`；tx_log | ✅ |
 | P0 | 权限 `carrier:view` / `edit` / `bind`；HTTP `/carrier` | ✅ |
-| P0 | TrackIn 闸 + context `carrierId`/`carrierRequired` | ⏳ |
-| P0 | Admin `/app/carrier`；Lot/现场展示绑定 | ⏳ |
+| P0 | TrackIn 闸 + context `carrierId`/`carrierRequired` | ✅ |
+| P0 | Admin `/app/carrier`；Lot/现场展示绑定 | ✅ |
 | P1 | 现场扫码比对 CarrierCode（L2） | 后置 |
 | P1 | 位置 Store/Retrieve（C3） | 后置；随 Stocker |
 | P2 | SlotMap 强校验 / 一盒多 Lot / MCS / E87 | 后置 |
@@ -47,7 +47,7 @@
 | Car-2 | `CarrierFacade` 台账 + 改态状态机 | ✅ |
 | Car-3 | bind / unbind + 锁序 + UK + tx_log + Lot 同步 | ✅ |
 | Car-4 | HTTP `/carrier`（+ 可选 `/lots/{id}/carrier` 委托） | ✅ |
-| Car-5 | TrackIn 闸 + context；Admin 页 + 菜单 | ⏳ |
+| Car-5 | TrackIn 闸 + context；Admin 页 + 菜单 | ✅ |
 
 顺序：**Car-1 → 2 → 3 → 4 → 5**。  
 **禁止** Car-3 先于 Car-1（无 UK 必脏绑）。  
@@ -187,17 +187,17 @@
 
 ---
 
-### Car-5（Track 闸 + 前端）⏳
+### Car-5（Track 闸 + 前端）✅
 
 #### 5.1 交付
 
-- TrackIn：当 `mes.carrier.track-in-required=true` → `carrierFacade.assertBound(lotId)`；未绑 → `CARRIER_REQUIRED`
-- 与 TrackIn **同事务**；开关 false → 零行为差
-- TrackIn `mes_tx_log` 记 `carrier_id`（有则写）
-- context（T2-5b）：`carrierId` / `carrierRequired`；无绑不伪造 required=true（除非开关开）
-- Admin `/app/carrier`：台账列表、改态、绑解入口（或从 Lot 抽屉绑）
-- 菜单：挂 **主数据 / 生产支撑** 类目录（与 Eqp 同级思路）；**禁止**塞进「复盘」
-- Lot 详情 / 现场过站区只读展示 carrierCode（有则显示）
+- TrackIn：当 `mes.carrier.track-in-required=true` → `carrierFacade.assertBound(lotId)`；未绑 → `CARRIER_REQUIRED` ✅
+- 与 TrackIn **同事务**；开关 false → 零行为差 ✅
+- TrackIn `mes_tx_log` 记 `carrier_id`（有则写，extJson）✅
+- context（T2-5b）：`carrierId` / `carrierCode` / `carrierRequired` ✅
+- Admin `/app/carrier`：台账列表、改态、绑解入口 ✅
+- 菜单：挂生产执行目录（perm 320 `/app/carrier`）✅
+- Lot 详情 / 现场过站区只读展示 carrierCode ✅
 
 #### 5.2 口径锁死
 
@@ -214,11 +214,11 @@
 
 #### 5.4 验收（Car-5）
 
-- [ ] 开关关 + 未绑 In → 通过（与现网一致）
-- [ ] 开关开 + 未绑 In → 拒绝 `CARRIER_REQUIRED`
-- [ ] 开关开 + 已绑 In → 通过；履历含 carrier_id
-- [ ] context 字段与开关/绑定一致
-- [ ] Admin 可完成建盒→绑 Lot→解绑
+- [x] 开关关 + 未绑 In → 通过（与现网一致）
+- [x] 开关开 + 未绑 In → 拒绝 `CARRIER_REQUIRED`
+- [x] 开关开 + 已绑 In → 通过；履历含 carrier_id
+- [x] context 字段与开关/绑定一致
+- [x] Admin 可完成建盒→绑 Lot→解绑
 
 ---
 

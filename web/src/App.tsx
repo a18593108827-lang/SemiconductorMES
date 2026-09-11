@@ -11,6 +11,7 @@ import { RolesPage } from './pages/auth/RolesPage'
 import { UsersPage } from './pages/auth/UsersPage'
 import { AccountPage } from './pages/account/AccountPage'
 import { ForcePasswordPage } from './pages/account/ForcePasswordPage'
+import { CarrierPage } from './pages/CarrierPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DispatchPage } from './pages/DispatchPage'
 import { EquipmentPage } from './pages/EquipmentPage'
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="lots" element={<LotsPage />} />
         <Route path="wip" element={<WipPage />} />
         <Route path="equipment" element={<EquipmentPage />} />
+        <Route path="carrier" element={<CarrierPage />} />
         <Route path="dispatch" element={<DispatchPage />} />
         <Route path="recipe" element={<RecipePage />} />
         <Route path="edc" element={<EdcPage />} />

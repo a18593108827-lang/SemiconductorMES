@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import gsap from 'gsap'
-import { Flame, GitBranch, PackagePlus, Pencil, Rocket } from 'lucide-react'
+import { Flame, GitBranch, Link2, Link2Off, PackagePlus, Pencil, Rocket } from 'lucide-react'
 import {
   createLotApi,
   getLotApi,
@@ -13,6 +13,12 @@ import {
   type MesLotItem,
   type MesLotStatus,
 } from '../api/lot'
+import {
+  bindLotCarrierApi,
+  getLotCarrierApi,
+  unbindLotCarrierApi,
+  type MesCarrierBinding,
+} from '../api/carrier'
 import { GenealogyTree } from '../components/lot/GenealogyTree'
 import { listRoutesApi, type MesRouteItem } from '../api/route'
 import { useAuth } from '../auth/AuthContext'
@@ -101,11 +107,16 @@ export function LotsPage() {
   const [editError, setEditError] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [releasing, setReleasing] = useState(false)
+  const [lotCarrier, setLotCarrier] = useState<MesCarrierBinding | null>(null)
+  const [carrierRefInput, setCarrierRefInput] = useState('')
+  const [carrierBusy, setCarrierBusy] = useState(false)
 
   const size = 20
   const canAdd = hasPermission('lot:add')
   const canEdit = hasPermission('lot:edit')
   const canRelease = hasPermission('lot:release')
+  const canCarrierBind = hasPermission('carrier:bind')
+  const canCarrierView = hasPermission('carrier:view') || hasPermission('lot:list')
   const totalPages = Math.max(1, Math.ceil(total / size))
   const isCreated = detail?.status === 'created'
   const canEditDetail =
@@ -179,6 +190,8 @@ export function LotsPage() {
     setDetailLoading(true)
     setGenealogy(null)
     setGenealogyLoading(true)
+    setLotCarrier(null)
+    setCarrierRefInput('')
     try {
       const full = await getLotApi(row.id)
       setDetail(full)
@@ -191,6 +204,11 @@ export function LotsPage() {
         routeId: full.routeId != null ? String(full.routeId) : '',
         remark: full.remark ?? '',
       })
+      if (canCarrierView) {
+        void getLotCarrierApi(full.id)
+          .then((b) => setLotCarrier(b ?? null))
+          .catch(() => setLotCarrier(null))
+      }
       void getLotGenealogyApi(row.id, { direction: 'both', depth: 5 })
         .then((tree) => setGenealogy(tree))
         .catch(() => setGenealogy(null))
@@ -200,6 +218,47 @@ export function LotsPage() {
       setGenealogyLoading(false)
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  async function doBindCarrier() {
+    if (!detail || !carrierRefInput.trim()) {
+      toast.error('请填写载具编码或 ID')
+      return
+    }
+    setCarrierBusy(true)
+    try {
+      const b = await bindLotCarrierApi(detail.id, carrierRefInput.trim())
+      setLotCarrier(b)
+      setCarrierRefInput('')
+      toast.success(`已绑定 · ${b.carrierCode}`)
+      setFlashId(String(detail.id))
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : '绑定失败')
+    } finally {
+      setCarrierBusy(false)
+    }
+  }
+
+  async function doUnbindCarrier() {
+    if (!detail) return
+    const ok = await confirm({
+      title: '解绑载具',
+      message: `确认解绑 ${detail.lotNo}${lotCarrier?.carrierCode ? ` ↔ ${lotCarrier.carrierCode}` : ''}？`,
+      confirmText: '解绑',
+      danger: true,
+    })
+    if (!ok) return
+    setCarrierBusy(true)
+    try {
+      await unbindLotCarrierApi(detail.id)
+      setLotCarrier(null)
+      toast.success('已解绑')
+      setFlashId(String(detail.id))
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : '解绑失败')
+    } finally {
+      setCarrierBusy(false)
     }
   }
 
@@ -880,6 +939,47 @@ export function LotsPage() {
                 ) : null}
               </dl>
             )}
+
+            {canCarrierView ? (
+              <section className="space-y-2 border-t border-border pt-4">
+                <h3 className="text-sm font-semibold">载具</h3>
+                {lotCarrier ? (
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-mono text-accent">{lotCarrier.carrierCode}</span>
+                    {canCarrierBind ? (
+                      <Button
+                        variant="secondary"
+                        loading={carrierBusy}
+                        onClick={() => void doUnbindCarrier()}
+                      >
+                        <Link2Off className="size-4" aria-hidden />
+                        解绑
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted">未绑定</p>
+                    {canCarrierBind ? (
+                      <div className="flex flex-wrap items-end gap-2">
+                        <Field
+                          label="载具编码 / ID"
+                          name="lotCarrierRef"
+                          className="font-mono"
+                          value={carrierRefInput}
+                          onChange={(e) => setCarrierRefInput(e.target.value)}
+                          placeholder="FOUP-A-001"
+                        />
+                        <Button loading={carrierBusy} onClick={() => void doBindCarrier()}>
+                          <Link2 className="size-4" aria-hidden />
+                          绑定
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+            ) : null}
 
             <div>
               <h3 className="flex items-center gap-1.5 text-sm font-semibold">

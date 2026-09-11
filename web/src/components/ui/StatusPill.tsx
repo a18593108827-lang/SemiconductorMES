@@ -203,3 +203,33 @@ export const lotStatusLabel = lotMap
 export const mesLotStatusLabel = mesLotMap
 export const eqpStatusLabel = eqpMap
 export const mesEqpStatusLabel = mesEqpMap
+
+export type MesCarrierStatus = 'AVAILABLE' | 'IN_USE' | 'QUARANTINE' | 'SCRAPPED'
+
+const mesCarrierMap: Record<
+  MesCarrierStatus,
+  { label: string; dot: string; icon: typeof CircleDot }
+> = {
+  AVAILABLE: { label: '空闲', dot: 'bg-muted', icon: CircleDot },
+  IN_USE: { label: '使用中', dot: 'bg-success', icon: Play },
+  QUARANTINE: { label: '隔离', dot: 'bg-warning', icon: Pause },
+  SCRAPPED: { label: '报废', dot: 'bg-danger', icon: CircleAlert },
+}
+
+export function MesCarrierStatusPill({ status }: { status: MesCarrierStatus | string }) {
+  const m = mesCarrierMap[status as MesCarrierStatus] ?? {
+    label: status || '—',
+    dot: 'bg-muted',
+    icon: CircleDot,
+  }
+  const Icon = m.icon
+  return (
+    <span className="inline-flex h-[22px] items-center gap-1.5 rounded-sm bg-surface px-2 text-xs font-medium text-ink">
+      <span className={cn('size-1.5 rounded-full', m.dot)} aria-hidden />
+      <Icon className="size-3 text-muted" aria-hidden />
+      {m.label}
+    </span>
+  )
+}
+
+export const mesCarrierStatusLabel = mesCarrierMap

@@ -37,6 +37,7 @@ const iconMap: Record<string, LucideIcon> = {
   'layout-dashboard': LayoutDashboard,
   package: Package,
   boxes: Boxes,
+  box: Boxes,
   map: Map,
   'pause-circle': PauseCircle,
   bell: Bell,

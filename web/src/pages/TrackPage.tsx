@@ -1566,7 +1566,7 @@ export function TrackPage() {
                   </div>
                 </div>
 
-                <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                   <div className="min-w-0">
                     <dt className="text-xs text-field-muted">版本</dt>
                     <dd className="mt-0.5 truncate font-mono text-sm" title={String(ctx.routeVersionId ?? '')}>
@@ -1593,7 +1593,21 @@ export function TrackPage() {
                       ) : null}
                     </dd>
                   </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-field-muted">载具</dt>
+                    <dd
+                      className="mt-0.5 truncate font-mono text-sm"
+                      title={ctx.carrierCode ?? undefined}
+                    >
+                      {ctx.carrierCode || '—'}
+                    </dd>
+                  </div>
                 </dl>
+                {ctx.carrierRequired && !ctx.carrierCode ? (
+                  <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                    开工要求已绑定载具，请先在批次或载具台账完成绑定
+                  </p>
+                ) : null}
 
                 {(ctx.pendingFutureHolds?.length ?? 0) > 0 ? (
                   <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2">
