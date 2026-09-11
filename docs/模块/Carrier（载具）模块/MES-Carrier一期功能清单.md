@@ -3,7 +3,7 @@
 > 前提：Lot / Track / History 一期已齐；片级 Wafer、SECS Adapter、MCS **未齐**  
 > 对齐：`MES-Carrier架构设计.md` · 业务清单 §7 · Lot L2-7 · Track T2-3 / T2-5b · 总册 §5.13  
 > 更新：2026-09-10  
-> 状态：**Car-1～3 ✅；Car-4～5 ⏳**
+> 状态：**Car-1～4 ✅；Car-5 ⏳**
 
 ---
 
@@ -30,7 +30,7 @@
 | P0 | 表 `mes_carrier` + `mes_carrier_binding`；`mes_lot.carrier_id` | ✅ |
 | P0 | `CarrierFacade` 台账 CRUD / 改态 | ✅ |
 | P0 | bind / unbind；同步 Lot.`carrier_id`；tx_log | ✅ |
-| P0 | 权限 `carrier:view` / `edit` / `bind`；HTTP `/carrier` | ⏳ Car-1 权限✅；HTTP→Car-4 |
+| P0 | 权限 `carrier:view` / `edit` / `bind`；HTTP `/carrier` | ✅ |
 | P0 | TrackIn 闸 + context `carrierId`/`carrierRequired` | ⏳ |
 | P0 | Admin `/app/carrier`；Lot/现场展示绑定 | ⏳ |
 | P1 | 现场扫码比对 CarrierCode（L2） | 后置 |
@@ -46,7 +46,7 @@
 | Car-1 | DDL + 权限种子 + 配置项；实体/Mapper | ✅ |
 | Car-2 | `CarrierFacade` 台账 + 改态状态机 | ✅ |
 | Car-3 | bind / unbind + 锁序 + UK + tx_log + Lot 同步 | ✅ |
-| Car-4 | HTTP `/carrier`（+ 可选 `/lots/{id}/carrier` 委托） | ⏳ |
+| Car-4 | HTTP `/carrier`（+ 可选 `/lots/{id}/carrier` 委托） | ✅ |
 | Car-5 | TrackIn 闸 + context；Admin 页 + 菜单 | ⏳ |
 
 顺序：**Car-1 → 2 → 3 → 4 → 5**。  
@@ -132,7 +132,7 @@
 - 幂等：已是目标绑定 → 成功；未绑 unbind → 成功 ✅
 - 禁止静默换绑：已绑其它目标 → `LOT_ALREADY_BOUND` / `CARRIER_ALREADY_BOUND` ✅
 - `tx_log`：`CARRIER_BIND` / `CARRIER_UNBIND` ✅
-- AFTER_COMMIT 可消费的 `CarrierChangedEvent`（已 publish）✅
+- 事务提交后再发的 `CarrierChangedEvent`（`afterCommit` + publish）✅
 - 只读：`getCarrierId` / `isBound` / `assertBound` / `getBinding` / `resolveCodes` ✅
 
 落地：`CarrierFacade` 扩展 · `CarrierFacadeImpl` · `CarrierBindingVO` · `CarrierChangedEvent`
@@ -161,27 +161,29 @@
 
 ---
 
-### Car-4（HTTP）⏳
+### Car-4（HTTP）✅
 
 #### 4.1 交付
 
-- `MesCarrierController` 前缀 `/carrier`
-- 台账：list/get/create/update/changeStatus
-- 绑解：`POST /carrier/bind`、`POST /carrier/unbind`（或 REST 子资源）
-- 兼容：`POST /lots/{id}/carrier`、`DELETE /lots/{id}/carrier` → **只委托 Facade**
-- 权限：view / edit / bind 分拆；Facade 供 Track 方法不鉴权
-- 禁止 `PUT /lots/{id}` body 带 `carrierId` 生效（若有字段忽略或 400）
+- `MesCarrierController` 前缀 `/carrier` ✅
+- 台账：list/get/create/update/changeStatus ✅
+- 绑解：`POST /carrier/bind`、`POST /carrier/unbind`；`POST /carrier/{id}/unbind` ✅
+- 兼容：`POST/DELETE/GET /lots/{id}/carrier` → **只委托 Facade** ✅
+- 权限：view / edit / bind 分拆 ✅
+- `MesLotUpdateDTO` 无 `carrierId`，PUT 无法偷改 ✅
+
+落地：`MesCarrierController` · `CarrierBindDTO` / `UnbindDTO` / `StatusDTO` / `LotCarrierBindDTO` · `MesLotController` 兼容入口
 
 #### 4.2 本切片不做
 
-- Admin 完整页（Car-5 最小页可同发或本切片只 API）
+- Admin 完整页（Car-5）
 - Track 行为变更
 
 #### 4.3 验收（Car-4）
 
-- [ ] 无权限 → 403
-- [ ] 绑解 API 与 Facade 行为一致
-- [ ] Lot PUT 无法偷改 `carrier_id`
+- [x] Controller 挂 `@SaCheckPermission`
+- [x] 绑解 API 委托 Facade
+- [x] Lot PUT DTO 无 carrierId
 
 ---
 

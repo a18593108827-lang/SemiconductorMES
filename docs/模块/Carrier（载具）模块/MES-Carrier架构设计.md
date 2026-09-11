@@ -70,7 +70,7 @@ Sorter  = 换盒/理片后置；本期人工/API 绑解即可
 | D7 | 位置 | C0 可空；C3 起 `location_type`+`location_ref`；**不**推进工艺站 | 对齐 Store/Retrieve 语义后置 |
 | D8 | SlotMap | 表可建、校验默认关；有 Wafer 后再开 L3 | 避免假校验 |
 | D9 | 履历 | 绑/解写 `mes_tx_log`（`CARRIER_BIND`/`CARRIER_UNBIND`）或 `mes_carrier_tx`；**定：优先 tx_log 与 Track 同查** | History 调查台一条链 |
-| D10 | 事件 | 绑/解成功后 `ApplicationEvent`（AFTER_COMMIT）；MCS 后置监听 | 不阻塞主事务；解耦物流 |
+| D10 | 事件 | **发布侧** `TransactionSynchronization.afterCommit` 再 `publishEvent`；监听方可用普通 `@EventListener`（不必再 AFTER_COMMIT） | 回滚不发假事件；与 AlarmWs 同模式 |
 | D11 | 权限 | HTTP 鉴权；Facade 系统方法不鉴权（Track 调用） | 同 EdcFacade / Hold |
 | D12 | 开关 | `mes.carrier.track-in-required` 默认 **false** | 灰度；存量线不挡车 |
 | D13 | 标识 | 业务键 `carrier_code` 唯一；内部雪花 `id` | 现场扫码对 code |
@@ -388,7 +388,7 @@ IN_USE ──quarantine──► QUARANTINE（须先业务确认；建议强制�
 
 | 风险 | 缓解 |
 |------|------|
-| 冗余 `lot.carrier_id` 漂移 | 同事务写；可选对账 Job |
+| 冗余 `lot.carrier_id` 漂移 | 同事务写；解绑双写对齐并收回漂移盒；`assertBound`/`isBound` 认 binding；孤儿 IN_USE 可再绑收回 |
 | 过早开闸挡生产 | 默认 false；按产线配置 |
 | 一盒多 Lot 需求提前 | 本架构 UK 为一期不变量；放开须新设计评审 |
 | 与 MCS 双写位置 | 位置只 Facade 写；MCS 回传也走 updateLocation |
