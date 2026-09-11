@@ -5,8 +5,8 @@
 > 产品口径：「TrackIn 载具闸 / prerequisite」——**不**宣称 Carrier Management / 对标 E87 / AMHS  
 > 对齐：`docs/架构/半导MES架构设计.md`；业务清单 §7；Lot L2-7；Track T2-3 / T2-5b；产品分析（薄 Carrier = C0+C1）  
 > 前提：Lot / Track / History 一期已齐；片级 Wafer、SECS Adapter、MCS **未齐**  
-> 状态：**Car-1 已落地 · 架构稿**  
-> 更新：2026-09-10
+> 状态：**Car-1～3 已落地 · 架构稿**  
+> 更新：2026-09-11
 
 ---
 

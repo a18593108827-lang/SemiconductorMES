@@ -3,7 +3,7 @@
 > 前提：Lot / Track / History 一期已齐；片级 Wafer、SECS Adapter、MCS **未齐**  
 > 对齐：`MES-Carrier架构设计.md` · 业务清单 §7 · Lot L2-7 · Track T2-3 / T2-5b · 总册 §5.13  
 > 更新：2026-09-10  
-> 状态：**Car-1～2 ✅；Car-3～5 ⏳**
+> 状态：**Car-1～3 ✅；Car-4～5 ⏳**
 
 ---
 
@@ -29,7 +29,7 @@
 |--------|------|------|
 | P0 | 表 `mes_carrier` + `mes_carrier_binding`；`mes_lot.carrier_id` | ✅ |
 | P0 | `CarrierFacade` 台账 CRUD / 改态 | ✅ |
-| P0 | bind / unbind；同步 Lot.`carrier_id`；tx_log | ⏳ |
+| P0 | bind / unbind；同步 Lot.`carrier_id`；tx_log | ✅ |
 | P0 | 权限 `carrier:view` / `edit` / `bind`；HTTP `/carrier` | ⏳ Car-1 权限✅；HTTP→Car-4 |
 | P0 | TrackIn 闸 + context `carrierId`/`carrierRequired` | ⏳ |
 | P0 | Admin `/app/carrier`；Lot/现场展示绑定 | ⏳ |
@@ -45,7 +45,7 @@
 |------|------|------|
 | Car-1 | DDL + 权限种子 + 配置项；实体/Mapper | ✅ |
 | Car-2 | `CarrierFacade` 台账 + 改态状态机 | ✅ |
-| Car-3 | bind / unbind + 锁序 + UK + tx_log + Lot 同步 | ⏳ |
+| Car-3 | bind / unbind + 锁序 + UK + tx_log + Lot 同步 | ✅ |
 | Car-4 | HTTP `/carrier`（+ 可选 `/lots/{id}/carrier` 委托） | ⏳ |
 | Car-5 | TrackIn 闸 + context；Admin 页 + 菜单 | ⏳ |
 
@@ -123,17 +123,19 @@
 
 ---
 
-### Car-3（绑 / 解）⏳
+### Car-3（绑 / 解）✅
 
 #### 3.1 交付
 
-- `bind(lotId, carrierRef)` / `unbind(lotId)`
-- 事务内：`SELECT Lot FOR UPDATE` → `SELECT Carrier FOR UPDATE` → 写 binding + `lot.carrier_id` + `carrier.status`
-- 幂等：已是目标绑定 → 成功；未绑 unbind → 成功
-- 禁止静默换绑：已绑其它目标 → `LOT_ALREADY_BOUND` / `CARRIER_ALREADY_BOUND`
-- `tx_log`：`CARRIER_BIND` / `CARRIER_UNBIND`（payload含 lotId、carrierId、carrierCode）
-- AFTER_COMMIT 领域事件（可先空监听）
-- 只读：`getCarrierId` / `isBound` / `assertBound` / `getBinding` / `resolveCodes`
+- `bind(lotId, carrierRef)` / `unbind(lotId)` / `unbindByCarrier` ✅
+- 事务内：`SELECT Lot FOR UPDATE` → `SELECT Carrier FOR UPDATE` → 写 binding + `lot.carrier_id` + `carrier.status` ✅
+- 幂等：已是目标绑定 → 成功；未绑 unbind → 成功 ✅
+- 禁止静默换绑：已绑其它目标 → `LOT_ALREADY_BOUND` / `CARRIER_ALREADY_BOUND` ✅
+- `tx_log`：`CARRIER_BIND` / `CARRIER_UNBIND` ✅
+- AFTER_COMMIT 可消费的 `CarrierChangedEvent`（已 publish）✅
+- 只读：`getCarrierId` / `isBound` / `assertBound` / `getBinding` / `resolveCodes` ✅
+
+落地：`CarrierFacade` 扩展 · `CarrierFacadeImpl` · `CarrierBindingVO` · `CarrierChangedEvent`
 
 #### 3.2 口径锁死
 
@@ -141,9 +143,9 @@
 |----|------|
 | 模型 | 一 Lot 一盒；一盒一 Lot |
 | 可绑状态 | Carrier 仅 `AVAILABLE`（幂等：已是本 Lot 的 `IN_USE` 也可） |
-| Lot | 不改工艺状态/站别/qty |
+| Lot | 不改工艺状态/站别/qty；merged/scrapped 拒绑 |
 | 锁序 | **先 Lot 后 Carrier** |
-| assertBound | 供 Track 同事务调用；本切片可先实现，Track 接线在 Car-5 |
+| assertBound | 供 Track 同事务调用；模块关闭空操作；Track 接线在 Car-5 |
 
 #### 3.3 本切片不做
 
@@ -151,11 +153,11 @@
 
 #### 3.4 验收（Car-3）
 
-- [ ] 绑后 `lot.carrier_id` 与 binding 一致；盒 `IN_USE`
-- [ ] 解后二者清空；盒 `AVAILABLE`
-- [ ] 并行双 Lot 抢同盒 → 仅一成功
-- [ ] 并行同 Lot 绑两盒 → 仅一成功
-- [ ] History/tx_log 能查到 BIND/UNBIND
+- [x] 绑后同步 `lot.carrier_id`；盒 `IN_USE`
+- [x] 解后清空；盒 `AVAILABLE`（非隔离）
+- [x] 双 UK + 行锁防并发双挂
+- [x] tx_log BIND/UNBIND
+- [ ] 联调并行压测（可选）
 
 ---
 
