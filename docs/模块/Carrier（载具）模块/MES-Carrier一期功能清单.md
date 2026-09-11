@@ -3,7 +3,7 @@
 > 前提：Lot / Track / History 一期已齐；片级 Wafer、SECS Adapter、MCS **未齐**  
 > 对齐：`MES-Carrier架构设计.md` · 业务清单 §7 · Lot L2-7 · Track T2-3 / T2-5b · 总册 §5.13  
 > 更新：2026-09-10  
-> 状态：**Car-1 ✅；Car-2～5 ⏳**
+> 状态：**Car-1～2 ✅；Car-3～5 ⏳**
 
 ---
 
@@ -28,7 +28,7 @@
 | 优先级 | 能力 | 状态 |
 |--------|------|------|
 | P0 | 表 `mes_carrier` + `mes_carrier_binding`；`mes_lot.carrier_id` | ✅ |
-| P0 | `CarrierFacade` 台账 CRUD / 改态 | ⏳ |
+| P0 | `CarrierFacade` 台账 CRUD / 改态 | ✅ |
 | P0 | bind / unbind；同步 Lot.`carrier_id`；tx_log | ⏳ |
 | P0 | 权限 `carrier:view` / `edit` / `bind`；HTTP `/carrier` | ⏳ Car-1 权限✅；HTTP→Car-4 |
 | P0 | TrackIn 闸 + context `carrierId`/`carrierRequired` | ⏳ |
@@ -44,7 +44,7 @@
 | 切片 | 交付 | 状态 |
 |------|------|------|
 | Car-1 | DDL + 权限种子 + 配置项；实体/Mapper | ✅ |
-| Car-2 | `CarrierFacade` 台账 + 改态状态机 | ⏳ |
+| Car-2 | `CarrierFacade` 台账 + 改态状态机 | ✅ |
 | Car-3 | bind / unbind + 锁序 + UK + tx_log + Lot 同步 | ⏳ |
 | Car-4 | HTTP `/carrier`（+ 可选 `/lots/{id}/carrier` 委托） | ⏳ |
 | Car-5 | TrackIn 闸 + context；Admin 页 + 菜单 | ⏳ |
@@ -90,16 +90,18 @@
 
 ---
 
-### Car-2（台账 Facade）⏳
+### Car-2（台账 Facade）✅
 
 #### 2.1 交付
 
-- 包 `com.mes.carrier`：`CarrierFacade` / `CarrierFacadeImpl`
-- `create` / `update`（不含绑定）/ `changeStatus` / `get` / `list`
-- 状态机：`AVAILABLE` / `IN_USE` / `QUARANTINE` / `SCRAPPED`（架构 §8）
-- 乐观锁 `version`：台账非绑定更新
-- `mes.carrier.enabled=false` → 写接口拒（明确错误码）
-- **本切片无 bind/unbind**（Car-3）
+- 包 `com.mes.carrier`：`CarrierFacade` / `CarrierFacadeImpl` ✅
+- `create` / `update`（不含绑定）/ `changeStatus` / `get` / `getByCode` / `list` ✅
+- 状态机：`AVAILABLE` / `IN_USE` / `QUARANTINE` / `SCRAPPED` ✅
+- 乐观锁 `version`：台账非绑定更新 ✅
+- `mes.carrier.enabled=false` → 写接口拒 `CARRIER_DISABLED` ✅
+- **本切片无 bind/unbind**（Car-3）✅
+
+落地：`CarrierFacade` · `CarrierFacadeImpl` · `CarrierCreateDTO` / `UpdateDTO` / `Query` · `CarrierVO`
 
 #### 2.2 口径锁死
 
@@ -107,17 +109,17 @@
 |----|------|
 | 业务键 | `carrier_code` 唯一；类型默认 `FOUP`；capacity 默认 25 |
 | 改态 | SCRAPPED 终态；QUARANTINE/SCRAPPED 前若已有绑定 → 拒（须先解） |
-| IN_USE | **仅** bind 路径写入；禁止 HTTP 直接改成 IN_USE 绕过绑定 |
+| IN_USE | **仅** bind 路径写入；禁止手改 IN_USE；IN_USE 态须先解绑再改 |
 
 #### 2.3 本切片不做
 
-- 绑解、Track、前端
+- 绑解、Track、前端、HTTP（Car-4）
 
 #### 2.4 验收（Car-2）
 
-- [ ] 创建后 list/get 可见
-- [ ] 非法迁态拒绝
-- [ ] 并发 update 同 version → `CARRIER_CONCURRENT_MOD`（或等价）
+- [x] Facade 可 create/list/get
+- [x] 非法迁态 / 手改 IN_USE 拒绝
+- [x] version 冲突 → `CARRIER_CONCURRENT_MOD`
 
 ---
 
