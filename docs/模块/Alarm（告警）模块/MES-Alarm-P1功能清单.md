@@ -38,8 +38,9 @@
 | A6  | 策略触发点   | **仅新 insert OPEN** 执行 HOLD_LOT；同键 OPEN **bump 不再挂锁**                                       |
 | A7  | 实体门槛    | 仅 `entity_type=LOT` 且 `entity_id>0`；EQP/CHART/NONE 有策略也跳过并 warn                            |
 | A8  | 幂等      | 目标 Lot 已有 active Hold → **跳过** create，info 日志；不抛、不重试刷屏                                     |
-| A9  | 灰度      | 种子码默认仍 `NONE`；靠码表改 `HOLD_LOT` 启用；可选总阀（见 §4）                                                |
-| A10 | 并发      | 见 §6；禁止无锁双开 OPEN、禁止无保护双挂 Hold                                                              |
+| A9  | 自挂码禁策略  | `AlarmSelfHoldCodes`（如 ProcessTime/QTime）禁配、禁跑 HOLD_LOT；新自挂码须加入集合                         |
+| A10 | 灰度      | 种子码默认仍 `NONE`；靠码表改 `HOLD_LOT` 启用；可选总阀（见 §4）                                                |
+| A11 | 并发      | 见 §6；禁止无锁双开 OPEN、禁止无保护双挂 Hold                                                              |
 
 
 **禁止**

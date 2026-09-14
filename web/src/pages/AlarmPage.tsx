@@ -58,6 +58,9 @@ const ON_RAISE_LABEL: Record<string, string> = {
   HOLD_LOT: '告警并锁批',
 }
 
+/** 与后端 AlarmSelfHoldCodes 对齐：已自挂 Hold，禁止再配 HOLD_LOT */
+const SELF_HOLD_ALARM_CODES = new Set(['PROCESS_TIME_VIOLATION', 'QTIME_EXCEED'])
+
 function fmtTime(v: string | null | undefined) {
   if (!v) return '—'
   return v.replace('T', ' ').slice(0, 16)
@@ -232,11 +235,14 @@ export function AlarmPage() {
 
   const startEditCode = (row: AlarmCodeItem) => {
     setEditCode(row)
+    const selfHold = SELF_HOLD_ALARM_CODES.has(row.code)
     setCodeForm({
       name: row.name,
       level: (row.level as AlarmLevel) || 'WARNING',
-      onRaise: (row.onRaise === 'HOLD_LOT' ? 'HOLD_LOT' : 'NONE') as AlarmOnRaise,
-      holdReasonCode: row.holdReasonCode ?? '',
+      onRaise: selfHold
+        ? 'NONE'
+        : ((row.onRaise === 'HOLD_LOT' ? 'HOLD_LOT' : 'NONE') as AlarmOnRaise),
+      holdReasonCode: selfHold ? '' : (row.holdReasonCode ?? ''),
       enabled: row.enabled === 1 ? 1 : 0,
       remark: row.remark ?? '',
     })
@@ -779,6 +785,7 @@ export function AlarmPage() {
                 <select
                   className="h-9 rounded-md border border-border bg-bg px-3"
                   value={codeForm.onRaise}
+                  disabled={SELF_HOLD_ALARM_CODES.has(editCode.code)}
                   onChange={(e) =>
                     setCodeForm({
                       ...codeForm,
@@ -791,8 +798,15 @@ export function AlarmPage() {
                   }
                 >
                   <option value="NONE">仅告警（NONE）</option>
-                  <option value="HOLD_LOT">告警并锁批（HOLD_LOT）</option>
+                  {!SELF_HOLD_ALARM_CODES.has(editCode.code) ? (
+                    <option value="HOLD_LOT">告警并锁批（HOLD_LOT）</option>
+                  ) : null}
                 </select>
+                {SELF_HOLD_ALARM_CODES.has(editCode.code) ? (
+                  <span className="text-[11px] text-warning">
+                    该码已由业务自挂锁批，禁止 HOLD_LOT，请保持 NONE
+                  </span>
+                ) : null}
               </label>
               {codeForm.onRaise === 'HOLD_LOT' ? (
                 <label className="flex flex-col gap-1">
