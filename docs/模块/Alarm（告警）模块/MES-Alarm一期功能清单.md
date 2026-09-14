@@ -3,7 +3,7 @@
 > 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用；Hold 最小集已齐  
 > 对齐：`MES-Alarm架构设计.md` · `docs/架构/半导MES架构设计.md` §5.8  
 > 更新：2026-09-04  
-> 状态：**一期 P0（Alarm-1～4）已完成**；P1/P2 后置
+> 状态：**一期 P0（Alarm-1～4）已完成**；P1 见 `MES-Alarm-P1功能清单.md`
 
 ---
 
@@ -30,7 +30,7 @@
 | P0 | HTTP `/alarm` | ✅ |
 | P0 | Admin `/app/alarm` 真列表 + CRITICAL 顶栏 | ✅ |
 | P0 | WS `alarm.active`（后端推 + 前端订） | ✅ |
-| P1 | `on_raise=HOLD_LOT`；未 ACK 升级；禁派钩子 | 后置；见架构 §9 |
+| P1 | `on_raise=HOLD_LOT`；未 ACK 升级；禁派钩子 | 清单：`MES-Alarm-P1功能清单.md`（Hold 策略先做；升级/禁派后置） |
 | P2 | GEM 进仓、Pareto、OCAP、独立 AMS | 后置 |
 
 ---
@@ -117,6 +117,7 @@
 ## 5. 关联
 
 - `MES-Alarm架构设计.md`
+- `MES-Alarm-P1功能清单.md`
 - `docs/架构/半导MES架构设计.md` §5.8
 - `docs/架构/MES-实施进度与下一步.md`
 - `docs/模块/SPC（统计过程控制）模块/MES-SPC架构设计.md` D9

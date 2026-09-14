@@ -5,8 +5,8 @@
 > 产品口径：工艺/班组长看见该响的、认领严重项；不是 Applied AMS / 独立 fab Alarm Hub  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.8 / §7；SPC D9；Hold 边界；业务清单 §8  
 > 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用  
-> 状态：**P0 已完成**（Alarm-1～4：表 / raise / HTTP / Admin / STOMP）；P1/P2 后置  
-> 更新：2026-09-04
+> 状态：**P0 已完成**（Alarm-1～4）；P1 清单已立：`MES-Alarm-P1功能清单.md`（Alarm→Hold）  
+> 更新：2026-09-14
 
 ---
 
@@ -226,7 +226,7 @@ WebSocket：`alarm.active` 推送 OPEN 变更摘要（id、code、level、messag
 | **P1** | `on_raise=HOLD_LOT`；未 ACK 升级（定时或班次）；Dispatch 可读 critical 禁派钩子 | OCAP、邮件网关 |
 | **P2** | Adapter→raise 设备码；Pareto；与 OCAP/知识库挂接 | 独立 AMS 产品形态 |
 
-切片锁定：`MES-Alarm一期功能清单.md`（Alarm-1～4 = P0 ✅；策略 Hold = P1）。
+切片锁定：`MES-Alarm一期功能清单.md`（Alarm-1～4 = P0 ✅）；P1：`MES-Alarm-P1功能清单.md`（Alarm-5～7）。
 
 ---
 
