@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
-import { AlertTriangle, CheckCircle2, Eye, RefreshCw, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Eye, Pencil, RefreshCw, Settings2, XCircle } from 'lucide-react'
 import {
   ackAlarmApi,
   clearAlarmApi,
   getAlarmApi,
+  listAlarmCodesApi,
   listAlarmsApi,
   listCriticalAlarmsApi,
+  updateAlarmCodeApi,
+  type AlarmCodeItem,
   type AlarmItem,
   type AlarmLevel,
+  type AlarmOnRaise,
   type AlarmStatus,
 } from '../api/alarm'
+import { listHoldReasonsApi, type MesHoldReason } from '../api/hold'
 import { useAuth } from '../auth/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Drawer } from '../components/ui/Drawer'
@@ -48,6 +53,11 @@ const STATUS_LABEL: Record<AlarmStatus, string> = {
   CLEARED: '已关闭',
 }
 
+const ON_RAISE_LABEL: Record<string, string> = {
+  NONE: '仅告警',
+  HOLD_LOT: '告警并锁批',
+}
+
 function fmtTime(v: string | null | undefined) {
   if (!v) return '—'
   return v.replace('T', ' ').slice(0, 16)
@@ -69,6 +79,15 @@ function LevelDot({ level }: { level: AlarmLevel }) {
   )
 }
 
+type CodeForm = {
+  name: string
+  level: AlarmLevel
+  onRaise: AlarmOnRaise
+  holdReasonCode: string
+  enabled: 0 | 1
+  remark: string
+}
+
 export function AlarmPage() {
   const { hasPermission } = useAuth()
   const toast = useToast()
@@ -77,6 +96,7 @@ export function AlarmPage() {
   const canView = hasPermission('alarm:view')
   const canAck = hasPermission('alarm:ack')
   const canClear = hasPermission('alarm:clear')
+  const canEdit = hasPermission('alarm:edit')
 
   const [statusFilter, setStatusFilter] = useState<AlarmStatus | 'all'>('OPEN')
   const [levelFilter, setLevelFilter] = useState<AlarmLevel | 'all'>('all')
@@ -96,6 +116,14 @@ export function AlarmPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [remark, setRemark] = useState('')
   const [acting, setActing] = useState(false)
+
+  const [codesOpen, setCodesOpen] = useState(false)
+  const [codes, setCodes] = useState<AlarmCodeItem[]>([])
+  const [codesLoading, setCodesLoading] = useState(false)
+  const [editCode, setEditCode] = useState<AlarmCodeItem | null>(null)
+  const [codeForm, setCodeForm] = useState<CodeForm | null>(null)
+  const [codeSaving, setCodeSaving] = useState(false)
+  const [reasons, setReasons] = useState<MesHoldReason[]>([])
 
   const totalPages = Math.max(1, Math.ceil(total / size))
 
@@ -129,6 +157,18 @@ export function AlarmPage() {
       setCriticals([])
     }
   }, [])
+
+  const loadCodes = useCallback(async () => {
+    setCodesLoading(true)
+    try {
+      setCodes(await listAlarmCodesApi())
+    } catch (err) {
+      setCodes([])
+      toast.error(err instanceof ApiError ? err.message : '告警码加载失败')
+    } finally {
+      setCodesLoading(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     if (!canView) return
@@ -175,6 +215,53 @@ export function AlarmPage() {
       toast.error(err instanceof ApiError ? err.message : '详情加载失败')
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  const openCodes = async () => {
+    setCodesOpen(true)
+    setEditCode(null)
+    setCodeForm(null)
+    await loadCodes()
+    try {
+      setReasons(await listHoldReasonsApi(false))
+    } catch {
+      setReasons([])
+    }
+  }
+
+  const startEditCode = (row: AlarmCodeItem) => {
+    setEditCode(row)
+    setCodeForm({
+      name: row.name,
+      level: (row.level as AlarmLevel) || 'WARNING',
+      onRaise: (row.onRaise === 'HOLD_LOT' ? 'HOLD_LOT' : 'NONE') as AlarmOnRaise,
+      holdReasonCode: row.holdReasonCode ?? '',
+      enabled: row.enabled === 1 ? 1 : 0,
+      remark: row.remark ?? '',
+    })
+  }
+
+  const saveCode = async () => {
+    if (!editCode || !codeForm) return
+    setCodeSaving(true)
+    try {
+      await updateAlarmCodeApi(editCode.code, {
+        name: codeForm.name.trim(),
+        level: codeForm.level,
+        onRaise: codeForm.onRaise,
+        holdReasonCode: codeForm.onRaise === 'HOLD_LOT' ? codeForm.holdReasonCode.trim() || null : null,
+        enabled: codeForm.enabled,
+        remark: codeForm.remark.trim() || null,
+      })
+      toast.success('告警码已更新')
+      setEditCode(null)
+      setCodeForm(null)
+      await loadCodes()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : '保存失败')
+    } finally {
+      setCodeSaving(false)
     }
   }
 
@@ -257,16 +344,24 @@ export function AlarmPage() {
           <h1 className="text-xl font-semibold tracking-tight">报警管理</h1>
           <p className="mt-1 text-sm text-muted">统一台：记录 · 确认 · 关闭 · 推送</p>
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            void loadList()
-            void loadCriticals()
-          }}
-        >
-          <RefreshCw className="size-4" aria-hidden />
-          刷新
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canEdit || canView ? (
+            <Button variant="secondary" onClick={() => void openCodes()}>
+              <Settings2 className="size-4" aria-hidden />
+              告警码
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void loadList()
+              void loadCriticals()
+            }}
+          >
+            <RefreshCw className="size-4" aria-hidden />
+            刷新
+          </Button>
+        </div>
       </header>
 
       <div className="alarm-block flex flex-wrap items-center gap-2">
@@ -510,6 +605,32 @@ export function AlarmPage() {
                 <span className="font-mono text-[13px]">{fmtTime(detail.clearAt)}</span>
               </div>
             </div>
+
+            <div className="rounded-md border border-border bg-surface p-3 space-y-2">
+              <div className="text-xs font-medium text-muted">码表策略</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="text-[11px] text-muted">触发动作</div>
+                  <div>{ON_RAISE_LABEL[detail.onRaise ?? ''] ?? detail.onRaise ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-muted">锁批原因码</div>
+                  <div className="font-mono text-[13px]">{detail.holdReasonCode || '—'}</div>
+                </div>
+              </div>
+              {detail.entityType === 'LOT' ? (
+                <div className="text-xs text-muted">
+                  {detail.lotHoldActive === true
+                    ? '当前批次已有生效锁批（策略锁批 ≠ 人工 Hold；解锁请到锁批台）'
+                    : detail.lotHoldActive === false
+                      ? '当前批次无生效锁批'
+                      : '锁批状态未返回'}
+                </div>
+              ) : (
+                <div className="text-xs text-muted">策略锁批仅作用于 Lot 实体；解锁请到锁批台。</div>
+              )}
+            </div>
+
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted">消息</span>
               <p className="whitespace-pre-wrap text-ink">{detail.message}</p>
@@ -547,6 +668,182 @@ export function AlarmPage() {
             ) : null}
           </div>
         ) : null}
+      </Drawer>
+
+      <Drawer
+        open={codesOpen}
+        size="lg"
+        title="告警码维护"
+        onClose={() => {
+          setCodesOpen(false)
+          setEditCode(null)
+          setCodeForm(null)
+        }}
+        footer={
+          editCode && codeForm && canEdit ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="secondary"
+                disabled={codeSaving}
+                onClick={() => {
+                  setEditCode(null)
+                  setCodeForm(null)
+                }}
+              >
+                取消
+              </Button>
+              <Button disabled={codeSaving} onClick={() => void saveCode()}>
+                保存
+              </Button>
+            </div>
+          ) : undefined
+        }
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-xs text-muted">
+            配置 on_raise：NONE 只记告警；HOLD_LOT 新开告警时自动锁批。策略锁批 ≠ 人工 Hold，解锁请到锁批台。
+          </p>
+          {codesLoading ? <p className="text-muted">加载中…</p> : null}
+          {!editCode ? (
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="bg-surface text-xs font-medium text-muted">
+                  <tr className="h-9 border-b border-border">
+                    <th className="px-3">编码</th>
+                    <th className="px-3">名称</th>
+                    <th className="px-3">级别</th>
+                    <th className="px-3">策略</th>
+                    <th className="px-3">原因码</th>
+                    <th className="px-3">启用</th>
+                    <th className="px-3">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {codes.length === 0 && !codesLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-muted">
+                        暂无告警码
+                      </td>
+                    </tr>
+                  ) : (
+                    codes.map((c) => (
+                      <tr key={c.code} className="h-10 border-b border-border/70">
+                        <td className="px-3 font-mono text-[13px] text-accent">{c.code}</td>
+                        <td className="px-3">{c.name}</td>
+                        <td className="px-3">
+                          <LevelDot level={(c.level as AlarmLevel) || 'WARNING'} />
+                        </td>
+                        <td className="px-3 text-xs">{ON_RAISE_LABEL[c.onRaise] ?? c.onRaise}</td>
+                        <td className="px-3 font-mono text-[12px] text-muted">{c.holdReasonCode || '—'}</td>
+                        <td className="px-3 text-xs">{c.enabled === 1 ? '是' : '否'}</td>
+                        <td className="px-3">
+                          {canEdit ? (
+                            <TableAction icon={Pencil} label="编辑" onClick={() => startEditCode(c)} />
+                          ) : (
+                            <span className="text-xs text-muted">只读</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : codeForm ? (
+            <div className="space-y-3">
+              <div className="text-xs text-muted">
+                编码（不可改）· <span className="font-mono text-accent">{editCode.code}</span>
+              </div>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted">名称</span>
+                <input
+                  className="h-9 rounded-md border border-border bg-bg px-3"
+                  value={codeForm.name}
+                  onChange={(e) => setCodeForm({ ...codeForm, name: e.target.value })}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted">级别</span>
+                <select
+                  className="h-9 rounded-md border border-border bg-bg px-3"
+                  value={codeForm.level}
+                  onChange={(e) => setCodeForm({ ...codeForm, level: e.target.value as AlarmLevel })}
+                >
+                  <option value="CRITICAL">严重</option>
+                  <option value="WARNING">警告</option>
+                  <option value="INFO">提示</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted">触发策略</span>
+                <select
+                  className="h-9 rounded-md border border-border bg-bg px-3"
+                  value={codeForm.onRaise}
+                  onChange={(e) =>
+                    setCodeForm({
+                      ...codeForm,
+                      onRaise: e.target.value as AlarmOnRaise,
+                      holdReasonCode:
+                        e.target.value === 'HOLD_LOT'
+                          ? codeForm.holdReasonCode || 'ALARM_POLICY'
+                          : '',
+                    })
+                  }
+                >
+                  <option value="NONE">仅告警（NONE）</option>
+                  <option value="HOLD_LOT">告警并锁批（HOLD_LOT）</option>
+                </select>
+              </label>
+              {codeForm.onRaise === 'HOLD_LOT' ? (
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted">锁批原因码</span>
+                  {reasons.length > 0 ? (
+                    <select
+                      className="h-9 rounded-md border border-border bg-bg px-3 font-mono text-sm"
+                      value={codeForm.holdReasonCode}
+                      onChange={(e) => setCodeForm({ ...codeForm, holdReasonCode: e.target.value })}
+                    >
+                      <option value="">请选择</option>
+                      {reasons.map((r) => (
+                        <option key={r.reasonCode} value={r.reasonCode}>
+                          {r.reasonCode} · {r.reasonName}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="h-9 rounded-md border border-border bg-bg px-3 font-mono text-sm"
+                      value={codeForm.holdReasonCode}
+                      onChange={(e) => setCodeForm({ ...codeForm, holdReasonCode: e.target.value })}
+                      placeholder="如 ALARM_POLICY"
+                    />
+                  )}
+                </label>
+              ) : null}
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted">启用</span>
+                <select
+                  className="h-9 rounded-md border border-border bg-bg px-3"
+                  value={codeForm.enabled}
+                  onChange={(e) =>
+                    setCodeForm({ ...codeForm, enabled: Number(e.target.value) as 0 | 1 })
+                  }
+                >
+                  <option value={1}>启用</option>
+                  <option value={0}>停用</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-muted">备注</span>
+                <textarea
+                  className="min-h-[72px] rounded-md border border-border bg-bg px-3 py-2"
+                  value={codeForm.remark}
+                  onChange={(e) => setCodeForm({ ...codeForm, remark: e.target.value })}
+                />
+              </label>
+            </div>
+          ) : null}
+        </div>
       </Drawer>
     </div>
   )

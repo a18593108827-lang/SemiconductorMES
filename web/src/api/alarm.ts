@@ -4,6 +4,7 @@ import type { PageResult } from './system'
 export type AlarmStatus = 'OPEN' | 'ACK' | 'CLEARED'
 export type AlarmLevel = 'CRITICAL' | 'WARNING' | 'INFO'
 export type AlarmEntityType = 'LOT' | 'EQP' | 'CHART' | 'NONE'
+export type AlarmOnRaise = 'NONE' | 'HOLD_LOT'
 
 export interface AlarmItem {
   id: number | string
@@ -24,6 +25,30 @@ export interface AlarmItem {
   clearBy: number | string | null
   clearAt: string | null
   clearRemark: string | null
+  /** 详情：码表策略 */
+  onRaise?: AlarmOnRaise | string | null
+  holdReasonCode?: string | null
+  /** 详情：挂 Lot 时是否已有生效锁批 */
+  lotHoldActive?: boolean | null
+}
+
+export interface AlarmCodeItem {
+  code: string
+  name: string
+  level: AlarmLevel
+  onRaise: AlarmOnRaise | string
+  holdReasonCode: string | null
+  enabled: number
+  remark: string | null
+}
+
+export interface AlarmCodeUpdateBody {
+  name: string
+  level: AlarmLevel
+  onRaise: AlarmOnRaise
+  holdReasonCode?: string | null
+  enabled: 0 | 1
+  remark?: string | null
 }
 
 export interface AlarmActiveMessage {
@@ -73,5 +98,16 @@ export function clearAlarmApi(id: number | string, remark?: string) {
   return request<AlarmItem>(`/alarm/${id}/clear`, {
     method: 'POST',
     body: remark !== undefined ? { remark } : {},
+  })
+}
+
+export function listAlarmCodesApi() {
+  return request<AlarmCodeItem[]>('/alarm/codes', { method: 'GET' })
+}
+
+export function updateAlarmCodeApi(code: string, body: AlarmCodeUpdateBody) {
+  return request<AlarmCodeItem>(`/alarm/codes/${encodeURIComponent(code)}`, {
+    method: 'PUT',
+    body,
   })
 }
