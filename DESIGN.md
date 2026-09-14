@@ -188,7 +188,8 @@ components:
 - 全局命令：`⌘K` / `Ctrl+K` 搜 Lot / Eqp / Recipe
 
 ### Overlays
-- 优先 **Drawer** 做详情与表单；Modal 仅用于短确认与阻塞告警
+- Drawer 分级：`sm` 440（≤6 字段）/ `md` 560（中等详情）/ `lg` 720（宽只读）；多表可编辑配置用 **全页工作台**（如 Route 维护），勿塞抽屉
+- 优先 **Drawer** 做短表单与轻详情；Modal 仅用于短确认与阻塞告警
 - Toast 右上；Alarm 推送可固定顶条，critical 不自动消失
 
 ### Charts（看板）

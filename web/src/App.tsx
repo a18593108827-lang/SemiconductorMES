@@ -23,6 +23,7 @@ import { LotsPage } from './pages/LotsPage'
 import { EdcPage } from './pages/EdcPage'
 import { RecipePage } from './pages/RecipePage'
 import { SpcPage } from './pages/SpcPage'
+import { RouteEditorPage } from './pages/RouteEditorPage'
 import { RoutePage } from './pages/RoutePage'
 import { TrackPage } from './pages/TrackPage'
 import { WipPage } from './pages/WipPage'
@@ -48,7 +49,7 @@ export default function App() {
         }
       >
         <Route path="account/password" element={<ForcePasswordPage />} />
-        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route index element={<Navigate to="/app/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="lots" element={<LotsPage />} />
         <Route path="wip" element={<WipPage />} />
@@ -58,7 +59,10 @@ export default function App() {
         <Route path="recipe" element={<RecipePage />} />
         <Route path="edc" element={<EdcPage />} />
         <Route path="spc" element={<SpcPage />} />
-        <Route path="route" element={<RoutePage />} />
+        <Route path="route">
+          <Route index element={<RoutePage />} />
+          <Route path=":routeId" element={<RouteEditorPage />} />
+        </Route>
         <Route path="hold" element={<HoldPage />} />
         <Route path="alarm" element={<AlarmPage />} />
         <Route path="history" element={<HistoryPage />} />

@@ -1,198 +1,32 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
-import { ArrowDown, ArrowUp, GitBranch, Pencil, Plus, Trash2, Wrench } from 'lucide-react'
+import { GitBranch, Pencil, Plus, Wrench } from 'lucide-react'
 import {
   createRouteApi,
   createStepApi,
-  getRouteVersionApi,
-  listRouteVersionsApi,
   listRoutesApi,
   listStepsApi,
-  publishRouteVersionApi,
-  saveRouteDraftStepsApi,
   updateStepApi,
-  upgradeRouteVersionApi,
   type MesRouteItem,
-  type MesRouteStepItem,
-  type MesRouteVersionDetail,
-  type MesRouteVersionItem,
-  type MesRouteEdgeItem,
   type MesStepItem,
 } from '../api/route'
 import { useAuth } from '../auth/AuthContext'
 import { Button } from '../components/ui/Button'
-import { useConfirm } from '../components/ui/ConfirmDialog'
 import { Drawer } from '../components/ui/Drawer'
 import { Field } from '../components/ui/Field'
-import { FlashRow } from '../components/ui/FlashRow'
-import { EnablePill, RouteVersionPill } from '../components/ui/StatusPill'
+import { EnablePill } from '../components/ui/StatusPill'
 import { TableAction } from '../components/ui/TableAction'
 import { useToast } from '../components/ui/Toast'
 import { ApiError } from '../lib/http'
 import { cn } from '../lib/cn'
 import { motionMs } from '../lib/motion'
-
-const STEP_TYPE_LABEL: Record<number, string> = {
-  1: '加工',
-  2: '量测',
-  3: '其它',
-}
-
-type DraftRow = { key: string; stepId: string; pathKind: 'main' | 'off' }
-type DraftEdge = {
-  key: string
-  edgeType: 'rework' | 'branch' | 'skip_allow' | 'off_flow' | 'time_link' | 'normal_qtime'
-  fromSortNo: number
-  toSortNo: number
-  maxReworkCount: number
-  reasonCodes: string
-  conditionCode: string
-  maxQueueMin: number | null
-  onViolate: string
-}
-
-function fmtTime(v: string | null | undefined) {
-  if (!v) return '—'
-  return v.replace('T', ' ').slice(0, 16)
-}
-
-function toDraftRows(steps: MesRouteStepItem[]): DraftRow[] {
-  return steps.map((s, i) => ({
-    key: `e-${s.id}-${i}`,
-    stepId: String(s.stepId),
-    pathKind: s.sortNo >= 200 ? 'off' : 'main',
-  }))
-}
-
-function emptyQtimeFields() {
-  return { maxQueueMin: null as number | null, onViolate: '' }
-}
-
-function toDraftEdges(edges: MesRouteEdgeItem[] | undefined): DraftEdge[] {
-  return (edges ?? [])
-    .filter(
-      (e) =>
-        e.edgeType === 'rework' ||
-        e.edgeType === 'branch' ||
-        e.edgeType === 'skip_allow' ||
-        e.edgeType === 'off_flow' ||
-        e.edgeType === 'time_link' ||
-        (e.edgeType === 'normal' && e.maxQueueMin != null && e.maxQueueMin >= 1),
-    )
-    .map((e, i) => ({
-      key: `edge-${e.id ?? i}`,
-      edgeType:
-        e.edgeType === 'normal'
-          ? ('normal_qtime' as const)
-          : (e.edgeType as DraftEdge['edgeType']),
-      fromSortNo: e.fromSortNo,
-      toSortNo: e.toSortNo,
-      maxReworkCount: e.maxReworkCount ?? 1,
-      reasonCodes: e.reasonCodes ?? '',
-      conditionCode: e.conditionCode ?? '',
-      maxQueueMin: e.maxQueueMin ?? null,
-      onViolate: e.onViolate ?? '',
-    }))
-}
-
-function toSaveSteps(rows: DraftRow[]) {
-  const main = rows.filter((r) => r.pathKind === 'main')
-  const off = rows.filter((r) => r.pathKind === 'off')
-  const chain = (list: DraftRow[], base: number) =>
-    list.map((r, i) => ({
-      stepId: r.stepId,
-      sortNo: base + (i + 1) * 10,
-      nextSortNo: i < list.length - 1 ? base + (i + 2) * 10 : null,
-    }))
-  return [...chain(main, 0), ...chain(off, 200)]
-}
-
-function displaySortNo(rows: DraftRow[], index: number) {
-  const row = rows[index]
-  if (row.pathKind === 'off') {
-    const offIdx = rows.slice(0, index + 1).filter((r) => r.pathKind === 'off').length
-    return 200 + offIdx * 10
-  }
-  const mainIdx = rows.slice(0, index + 1).filter((r) => r.pathKind === 'main').length
-  return mainIdx * 10
-}
-
-function toSaveEdges(edges: DraftEdge[]) {
-  return edges.map((e, i) => {
-    const qtime =
-      e.maxQueueMin != null && e.maxQueueMin >= 1
-        ? {
-            maxQueueMin: e.maxQueueMin,
-            onViolate: e.onViolate.trim() || null,
-          }
-        : {}
-    if (e.edgeType === 'branch') {
-      return {
-        fromSortNo: e.fromSortNo,
-        toSortNo: e.toSortNo,
-        edgeType: 'branch',
-        conditionCode: e.conditionCode.trim().toUpperCase() || null,
-        sortNo: i,
-        ...qtime,
-      }
-    }
-    if (e.edgeType === 'skip_allow') {
-      return {
-        fromSortNo: e.fromSortNo,
-        toSortNo: e.toSortNo,
-        edgeType: 'skip_allow',
-        reasonCodes: e.reasonCodes.trim() || null,
-        sortNo: i,
-        ...qtime,
-      }
-    }
-    if (e.edgeType === 'off_flow') {
-      return {
-        fromSortNo: e.fromSortNo,
-        toSortNo: e.toSortNo,
-        edgeType: 'off_flow',
-        maxReworkCount: e.maxReworkCount,
-        reasonCodes: e.reasonCodes.trim() || null,
-        sortNo: i,
-        ...qtime,
-      }
-    }
-    if (e.edgeType === 'time_link') {
-      return {
-        fromSortNo: e.fromSortNo,
-        toSortNo: e.toSortNo,
-        edgeType: 'time_link',
-        maxQueueMin: e.maxQueueMin ?? 1,
-        onViolate: e.onViolate.trim() || null,
-        sortNo: i,
-      }
-    }
-    if (e.edgeType === 'normal_qtime') {
-      return {
-        fromSortNo: e.fromSortNo,
-        toSortNo: e.toSortNo,
-        edgeType: 'normal',
-        maxQueueMin: e.maxQueueMin ?? 1,
-        onViolate: e.onViolate.trim() || null,
-        sortNo: i,
-      }
-    }
-    return {
-      fromSortNo: e.fromSortNo,
-      toSortNo: e.toSortNo,
-      edgeType: 'rework',
-      maxReworkCount: e.maxReworkCount,
-      reasonCodes: e.reasonCodes.trim() || null,
-      sortNo: i,
-      ...qtime,
-    }
-  })
-}
+import { STEP_TYPE_LABEL, fmtTime } from './route/routeDraft'
 
 export function RoutePage() {
   const { hasPermission } = useAuth()
   const toast = useToast()
-  const confirm = useConfirm()
+  const navigate = useNavigate()
   const rootRef = useRef<HTMLDivElement>(null)
 
   const [routes, setRoutes] = useState<MesRouteItem[]>([])
@@ -202,8 +36,6 @@ export function RoutePage() {
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
-  const [flashId, setFlashId] = useState<string | null>(null)
-
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({
     routeCode: '',
@@ -214,16 +46,6 @@ export function RoutePage() {
   const [createError, setCreateError] = useState('')
   const [savingCreate, setSavingCreate] = useState(false)
 
-  const [detailRoute, setDetailRoute] = useState<MesRouteItem | null>(null)
-  const [versions, setVersions] = useState<MesRouteVersionItem[]>([])
-  const [versionDetail, setVersionDetail] = useState<MesRouteVersionDetail | null>(null)
-  const [selectedVersionId, setSelectedVersionId] = useState<string>('')
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [draftRows, setDraftRows] = useState<DraftRow[]>([])
-  const [draftEdges, setDraftEdges] = useState<DraftEdge[]>([])
-  const [savingSteps, setSavingSteps] = useState(false)
-
-  const [stepOptions, setStepOptions] = useState<MesStepItem[]>([])
   const [stepsOpen, setStepsOpen] = useState(false)
   const [stepRows, setStepRows] = useState<MesStepItem[]>([])
   const [stepsLoading, setStepsLoading] = useState(false)
@@ -243,27 +65,11 @@ export function RoutePage() {
   })
   const [stepError, setStepError] = useState('')
   const [savingStep, setSavingStep] = useState(false)
-  const [quickStepOpen, setQuickStepOpen] = useState(false)
-  const [quickStepForm, setQuickStepForm] = useState({
-    stepCode: '',
-    stepName: '',
-    stepType: 1,
-  })
-  const [quickStepError, setQuickStepError] = useState('')
-  const [savingQuickStep, setSavingQuickStep] = useState(false)
-  const [quickFillRowKey, setQuickFillRowKey] = useState<string | null>(null)
 
   const size = 20
   const canAdd = hasPermission('route:add')
   const canEdit = hasPermission('route:edit')
   const totalPages = Math.max(1, Math.ceil(total / size))
-  const isDraft = versionDetail?.status === 'draft'
-  const hasDraftVersion = versions.some((v) => v.status === 'draft')
-
-  const stepNameMap = useMemo(
-    () => Object.fromEntries(stepOptions.map((s) => [String(s.id), s])),
-    [stepOptions],
-  )
 
   const loadRoutes = useCallback(async () => {
     setLoading(true)
@@ -282,22 +88,9 @@ export function RoutePage() {
     }
   }, [keyword, page, toast])
 
-  const loadStepOptions = useCallback(async () => {
-    try {
-      const data = await listStepsApi({ status: 1, page: 1, size: 200 })
-      setStepOptions(data.records)
-    } catch {
-      setStepOptions([])
-    }
-  }, [])
-
   useEffect(() => {
     void loadRoutes()
   }, [loadRoutes])
-
-  useEffect(() => {
-    void loadStepOptions()
-  }, [loadStepOptions])
 
   useEffect(() => {
     if (!rootRef.current) return
@@ -314,51 +107,6 @@ export function RoutePage() {
     }, rootRef)
     return () => ctx.revert()
   }, [])
-
-  async function openDetail(route: MesRouteItem) {
-    setDetailRoute(route)
-    setDetailLoading(true)
-    setVersionDetail(null)
-    setDraftRows([])
-    setDraftEdges([])
-    try {
-      const vers = await listRouteVersionsApi(route.id)
-      setVersions(vers)
-      const prefer =
-        vers.find((v) => v.status === 'active') ??
-        vers.find((v) => v.status === 'draft') ??
-        vers[0]
-      if (prefer) {
-        setSelectedVersionId(String(prefer.id))
-        const detail = await getRouteVersionApi(prefer.id)
-        setVersionDetail(detail)
-        setDraftRows(toDraftRows(detail.steps))
-        setDraftEdges(toDraftEdges(detail.edges))
-      } else {
-        setSelectedVersionId('')
-      }
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '加载版本失败')
-      setDetailRoute(null)
-    } finally {
-      setDetailLoading(false)
-    }
-  }
-
-  async function selectVersion(versionId: string) {
-    setSelectedVersionId(versionId)
-    setDetailLoading(true)
-    try {
-      const detail = await getRouteVersionApi(versionId)
-      setVersionDetail(detail)
-      setDraftRows(toDraftRows(detail.steps))
-      setDraftEdges(toDraftEdges(detail.edges))
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '加载版本失败')
-    } finally {
-      setDetailLoading(false)
-    }
-  }
 
   async function submitCreate() {
     const routeCode = createForm.routeCode.trim()
@@ -379,109 +127,12 @@ export function RoutePage() {
       setCreateOpen(false)
       setCreateForm({ routeCode: '', routeName: '', productCode: '', remark: '' })
       toast.success('路线已创建')
-      setFlashId(String(id))
-      if (page === 1) await loadRoutes()
-      else setPage(1)
+      navigate(`/app/route/${id}`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : '创建失败')
     } finally {
       setSavingCreate(false)
     }
-  }
-
-  async function saveDraft() {
-    if (!versionDetail || !isDraft) return
-    if (draftRows.some((r) => !r.stepId)) {
-      toast.error('请为每个步骤选择工序')
-      return
-    }
-    setSavingSteps(true)
-    try {
-      await saveRouteDraftStepsApi(versionDetail.id, toSaveSteps(draftRows), toSaveEdges(draftEdges))
-      toast.success('草稿已保存')
-      const detail = await getRouteVersionApi(versionDetail.id)
-      setVersionDetail(detail)
-      setDraftRows(toDraftRows(detail.steps))
-      setDraftEdges(toDraftEdges(detail.edges))
-      setFlashId(String(detailRoute?.id ?? ''))
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '保存失败')
-    } finally {
-      setSavingSteps(false)
-    }
-  }
-
-  async function publishVersion() {
-    if (!versionDetail || !isDraft) return
-    if (draftRows.length === 0) {
-      toast.error('至少配置一个步骤才能发布')
-      return
-    }
-    const ok = await confirm({
-      title: '发布版本',
-      message: `确认发布 v${versionDetail.versionNo}？原生效版将归档。`,
-      confirmText: '发布',
-    })
-    if (!ok) return
-    setSavingSteps(true)
-    try {
-      if (draftRows.some((r) => !r.stepId)) {
-        toast.error('请为每个步骤选择工序')
-        return
-      }
-      await saveRouteDraftStepsApi(versionDetail.id, toSaveSteps(draftRows), toSaveEdges(draftEdges))
-      await publishRouteVersionApi(versionDetail.id)
-      toast.success('版本已发布')
-      if (detailRoute) await openDetail(detailRoute)
-      await loadRoutes()
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '发布失败')
-    } finally {
-      setSavingSteps(false)
-    }
-  }
-
-  async function upgradeFromCurrent() {
-    if (!detailRoute || !versionDetail) return
-    if (hasDraftVersion) {
-      toast.error('已有草稿版本，请先发布或继续编辑现有草稿')
-      const draft = versions.find((v) => v.status === 'draft')
-      if (draft) void selectVersion(String(draft.id))
-      return
-    }
-    const ok = await confirm({
-      title: '升版',
-      message: `基于 v${versionDetail.versionNo} 复制为新草稿？同一路线同时仅允许一个草稿。`,
-      confirmText: '升版',
-    })
-    if (!ok) return
-    try {
-      const { versionId } = await upgradeRouteVersionApi(detailRoute.id, versionDetail.id)
-      toast.success('已生成新草稿')
-      await openDetail(detailRoute)
-      await selectVersion(String(versionId))
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '升版失败')
-    }
-  }
-
-  function addDraftRow() {
-    setDraftRows((rows) => [...rows, { key: `n-${Date.now()}`, stepId: '', pathKind: 'main' }])
-  }
-
-  function addOffDraftRow() {
-    setDraftRows((rows) => [...rows, { key: `o-${Date.now()}`, stepId: '', pathKind: 'off' }])
-  }
-
-  function moveDraftRow(index: number, dir: -1 | 1) {
-    setDraftRows((rows) => {
-      const next = [...rows]
-      const j = index + dir
-      if (j < 0 || j >= next.length) return rows
-      if (next[index].pathKind !== next[j].pathKind) return rows
-      ;[next[index], next[j]] = [next[j], next[index]]
-      return next
-    })
   }
 
   function resetStepForm() {
@@ -584,58 +235,10 @@ export function RoutePage() {
       }
       resetStepForm()
       await loadStepRows()
-      await loadStepOptions()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : '保存失败')
     } finally {
       setSavingStep(false)
-    }
-  }
-
-  function openQuickStep(rowKey?: string) {
-    setQuickFillRowKey(rowKey ?? null)
-    setQuickStepOpen(true)
-    setQuickStepError('')
-    setQuickStepForm({ stepCode: '', stepName: '', stepType: 1 })
-  }
-
-  async function saveQuickStep() {
-    const stepCode = quickStepForm.stepCode.trim()
-    const stepName = quickStepForm.stepName.trim()
-    if (!stepCode || !stepName) {
-      setQuickStepError('请填写工序编码和名称')
-      return
-    }
-    setSavingQuickStep(true)
-    setQuickStepError('')
-    try {
-      await createStepApi({
-        stepCode,
-        stepName,
-        stepType: quickStepForm.stepType,
-      })
-      const data = await listStepsApi({ status: 1, page: 1, size: 200 })
-      setStepOptions(data.records)
-      const created = data.records.find((s) => s.stepCode === stepCode)
-      if (created) {
-        const id = String(created.id)
-        setDraftRows((rows) => {
-          if (quickFillRowKey) {
-            return rows.map((r) => (r.key === quickFillRowKey ? { ...r, stepId: id } : r))
-          }
-          const empty = rows.find((r) => !r.stepId)
-          if (empty) {
-            return rows.map((r) => (r.key === empty.key ? { ...r, stepId: id } : r))
-          }
-          return [...rows, { key: `n-${Date.now()}`, stepId: id, pathKind: 'main' }]
-        })
-      }
-      setQuickStepOpen(false)
-      toast.success('工序已新增并选用')
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : '新增失败')
-    } finally {
-      setSavingQuickStep(false)
     }
   }
 
@@ -735,7 +338,7 @@ export function RoutePage() {
               </tr>
             ) : (
               routes.map((r) => (
-                <FlashRow key={String(r.id)} active={flashId === String(r.id)}>
+                <tr key={String(r.id)}>
                   <td className="h-10 border-b border-border px-3 font-mono text-[13px] font-medium">
                     {r.routeCode}
                   </td>
@@ -753,14 +356,15 @@ export function RoutePage() {
                     {fmtTime(r.updateTime)}
                   </td>
                   <td className="border-b border-border px-3">
-                    <TableAction
-                      icon={GitBranch}
-                      label="维护"
-                      tone="accent"
-                      onClick={() => void openDetail(r)}
-                    />
+                    <Link
+                      to={`/app/route/${r.id}`}
+                      className="inline-flex h-7 items-center gap-1 rounded-md border border-accent/30 px-2 text-xs font-medium text-accent transition-colors duration-150 hover:bg-accent/8"
+                    >
+                      <GitBranch className="size-3.5 shrink-0" aria-hidden />
+                      维护
+                    </Link>
                   </td>
-                </FlashRow>
+                </tr>
               ))
             )}
           </tbody>
@@ -790,6 +394,7 @@ export function RoutePage() {
       <Drawer
         open={createOpen}
         title="新建路线"
+        size="sm"
         onClose={() => setCreateOpen(false)}
         footer={
           <>
@@ -830,645 +435,8 @@ export function RoutePage() {
             onChange={(e) => setCreateForm((f) => ({ ...f, remark: e.target.value }))}
             placeholder="可选"
           />
-          <p className="text-xs text-muted">创建后自动生成草稿 v1，需配置步骤并发布后才会成为生效版。</p>
+          <p className="text-xs text-muted">创建后进入维护页配置步骤并发布。</p>
         </div>
-      </Drawer>
-
-      <Drawer
-        open={!!detailRoute}
-        title={detailRoute ? `维护 · ${detailRoute.routeCode}` : '维护路线'}
-        onClose={() => setDetailRoute(null)}
-        width={560}
-        footer={
-          versionDetail ? (
-            <>
-              <Button variant="secondary" onClick={() => setDetailRoute(null)}>
-                关闭
-              </Button>
-              {canAdd ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => void upgradeFromCurrent()}
-                  disabled={hasDraftVersion}
-                  title={hasDraftVersion ? '已有草稿，请先发布或编辑现有草稿' : undefined}
-                >
-                  升版
-                </Button>
-              ) : null}
-              {isDraft && canEdit ? (
-                <>
-                  <Button variant="secondary" loading={savingSteps} onClick={() => void saveDraft()}>
-                    保存草稿
-                  </Button>
-                  <Button loading={savingSteps} onClick={() => void publishVersion()}>
-                    发布
-                  </Button>
-                </>
-              ) : null}
-            </>
-          ) : null
-        }
-      >
-        {detailLoading && !versionDetail ? (
-          <p className="text-sm text-muted">加载中…</p>
-        ) : versionDetail ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium">{versionDetail.routeName}</span>
-              <RouteVersionPill status={versionDetail.status} />
-              <span className="font-mono text-xs text-muted">v{versionDetail.versionNo}</span>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {versions.map((v) => (
-                <button
-                  key={String(v.id)}
-                  type="button"
-                  onClick={() => void selectVersion(String(v.id))}
-                  className={cn(
-                    'cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors duration-150',
-                    selectedVersionId === String(v.id)
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-border bg-bg text-muted hover:bg-surface',
-                  )}
-                >
-                  v{v.versionNo}
-                  <span className="ml-1 opacity-80">
-                    {v.status === 'draft' ? '草稿' : v.status === 'active' ? '生效' : '归档'}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full min-w-[460px] text-left text-sm">
-                <thead className="bg-surface text-xs font-medium text-muted">
-                  <tr className="h-9 border-b border-border">
-                    <th className="px-2">顺序</th>
-                    <th className="px-2">路径</th>
-                    <th className="px-2">工序</th>
-                    <th className="px-2">设备类型</th>
-                    <th className="px-2">下一站</th>
-                    {isDraft && canEdit ? <th className="px-2">操作</th> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(isDraft ? draftRows : versionDetail.steps).length === 0 ? (
-                    <tr>
-                        <td
-                          colSpan={isDraft && canEdit ? 6 : 5}
-                          className="h-14 px-2 text-center text-muted"
-                        >
-                        暂无步骤
-                        {isDraft && canEdit ? '，点击下方添加。' : '。'}
-                      </td>
-                    </tr>
-                  ) : isDraft ? (
-                    draftRows.map((row, index) => {
-                      const sortNo = displaySortNo(draftRows, index)
-                      const sameKind = draftRows.filter((r) => r.pathKind === row.pathKind)
-                      const kindIdx = sameKind.findIndex((r) => r.key === row.key)
-                      const nextRow = kindIdx >= 0 && kindIdx < sameKind.length - 1 ? sameKind[kindIdx + 1] : null
-                      const nextLabel = nextRow
-                        ? stepNameMap[nextRow.stepId]?.stepCode ??
-                          `站${displaySortNo(
-                            draftRows,
-                            draftRows.findIndex((r) => r.key === nextRow.key),
-                          )}`
-                        : '结束'
-                      return (
-                        <tr key={row.key} className="h-10 border-b border-border">
-                          <td className="px-2 font-mono text-[13px]">{sortNo}</td>
-                          <td className="px-2 text-[12px] text-muted">
-                            {row.pathKind === 'off' ? '旁路' : '主'}
-                          </td>
-                          <td className="px-2">
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                className="h-8 w-full max-w-[200px] rounded-md border border-border bg-bg px-2 text-sm"
-                                value={row.stepId}
-                                disabled={!canEdit}
-                                onChange={(e) =>
-                                  setDraftRows((rows) =>
-                                    rows.map((r) =>
-                                      r.key === row.key ? { ...r, stepId: e.target.value } : r,
-                                    ),
-                                  )
-                                }
-                                aria-label={`步骤${index + 1}工序`}
-                              >
-                                <option value="">选择工序</option>
-                                {stepOptions.map((s) => (
-                                  <option key={String(s.id)} value={String(s.id)}>
-                                    {s.stepCode} · {s.stepName}
-                                  </option>
-                                ))}
-                              </select>
-                              {canAdd && !row.stepId ? (
-                                <button
-                                  type="button"
-                                  className="shrink-0 cursor-pointer text-[11px] text-accent hover:underline"
-                                  onClick={() => openQuickStep(row.key)}
-                                >
-                                  新建
-                                </button>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="px-2 font-mono text-[12px] text-muted">
-                            {stepNameMap[row.stepId]?.eqpType || '—'}
-                          </td>
-                          <td className="px-2 font-mono text-[12px] text-muted">{nextLabel}</td>
-                          {canEdit ? (
-                            <td className="px-2">
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  className="cursor-pointer rounded-sm p-1 text-muted hover:bg-surface hover:text-ink"
-                                  aria-label="上移"
-                                  onClick={() => moveDraftRow(index, -1)}
-                                >
-                                  <ArrowUp className="size-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="cursor-pointer rounded-sm p-1 text-muted hover:bg-surface hover:text-ink"
-                                  aria-label="下移"
-                                  onClick={() => moveDraftRow(index, 1)}
-                                >
-                                  <ArrowDown className="size-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="cursor-pointer rounded-sm p-1 text-muted hover:bg-danger/10 hover:text-danger"
-                                  aria-label="删除"
-                                  onClick={() =>
-                                    setDraftRows((rows) => rows.filter((r) => r.key !== row.key))
-                                  }
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          ) : null}
-                        </tr>
-                      )
-                    })
-                  ) : (
-                    versionDetail.steps.map((s) => (
-                      <tr key={String(s.id)} className="h-10 border-b border-border">
-                        <td className="px-2 font-mono text-[13px]">{s.sortNo}</td>
-                        <td className="px-2 text-[12px] text-muted">
-                          {s.sortNo >= 200 ? '旁路' : '主'}
-                        </td>
-                        <td className="px-2">
-                          <span className="font-mono text-[13px]">{s.stepCode}</span>
-                          <span className="ml-2 text-muted">{s.stepName}</span>
-                        </td>
-                        <td className="px-2 font-mono text-[12px] text-muted">
-                          {s.eqpType || '—'}
-                        </td>
-                        <td className="px-2 font-mono text-[12px] text-muted">
-                          {s.nextSortNo ?? '结束'}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {isDraft && canEdit ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" onClick={addDraftRow}>
-                  <Plus className="size-4" aria-hidden />
-                  添加步骤
-                </Button>
-                <Button variant="secondary" onClick={addOffDraftRow}>
-                  <Plus className="size-4" aria-hidden />
-                  旁路步骤
-                </Button>
-                {canAdd ? (
-                  <button
-                    type="button"
-                    className="cursor-pointer text-xs text-accent hover:underline"
-                    onClick={() => openQuickStep()}
-                  >
-                    缺少工序？快速新建
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-ink">边（回流 / 分支 / 跳站 / Off-Flow / QTime）</p>
-                {isDraft && canEdit ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setDraftEdges((rows) => [
-                          ...rows,
-                          {
-                            key: `edge-${Date.now()}`,
-                            edgeType: 'rework',
-                            fromSortNo: draftRows.filter((r) => r.pathKind === 'main').length
-                              ? draftRows.filter((r) => r.pathKind === 'main').length * 10
-                              : 10,
-                            toSortNo: 10,
-                            maxReworkCount: 2,
-                            reasonCodes: '',
-                            conditionCode: '',
-                            ...emptyQtimeFields(),
-                          },
-                        ])
-                      }
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      回流
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setDraftEdges((rows) => [
-                          ...rows,
-                          {
-                            key: `edge-b-${Date.now()}`,
-                            edgeType: 'branch',
-                            fromSortNo: draftRows.filter((r) => r.pathKind === 'main').length
-                              ? draftRows.filter((r) => r.pathKind === 'main').length * 10
-                              : 10,
-                            toSortNo: 10,
-                            maxReworkCount: 1,
-                            reasonCodes: '',
-                            conditionCode: 'PASS',
-                            ...emptyQtimeFields(),
-                          },
-                        ])
-                      }
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      分支
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setDraftEdges((rows) => [
-                          ...rows,
-                          {
-                            key: `edge-s-${Date.now()}`,
-                            edgeType: 'skip_allow',
-                            fromSortNo: 10,
-                            toSortNo: draftRows.filter((r) => r.pathKind === 'main').length
-                              ? draftRows.filter((r) => r.pathKind === 'main').length * 10
-                              : 20,
-                            maxReworkCount: 1,
-                            reasonCodes: '',
-                            conditionCode: '',
-                            ...emptyQtimeFields(),
-                          },
-                        ])
-                      }
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      跳站
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        const mainN = draftRows.filter((r) => r.pathKind === 'main').length
-                        const offN = draftRows.filter((r) => r.pathKind === 'off').length
-                        setDraftEdges((rows) => [
-                          ...rows,
-                          {
-                            key: `edge-o-${Date.now()}`,
-                            edgeType: 'off_flow',
-                            fromSortNo: mainN ? mainN * 10 : 10,
-                            toSortNo: offN ? 210 : 210,
-                            maxReworkCount: 1,
-                            reasonCodes: '',
-                            conditionCode: '',
-                            ...emptyQtimeFields(),
-                          },
-                        ])
-                      }}
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      Off-Flow
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        const mainN = draftRows.filter((r) => r.pathKind === 'main').length
-                        setDraftEdges((rows) => [
-                          ...rows,
-                          {
-                            key: `edge-q-${Date.now()}`,
-                            edgeType: 'time_link',
-                            fromSortNo: 10,
-                            toSortNo: mainN > 1 ? mainN * 10 : 20,
-                            maxReworkCount: 1,
-                            reasonCodes: '',
-                            conditionCode: '',
-                            maxQueueMin: 120,
-                            onViolate: 'HOLD',
-                          },
-                        ])
-                      }}
-                    >
-                      <Plus className="size-4" aria-hidden />
-                      QTime
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-              <div className="overflow-hidden rounded-md border border-border">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-surface text-[11px] uppercase tracking-wide text-muted">
-                    <tr className="h-9">
-                      <th className="px-2 font-medium">类型</th>
-                      <th className="px-2 font-medium">触发站</th>
-                      <th className="px-2 font-medium">目标站</th>
-                      <th className="px-2 font-medium">条件/上限</th>
-                      <th className="px-2 font-medium">QTime</th>
-                      <th className="px-2 font-medium">原因码</th>
-                      {isDraft && canEdit ? <th className="px-2 font-medium w-10" /> : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(isDraft ? draftEdges : toDraftEdges(versionDetail.edges)).length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={isDraft && canEdit ? 7 : 6}
-                          className="px-2 py-4 text-center text-muted"
-                        >
-                          无特殊边（默认下一站由步骤顺序生成；QTime 可单独配置）
-                        </td>
-                      </tr>
-                    ) : (
-                      (isDraft ? draftEdges : toDraftEdges(versionDetail.edges)).map((edge) => (
-                        <tr key={edge.key} className="h-10 border-b border-border">
-                          {isDraft && canEdit ? (
-                            <>
-                              <td className="px-2 font-mono text-[12px]">
-                                {edge.edgeType === 'normal_qtime' ? 'normal+qtime' : edge.edgeType}
-                              </td>
-                              <td className="px-2">
-                                <input
-                                  className="w-16 rounded border border-border bg-bg px-1 py-0.5 font-mono text-[12px]"
-                                  type="number"
-                                  value={edge.fromSortNo}
-                                  onChange={(e) =>
-                                    setDraftEdges((rows) =>
-                                      rows.map((r) =>
-                                        r.key === edge.key
-                                          ? { ...r, fromSortNo: Number(e.target.value) || 0 }
-                                          : r,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="px-2">
-                                <input
-                                  className="w-16 rounded border border-border bg-bg px-1 py-0.5 font-mono text-[12px]"
-                                  type="number"
-                                  value={edge.toSortNo}
-                                  onChange={(e) =>
-                                    setDraftEdges((rows) =>
-                                      rows.map((r) =>
-                                        r.key === edge.key
-                                          ? { ...r, toSortNo: Number(e.target.value) || 0 }
-                                          : r,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </td>
-                              <td className="px-2">
-                                {edge.edgeType === 'branch' ? (
-                                  <input
-                                    className="w-20 rounded border border-border bg-bg px-1 py-0.5 font-mono text-[12px]"
-                                    value={edge.conditionCode}
-                                    placeholder="PASS"
-                                    onChange={(e) =>
-                                      setDraftEdges((rows) =>
-                                        rows.map((r) =>
-                                          r.key === edge.key
-                                            ? { ...r, conditionCode: e.target.value }
-                                            : r,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                ) : edge.edgeType === 'rework' || edge.edgeType === 'off_flow' ? (
-                                  <input
-                                    className="w-14 rounded border border-border bg-bg px-1 py-0.5 font-mono text-[12px]"
-                                    type="number"
-                                    min={1}
-                                    value={edge.maxReworkCount}
-                                    onChange={(e) =>
-                                      setDraftEdges((rows) =>
-                                        rows.map((r) =>
-                                          r.key === edge.key
-                                            ? {
-                                                ...r,
-                                                maxReworkCount: Math.max(
-                                                  1,
-                                                  Number(e.target.value) || 1,
-                                                ),
-                                              }
-                                            : r,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                ) : edge.edgeType === 'time_link' ||
-                                  edge.edgeType === 'normal_qtime' ? (
-                                  <span className="text-[12px] text-muted">时间窗</span>
-                                ) : (
-                                  <span className="text-[12px] text-muted">前向</span>
-                                )}
-                              </td>
-                              <td className="px-2">
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    className="w-14 rounded border border-border bg-bg px-1 py-0.5 font-mono text-[12px]"
-                                    type="number"
-                                    min={1}
-                                    placeholder="分"
-                                    value={edge.maxQueueMin ?? ''}
-                                    onChange={(e) =>
-                                      setDraftEdges((rows) =>
-                                        rows.map((r) =>
-                                          r.key === edge.key
-                                            ? {
-                                                ...r,
-                                                maxQueueMin: e.target.value
-                                                  ? Math.max(1, Number(e.target.value) || 1)
-                                                  : null,
-                                              }
-                                            : r,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                  <select
-                                    className="h-7 max-w-[5.5rem] cursor-pointer rounded border border-border bg-bg px-1 font-mono text-[11px]"
-                                    value={edge.onViolate || ''}
-                                    onChange={(e) =>
-                                      setDraftEdges((rows) =>
-                                        rows.map((r) =>
-                                          r.key === edge.key
-                                            ? { ...r, onViolate: e.target.value }
-                                            : r,
-                                        ),
-                                      )
-                                    }
-                                    aria-label="超时策略"
-                                  >
-                                    <option value="">默认</option>
-                                    <option value="HOLD">HOLD</option>
-                                    <option value="ALARM">ALARM</option>
-                                    <option value="HOLD_ALARM">HOLD+ALARM</option>
-                                  </select>
-                                </div>
-                              </td>
-                              <td className="px-2">
-                                {edge.edgeType === 'rework' ||
-                                edge.edgeType === 'skip_allow' ||
-                                edge.edgeType === 'off_flow' ? (
-                                  <input
-                                    className="w-full rounded border border-border bg-bg px-1 py-0.5 font-mono text-[12px]"
-                                    value={edge.reasonCodes}
-                                    placeholder="EQP_DOWN,..."
-                                    onChange={(e) =>
-                                      setDraftEdges((rows) =>
-                                        rows.map((r) =>
-                                          r.key === edge.key
-                                            ? { ...r, reasonCodes: e.target.value }
-                                            : r,
-                                        ),
-                                      )
-                                    }
-                                  />
-                                ) : (
-                                  <span className="text-[12px] text-muted">—</span>
-                                )}
-                              </td>
-                              <td className="px-2">
-                                <button
-                                  type="button"
-                                  className="cursor-pointer rounded-sm p-1 text-muted hover:bg-danger/10 hover:text-danger"
-                                  aria-label="删除边"
-                                  onClick={() =>
-                                    setDraftEdges((rows) => rows.filter((r) => r.key !== edge.key))
-                                  }
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </button>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="px-2 font-mono text-[12px]">
-                                {edge.edgeType === 'normal_qtime' ? 'normal+qtime' : edge.edgeType}
-                              </td>
-                              <td className="px-2 font-mono text-[13px]">{edge.fromSortNo}</td>
-                              <td className="px-2 font-mono text-[13px]">{edge.toSortNo}</td>
-                              <td className="px-2 font-mono text-[13px]">
-                                {edge.edgeType === 'branch'
-                                  ? edge.conditionCode || '—'
-                                  : edge.edgeType === 'rework' || edge.edgeType === 'off_flow'
-                                    ? edge.maxReworkCount
-                                    : edge.edgeType === 'time_link' ||
-                                        edge.edgeType === 'normal_qtime'
-                                      ? '时间窗'
-                                      : '前向'}
-                              </td>
-                              <td className="px-2 font-mono text-[12px]">
-                                {edge.maxQueueMin != null
-                                  ? `${edge.maxQueueMin}分${edge.onViolate ? '/' + edge.onViolate : ''}`
-                                  : '—'}
-                              </td>
-                              <td className="px-2 font-mono text-[12px] text-muted">
-                                {edge.edgeType === 'rework' ||
-                                edge.edgeType === 'skip_allow' ||
-                                edge.edgeType === 'off_flow'
-                                  ? edge.reasonCodes || '任意'
-                                  : '—'}
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {isDraft && canAdd && quickStepOpen ? (
-              <div className="space-y-3 rounded-md border border-accent/25 bg-accent/5 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium text-ink">快速新建工序</p>
-                  <button
-                    type="button"
-                    className="cursor-pointer text-xs text-muted hover:text-ink hover:underline"
-                    onClick={() => setQuickStepOpen(false)}
-                  >
-                    收起
-                  </button>
-                </div>
-                {quickStepError ? <p className="text-xs text-danger">{quickStepError}</p> : null}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field
-                    label="工序编码"
-                    name="quickStepCode"
-                    value={quickStepForm.stepCode}
-                    onChange={(e) =>
-                      setQuickStepForm((f) => ({ ...f, stepCode: e.target.value }))
-                    }
-                  />
-                  <Field
-                    label="工序名称"
-                    name="quickStepName"
-                    value={quickStepForm.stepName}
-                    onChange={(e) =>
-                      setQuickStepForm((f) => ({ ...f, stepName: e.target.value }))
-                    }
-                  />
-                </div>
-                <label className="flex flex-col gap-1.5 text-sm">
-                  <span className="text-xs font-medium text-muted">类型</span>
-                  <select
-                    className="h-9 rounded-md border border-border bg-bg px-3"
-                    value={quickStepForm.stepType}
-                    onChange={(e) =>
-                      setQuickStepForm((f) => ({ ...f, stepType: Number(e.target.value) }))
-                    }
-                  >
-                    <option value={1}>加工</option>
-                    <option value={2}>量测</option>
-                    <option value={3}>其它</option>
-                  </select>
-                </label>
-                <Button loading={savingQuickStep} onClick={() => void saveQuickStep()}>
-                  新建并选用
-                </Button>
-              </div>
-            ) : null}
-
-            {!isDraft ? (
-              <p className="text-xs text-muted">
-                生效/归档版本只读。需要改工艺时请「升版」生成草稿后再编辑发布。
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          <p className="text-sm text-muted">暂无版本数据</p>
-        )}
       </Drawer>
 
       <Drawer
@@ -1482,7 +450,7 @@ export function RoutePage() {
           setStepsOpen(false)
           resetStepForm()
         }}
-        width={520}
+        size="md"
         footer={
           canAdd || canEdit ? (
             <>
@@ -1646,13 +614,13 @@ export function RoutePage() {
               <tbody>
                 {stepsLoading ? (
                   <tr>
-                    <td colSpan={5} className="h-14 px-2 text-center text-muted">
+                    <td colSpan={6} className="h-14 px-2 text-center text-muted">
                       加载中…
                     </td>
                   </tr>
                 ) : stepRows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="h-14 px-2 text-center text-muted">
+                    <td colSpan={6} className="h-14 px-2 text-center text-muted">
                       {stepKeyword ? '无匹配工序' : '暂无工序'}
                     </td>
                   </tr>

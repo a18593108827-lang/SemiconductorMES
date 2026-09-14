@@ -202,6 +202,7 @@ export function AdminShell() {
                 <NavLink
                   key={`${group.key}-${item.to}`}
                   to={item.to}
+                  end={item.to === '/app/route' ? false : undefined}
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors duration-150',

@@ -4,13 +4,24 @@ import { X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { motionMs } from '../../lib/motion'
 
+/** L1 窄表单 / L2 中等详情 / L3 宽面板（多表请用全页，勿塞抽屉） */
+export const DRAWER_SIZE = {
+  sm: 440,
+  md: 560,
+  lg: 720,
+} as const
+
+export type DrawerSize = keyof typeof DRAWER_SIZE
+
 interface DrawerProps {
   open: boolean
   title: string
   onClose: () => void
   children: React.ReactNode
   footer?: React.ReactNode
+  /** @deprecated 优先用 size；显式 width 会覆盖 size */
   width?: number
+  size?: DrawerSize
   tone?: 'admin' | 'field'
 }
 
@@ -20,11 +31,13 @@ export function Drawer({
   onClose,
   children,
   footer,
-  width = 440,
+  width,
+  size = 'sm',
   tone = 'admin',
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
+  const panelWidth = width ?? DRAWER_SIZE[size]
 
   useEffect(() => {
     if (!panelRef.current || !backdropRef.current) return
@@ -57,7 +70,7 @@ export function Drawer({
             ? 'border-field-border bg-field-bg text-field-ink shadow-[0_8px_28px_oklch(0_0_0/0.45)]'
             : 'border-border bg-bg shadow-[0_8px_24px_oklch(0_0_0/0.12)]',
         )}
-        style={{ width, maxWidth: '100vw' }}
+        style={{ width: panelWidth, maxWidth: '100vw' }}
       >
         <header
           className={cn(

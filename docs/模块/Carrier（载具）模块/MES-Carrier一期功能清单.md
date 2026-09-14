@@ -272,6 +272,9 @@ Lot 清单 L2-7 随 **Car-3/4** 关闭（绑解 API）。
 |------|------|
 | 架构 | `MES-Carrier架构设计.md` |
 | 本清单 | `MES-Carrier一期功能清单.md` |
+| 一页流程 | `WI-Carrier-一页流程.md` |
+| 正常 WI | `WI-Carrier-01-正常作业.md` |
+| 异常 / 开闸 | `WI-Carrier-02-异常与开闸检查表.md` |
 | Track 闸 | `docs/模块/Track（执行引擎）模块/MES-Track二期功能清单.md` §2.4 |
 | Lot 绑定 | `docs/模块/Lot（批次）模块/MES-Lot二期功能清单.md` §3.2 |
 | 进度 | `docs/架构/MES-实施进度与下一步.md` |
