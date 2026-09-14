@@ -4,7 +4,7 @@
 > 对齐：`MES-Alarm架构设计.md` §2 D3/D9 · §6 · §9 P1 · 业务清单 §8  
 > 产品口径：码表策略「告警 + 锁批」；**不**替代 Hold，**不**因 Alarm 挡 TrackOut，**不**做 GEM/OCAP  
 > 更新：2026-09-14  
-> 状态：**Alarm-5 ✅**；Alarm-6/7 待做
+> 状态：**Alarm-5 ✅ · Alarm-6 ✅**；Alarm-7 待做
 
 ---
 
@@ -70,7 +70,7 @@
 | P0  | Hold 失败 / 非 Lot / 原因码缺失：告警保留 + 日志                              | ✅      |
 | P0  | 已 active → 跳过；与现网自挂 Hold 码默认 `NONE`                            | ✅      |
 | P0  | 专用 Hold 原因码种子（供 HOLD_LOT 引用）                                   | ✅      |
-| P1  | 码表维护 HTTP：改 `on_raise` / `hold_reason_code`（`alarm:edit`）      | 待做      |
+| P1  | 码表维护 HTTP：改 `on_raise` / `hold_reason_code`（`alarm:edit`）      | ✅      |
 | P1  | Admin 码表或告警详情展示策略 / 关联 Hold 提示                                 | 待做      |
 | P2  | 未 ACK 升级（定时抬级或班次）                                              | 后置      |
 | P2  | Dispatch critical 禁派钩子                                         | 后置      |
@@ -87,7 +87,7 @@
 | 切片      | 交付                                | 状态  |
 | ------- | --------------------------------- | --- |
 | Alarm-5 | 策略内核：`HOLD_LOT` + 事务/并发契约 + 原因码种子 | ✅  |
-| Alarm-6 | 码表维护 API（启用策略的运营入口）               | 待做  |
+| Alarm-6 | 码表维护 API（启用策略的运营入口）               | ✅  |
 | Alarm-7 | Admin：策略可见 + 可选关联 Hold 展示         | 待做  |
 
 
@@ -151,7 +151,7 @@
 
 
 
-### Alarm-6（码表维护 API）⏳
+### Alarm-6（码表维护 API）✅
 
 
 
