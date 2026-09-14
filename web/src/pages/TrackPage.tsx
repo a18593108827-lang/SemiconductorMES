@@ -128,6 +128,9 @@ function formatCarrierGateError(msg: string) {
   if (msg.includes('CARRIER_SCAN_REQUIRED')) {
     return '请扫描载具编码后再开工'
   }
+  if (msg.includes('CARRIER_NOT_FOUND') && msg.includes('脏绑定')) {
+    return '载具绑定数据异常（台账缺失），请联系工程清理后重试'
+  }
   if (msg.includes('CARRIER_REQUIRED')) {
     return '批次未绑定载具，请先完成绑定'
   }
