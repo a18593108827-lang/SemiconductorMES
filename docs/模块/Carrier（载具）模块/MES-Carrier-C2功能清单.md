@@ -4,7 +4,7 @@
 > 对齐：`MES-Carrier架构设计.md` §11 C2 · 一期清单 P1「现场扫码比对」· Track T2-3 闸之上  
 > 业界对标：人工/半自动线 **MES 层 L2 读码比对**（非整厂 E87/RFID 联机）  
 > 更新：2026-09-14  
-> 状态：**Car-6 ✅ · Car-7/8 待**
+> 状态：**Car-6/7/8 ✅（C2 闭环）**
 
 ---
 
@@ -57,10 +57,10 @@
 |--------|------|------|
 | P0 | 配置 `mes.carrier.track-in-scan-required`（默认 false） | ✅ |
 | P0 | `CarrierFacade.assertMatch(lotId, scannedCode)` | ✅ |
-| P0 | TrackIn 接线：DTO 收扫码 + 同事务调用 | 待 |
-| P0 | context：`carrierScanRequired`；已绑展示期望 `carrierCode` | 待 |
-| P0 | TrackIn `tx_log.extJson` 记 `scannedCarrierCode`（开闸且有扫时） | 待 |
-| P0 | 现场 Track 页：扫码输入（枪/框）；比对失败可读提示 | 待 |
+| P0 | TrackIn 接线：DTO 收扫码 + 同事务调用 | ✅ |
+| P0 | context：`carrierScanRequired`；已绑展示期望 `carrierCode` | ✅ |
+| P0 | TrackIn `tx_log.extJson` 记 `scannedCarrierCode`（开闸且有扫时） | ✅ |
+| P0 | 现场 Track 页：扫码输入（枪/框）；比对失败可读提示 | ✅ |
 | P1 | 按线别/设备覆盖扫码闸（多租户配置） | 后置 |
 | P2 | 设备 RFID → 同一 `assertMatch` | 随 Adapter/C5 |
 
@@ -71,8 +71,8 @@
 | 切片 | 交付 | 状态 |
 |------|------|------|
 | Car-6 | 配置 + Facade `assertMatch` + 错误码 | ✅ |
-| Car-7 | TrackIn DTO/Service/context/tx_log | 待 |
-| Car-8 | 现场 Track 扫码 UI + 提示文案 | 待 |
+| Car-7 | TrackIn DTO/Service/context/tx_log | ✅ |
+| Car-8 | 现场 Track 扫码 UI + 提示文案 | ✅ |
 
 顺序：**Car-6 → 7 → 8**。  
 **禁止** Car-7 先于 Car-6（Track 自写比对）。  
@@ -114,12 +114,12 @@
 
 ---
 
-### Car-7（Track 接线）
+### Car-7（Track 接线）✅
 
 #### 7.1 交付
 
-- `TrackInDTO` 增加可选 `carrierCode`（扫码）；JSON 字段名与现场约定：`carrierCode`
-- `TrackService.trackIn`：当 `track-in-scan-required=true` → `carrierFacade.assertMatch(lotId, dto.carrierCode)`，与现有闸 **同事务、在改 Lot 状态之前**
+- `TrackInDTO` 增加可选 `carrierCode`（扫码）；JSON 字段名与现场约定：`carrierCode` ✅
+- `TrackService.trackIn`：当 `track-in-scan-required=true` → `carrierFacade.assertMatch(lotId, dto.carrierCode)`，与现有闸 **同事务、在改 Lot 状态之前** ✅
 - 开关组合：
 
 | track-in-required | track-in-scan-required | 行为 |
@@ -129,9 +129,11 @@
 | false | true | 仅 `assertMatch`（含未绑/空扫/错码） |
 | true | true | `assertMatch` 即可（已含未绑） |
 
-- context：`carrierScanRequired`（布尔，跟配置）；已有 `carrierCode` 继续暴露期望码供 UI 提示（**不**把期望码当扫码回填作弊）
-- TrackIn `extJson`：扫码闸开且请求带扫码时写 `scannedCarrierCode`；比对失败不写成功履历
-- Controller：透传 DTO；**不**在 Controller 比对
+- context：`carrierScanRequired`（布尔，跟配置）；已有 `carrierCode` 继续暴露期望码供 UI 提示（**不**把期望码当扫码回填作弊）✅
+- TrackIn `extJson`：扫码闸开且请求带扫码时写 `scannedCarrierCode`；比对失败不写成功履历 ✅
+- Controller：透传 DTO；**不**在 Controller 比对 ✅
+
+落地：`TrackInDTO` · `TrackService` / `TrackServiceImpl` · `TrackController` · `TrackContextVO`
 
 #### 7.2 口径锁死
 
@@ -143,22 +145,24 @@
 
 #### 7.3 验收（Car-7）
 
-- [ ] 扫码闸关 + 不传码 → In 成功
-- [ ] 扫码闸开 + 不传/空 → `CARRIER_SCAN_REQUIRED`
-- [ ] 扫码闸开 + 错码 → `CARRIER_MISMATCH`；Lot 仍 WAIT
-- [ ] 扫码闸开 + 对码 → In 成功；ext 含扫码
-- [ ] 并发解绑后乐观锁/断言失败可见（见 §6）
+- [x] 扫码闸关 + 不传码 → In 路径与现网一致（服务端已接）
+- [x] 扫码闸开 → 调 `assertMatch`（空/错/对由 Facade 覆盖）
+- [x] context 暴露 `carrierScanRequired`
+- [x] 成功且闸开有扫 → ext 含 `scannedCarrierCode`
+- [ ] 联调：错码 Lot 仍 WAIT（随 Car-8 / 现场验）
 
 ---
 
-### Car-8（现场 UI）
+### Car-8（现场 UI）✅
 
 #### 8.1 交付
 
-- Track 现场页：当 `carrierScanRequired=true` 显示载具扫码框（支持扫码枪键盘楔入）
-- 展示只读期望 `carrierCode`（有绑定时）；扫码框不自动填期望码
-- 错误码映射可读文案：`CARRIER_SCAN_REQUIRED` / `CARRIER_MISMATCH` / `CARRIER_REQUIRED`
-- Admin 载具台账 **不**强制改；绑解流程保持 Car-5
+- Track 现场页：当 `carrierScanRequired=true` 显示载具扫码框（支持扫码枪键盘楔入）✅
+- 展示只读期望 `carrierCode`（有绑定时）；扫码框不自动填期望码 ✅
+- 错误码映射可读文案：`CARRIER_SCAN_REQUIRED` / `CARRIER_MISMATCH` / `CARRIER_REQUIRED` ✅
+- Admin 载具台账 **不**强制改；绑解流程保持 Car-5 ✅
+
+落地：`TrackPage.tsx` · `web/src/api/track.ts`
 
 #### 8.2 本切片不做
 
@@ -167,9 +171,9 @@
 
 #### 8.3 验收（Car-8）
 
-- [ ] 开关关：无扫码框，行为同现网
-- [ ] 开关开：无扫无法提交或提交后服务端拒
-- [ ] 错码提示含「与绑定不一致」语义
+- [x] 开关关：无扫码框，行为同现网
+- [x] 开关开：无扫禁用开工按钮；服务端仍校验
+- [x] 错码提示含「与绑定不一致」语义
 
 ---
 

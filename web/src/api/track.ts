@@ -121,6 +121,8 @@ export interface TrackContext {
   carrierCode?: string | null
   /** TrackIn 是否强制已绑 */
   carrierRequired?: boolean | null
+  /** TrackIn 是否强制扫码比对 */
+  carrierScanRequired?: boolean | null
 }
 
 export interface TrackTxnResult {
@@ -164,12 +166,17 @@ export function getTrackContextApi(lotId: number | string) {
   return request<TrackContext>(`/track/lots/${lotId}/context`, { method: 'GET' })
 }
 
-export function trackInApi(lotId: number | string, eqpId?: number | string) {
+export function trackInApi(
+  lotId: number | string,
+  eqpId?: number | string,
+  carrierCode?: string,
+) {
   return request<TrackTxnResult>('/track/track-in', {
     method: 'POST',
     body: {
       lotId,
       eqpId: eqpId != null && eqpId !== '' ? eqpId : undefined,
+      carrierCode: carrierCode != null && carrierCode !== '' ? carrierCode : undefined,
     },
   })
 }

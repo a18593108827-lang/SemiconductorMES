@@ -120,6 +120,20 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/** 载具闸错误可读化 */
+function formatCarrierGateError(msg: string) {
+  if (msg.includes('CARRIER_MISMATCH')) {
+    return '扫码与绑定载具不一致，请核对实物标签后重扫'
+  }
+  if (msg.includes('CARRIER_SCAN_REQUIRED')) {
+    return '请扫描载具编码后再开工'
+  }
+  if (msg.includes('CARRIER_REQUIRED')) {
+    return '批次未绑定载具，请先完成绑定'
+  }
+  return msg
+}
+
 function fmtRemain(expireTime: string | null | undefined) {
   if (!expireTime) return '—'
   const t = new Date(expireTime.replace(' ', 'T')).getTime() - Date.now()
@@ -228,6 +242,7 @@ export function TrackPage() {
   const [candidates, setCandidates] = useState<DispatchCandidates | null>(null)
   const [candidateItems, setCandidateItems] = useState<DispatchCandidateItem[]>([])
   const [selectedEqpId, setSelectedEqpId] = useState('')
+  const [scannedCarrierCode, setScannedCarrierCode] = useState('')
   const [activeReserve, setActiveReserve] = useState<DispatchReserveItem | null>(null)
   const [reserveAction, setReserveAction] = useState(false)
   const [remainTick, setRemainTick] = useState(0)
@@ -372,6 +387,7 @@ export function TrackPage() {
         setFhTiming('PRE')
         setFhRemark('')
         setResultCode('')
+        setScannedCarrierCode('')
         flashStatus()
         if (historyRef.current && !prefersReducedMotion()) {
           gsap.fromTo(
@@ -777,17 +793,22 @@ export function TrackPage() {
       flashFeedback({ type: 'err', text: '请选择可开工设备' })
       return
     }
+    if (ctx.carrierScanRequired && !scannedCarrierCode.trim()) {
+      flashFeedback({ type: 'err', text: '请扫描载具编码后再开工' })
+      return
+    }
     const lotId = ctx.lotId
     setAction('in')
     try {
-      const res = await trackInApi(lotId, selectedEqpId)
+      const res = await trackInApi(lotId, selectedEqpId, scannedCarrierCode.trim() || undefined)
       flashFeedback({ type: 'ok', text: `开工成功 · ${res.lotNo}` })
       await loadLotById(lotId, { keepFeedback: true })
       await loadQueue()
     } catch (e) {
+      const raw = e instanceof ApiError ? e.message : '开工失败'
       flashFeedback({
         type: 'err',
-        text: e instanceof ApiError ? e.message : '开工失败',
+        text: formatCarrierGateError(raw),
       })
       await loadLotById(lotId, { keepFeedback: true })
       await loadQueue()
@@ -1608,6 +1629,20 @@ export function TrackPage() {
                     开工要求已绑定载具，请先在批次或载具台账完成绑定
                   </p>
                 ) : null}
+                {ctx.carrierScanRequired ? (
+                  <p className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-field-ink">
+                    开工须扫描实物载具编码
+                    {ctx.carrierCode ? (
+                      <>
+                        （期望{' '}
+                        <span className="font-mono text-accent">{ctx.carrierCode}</span>
+                        ，请扫盒上标签，勿手抄期望码）
+                      </>
+                    ) : (
+                      '；当前未绑定载具，请先绑定'
+                    )}
+                  </p>
+                ) : null}
 
                 {(ctx.pendingFutureHolds?.length ?? 0) > 0 ? (
                   <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2">
@@ -1694,6 +1729,25 @@ export function TrackPage() {
                     )}
                   </select>
                 </label>
+                {ctx.carrierScanRequired ? (
+                  <label className="flex flex-col gap-1.5 text-sm">
+                    <span className="text-xs text-field-muted">
+                      载具扫码
+                      {ctx.carrierCode ? (
+                        <span className="ml-1.5 font-mono text-field-ink">期望 {ctx.carrierCode}</span>
+                      ) : null}
+                    </span>
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      className="h-11 rounded-md border border-field-border bg-field-bg px-3 font-mono text-base text-field-ink"
+                      value={scannedCarrierCode}
+                      onChange={(e) => setScannedCarrierCode(e.target.value)}
+                      placeholder="扫描或输入载具编码"
+                      aria-label="载具扫码"
+                    />
+                  </label>
+                ) : null}
                 {candidates?.held ? (
                   <p className="text-xs text-danger">{candidates.message || '批次已锁批，不可派工'}</p>
                 ) : null}
@@ -1768,7 +1822,12 @@ export function TrackPage() {
               <Button
                 size="field"
                 className="w-full cursor-pointer"
-                disabled={!ctx?.canTrackIn || !selectedEqpId || candidateItems.length === 0}
+                disabled={
+                  !ctx?.canTrackIn ||
+                  !selectedEqpId ||
+                  candidateItems.length === 0 ||
+                  (!!ctx?.carrierScanRequired && !scannedCarrierCode.trim())
+                }
                 loading={action === 'in'}
                 onClick={() => void runTrackIn()}
               >
