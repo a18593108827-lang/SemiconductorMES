@@ -66,6 +66,7 @@ AMHS      = 搬运 ← 后置
 3. 当前站 `eqp_type` 非空时设备类型须相等  
 4. active Hold → 空候选 + `held=true`  
 5. 其他 Lot 未过期 active 预约占用的机台剔除  
+6. （P1）未关闭 CRITICAL 告警禁派 → 见 `MES-Dispatch-Critical禁派功能清单.md`  
 
 ### 4.2 排序与负载
 

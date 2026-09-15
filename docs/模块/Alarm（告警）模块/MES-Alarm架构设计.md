@@ -223,7 +223,7 @@ WebSocket：`alarm.active` 推送 OPEN 变更摘要（id、code、level、messag
 | 期 | 交付 | 不做 |
 |----|------|------|
 | **P0** | 码表+实例表；raise 落库去重；ACK/CLEAR；真列表+顶栏；WS；种子码 | 策略 Hold、通知渠道、GEM |
-| **P1** | `on_raise=HOLD_LOT`；未 ACK 升级（定时或班次）；Dispatch 可读 critical 禁派钩子 | OCAP、邮件网关 |
+| **P1** | `on_raise=HOLD_LOT` ✅；Dispatch critical 禁派钩子（清单：`MES-Dispatch-Critical禁派功能清单.md`）；未 ACK 升级后置 | OCAP、邮件网关 |
 | **P2** | Adapter→raise 设备码；Pareto；与 OCAP/知识库挂接 | 独立 AMS 产品形态 |
 
 切片锁定：`MES-Alarm一期功能清单.md`（Alarm-1～4 = P0 ✅）；P1：`MES-Alarm-P1功能清单.md`（Alarm-5～7）。

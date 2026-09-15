@@ -74,7 +74,7 @@
 | P1  | 码表维护 HTTP：改 `on_raise` / `hold_reason_code`（`alarm:edit`）      | ✅      |
 | P1  | Admin 码表或告警详情展示策略 / 关联 Hold 提示                                 | ✅      |
 | P2  | 未 ACK 升级（定时抬级或班次）                                              | 后置      |
-| P2  | Dispatch critical 禁派钩子                                         | 后置      |
+| P2  | Dispatch critical 禁派钩子                                         | 另册：`MES-Dispatch-Critical禁派功能清单.md` |
 | P2  | GEM / 邮件 / OCAP                                                | 不做（本清单） |
 
 
@@ -287,7 +287,7 @@ HTTP 码表校验失败（Alarm-6）：返回现网业务错，与策略运行�
 
 - Stocker / MCS / GEM S5F1
 - 未 ACK 升级、邮件/企微、OCAP、Pareto
-- Dispatch 禁派钩子（架构 P1 余量，另开清单）
+- Dispatch 禁派钩子 → `docs/模块/Dispatch（派工）模块/MES-Dispatch-Critical禁派功能清单.md`
 - 删除 QTime/ProcessTime 自挂 Hold
 - Alarm 内 Release；因 Alarm 改 `canTrackOut`
 

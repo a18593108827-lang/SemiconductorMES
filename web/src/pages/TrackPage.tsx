@@ -1754,6 +1754,9 @@ export function TrackPage() {
                 {candidates?.held ? (
                   <p className="text-xs text-danger">{candidates.message || '批次已锁批，不可派工'}</p>
                 ) : null}
+                {!candidates?.held && candidateItems.length === 0 && candidates?.message ? (
+                  <p className="text-xs text-danger">{candidates.message}</p>
+                ) : null}
                 {ctx.queueTime?.violated ? (
                   <p className="text-xs text-danger">
                     Queue Time 已超时，禁止开工（解锁须填备注）
