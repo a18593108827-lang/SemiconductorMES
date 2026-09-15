@@ -20,7 +20,7 @@
 | GN-3 | `GET /lots/{id}/genealogy`（up/down/both + depth） | ✅ |
 | GN-4 | LotsPage 谱系简图（当前居中 / 直系默认 / 深链折叠 / 影响面） | ✅ `GenealogyTree.tsx` |
 | GN-5 | 节点带 `qtyTransferred` / `txId` / `reasonCode`（边挂 child 端） | ✅ |
-| GN-6 | 按家族批量 Hold / 客诉追溯包导出 | ⏳ **P2** |
+| GN-6 | 按家族批量 Hold / 客诉追溯包导出 | ⏳ **P2**（设计：`docs/模块/History（履历）模块/MES-客诉追溯包接口设计.md`） |
 | GN-7 | Wafer/Die 级谱系 | ⏳ **P1**（依赖 `mes_lot_wafer`） |
 
 **P0 结论：** 查谱系主路径已闭环。白名单 / Hot Lot 属 L2-5 其它项，不阻塞 Genealogy。
