@@ -6,7 +6,7 @@
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
 > 更新：2026-09-15  
-> 状态：**CP-1 ✅** · CP-2+ 未做  
+> 状态：**CP-1 ✅ · CP-2 ✅** · CP-3+ 未做  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -100,7 +100,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | 优先级 | 能力 | 状态 |
 |--------|------|------|
 | P0 | DDL 包头 + 成员；开关；权限 | ✅ CP-1 |
-| P0 | `preview`：影响面 + 计数摘要（不落库） | ⏳ |
+| P0 | `preview`：影响面 + 计数摘要（不落库） | ✅ CP-2 |
 | P0 | `build`：落包头/成员 + 装配 VO | ⏳ |
 | P0 | `export`：JSON 下载（含清单） | ⏳ |
 | P0 | Admin：History / Lot 入口生成与下载 | ⏳ |
@@ -112,7 +112,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | 切片 | 交付 | 依赖 |
 |------|------|------|
 | CP-1 | DDL + 权限 + `enabled`；空 Facade 骨架 | ✅ |
-| CP-2 | 影响面展开算法 + `preview` | Genealogy |
+| CP-2 | 影响面展开算法 + `preview` | ✅ |
 | CP-3 | `build` + 包头审计 + 装配 VO | History / Hold 只读 |
 | CP-4 | `GET export` JSON；Admin 按钮 | CP-3 |
 | CP-5 | `contain` + 锁序 + 部分成功明细 | Hold |
