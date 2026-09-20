@@ -1,3 +1,12 @@
+---
+type: WI
+module: Carrier
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # WI-Carrier-01 载具正常作业
 
 > 版本：v1 · 适用系统：MES 薄 Carrier（Car-1～5）  

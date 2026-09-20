@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # MES 批次（Lot）— 二期功能清单
 
 > 前提：一期 Lot 主数据 + Release 绑 Route 快照已落地  

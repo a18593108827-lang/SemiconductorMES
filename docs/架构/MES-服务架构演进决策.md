@@ -1,3 +1,12 @@
+---
+type: 架构
+module: 
+status: in-progress
+slices: []
+aligns: []
+updated: 2026-09-18
+---
+
 # MES 服务架构演进决策 — 单体、Spring Cloud 与外围系统
 
 > 版本：v0.4（v0.3 基础上补前端形态演进章节）

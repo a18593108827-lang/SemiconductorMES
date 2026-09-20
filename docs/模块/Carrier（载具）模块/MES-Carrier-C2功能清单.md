@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Carrier
+status: done
+slices: []
+aligns: []
+updated: 2026-09-14
+---
+
 # MES 载具（Carrier）— C2 功能清单（现场扫码比对）
 
 > 前提：Car-1～5（C0+C1）已齐；片级 Wafer、SECS Adapter、MCS / E87 **未齐**  

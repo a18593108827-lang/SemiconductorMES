@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Alarm
+status: done
+slices: []
+aligns: []
+updated: 2026-09-14
+---
+
 # MES 告警（Alarm）— P1 功能清单（Alarm → Hold）
 
 > 前提：Alarm-1～4（P0）已齐；Hold 最小集已齐；`raise` 已被 QTime / ProcessTime / SPC 调用  

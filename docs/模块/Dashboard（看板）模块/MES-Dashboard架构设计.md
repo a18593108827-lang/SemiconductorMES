@@ -1,3 +1,12 @@
+---
+type: 架构
+module: Dashboard
+status: done
+slices: []
+aligns: []
+updated: 2026-09-08
+---
+
 # MES 看板（Dashboard）— 架构设计
 
 > 定位：班次级**执行指挥屏**——聚合 WIP / Hold / Alarm / Eqp 当前态 + TrackOut 粗趋势；**只读、不下写**  

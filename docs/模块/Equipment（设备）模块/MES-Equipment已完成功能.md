@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Equipment
+status: done
+slices: []
+aligns: []
+updated: 2026-07-28
+---
+
 # MES 设备（Equipment）— 功能查验清单
 
 > 更新：2026-07-28  

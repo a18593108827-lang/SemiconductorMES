@@ -1,3 +1,12 @@
+---
+type: 方案
+module: 
+status: draft
+slices: []
+aligns: []
+updated: 
+---
+
 # 半导 MES 设备数据采集与分析方案
 
 > 版本：v0.1（考察稿）  

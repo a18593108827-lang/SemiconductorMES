@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-07-30
+---
+
 # MES 工艺路线（Route）— 二期功能清单
 
 > 前提：一期线性主路径 + 版本快照已落地  

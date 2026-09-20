@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Report
+status: done
+slices: []
+aligns: []
+updated: 2026-09-10
+---
+
 # MES 报表（Report）— 一期功能清单
 
 > 前提：History / Hold / Dashboard 一期已齐；`/app/report` + 侧栏「复盘→报表」已落地  

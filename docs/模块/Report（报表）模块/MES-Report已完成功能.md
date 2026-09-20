@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Report
+status: done
+slices: []
+aligns: []
+updated: 2026-09-10
+---
+
 # MES 报表（Report）— 已完成功能（查验清单）
 
 > 对齐：`MES-Report架构设计.md` · `MES-Report一期功能清单.md`  

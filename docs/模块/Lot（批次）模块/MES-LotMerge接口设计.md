@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-07
+---
+
 # Lot Merge 合批 — 接口设计（架构）
 
 > 定位：把 ≥2 个可合源 Lot 收拢进一个主 Lot，数量守恒 + 谱系闭合  

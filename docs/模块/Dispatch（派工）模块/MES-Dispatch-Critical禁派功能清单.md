@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Dispatch
+status: done
+slices: []
+aligns: []
+updated: 2026-09-15
+---
+
 # MES 派工（Dispatch）— Critical 禁派功能清单
 
 > 前提：Dispatch 最小集已齐；Alarm-1～7（含 `HOLD_LOT`）已齐；Hold 最小集已齐  

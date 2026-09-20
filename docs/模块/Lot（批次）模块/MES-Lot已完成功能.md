@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # MES 批次（Lot）— 功能查验清单
 
 > 更新：2026-08-10  

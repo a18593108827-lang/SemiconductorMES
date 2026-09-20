@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-12
+---
+
 # Abort — 接口设计（架构）
 
 > 范围：加工中整批中止（`processing→wait` 同站）+ 原因码 + 履历 + 清 Process Time + 腾机 + context/`canAbort` + 现场台  

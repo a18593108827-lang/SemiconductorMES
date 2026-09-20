@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Dispatch
+status: done
+slices: []
+aligns: []
+updated: 2026-07-29
+---
+
 # MES 派工（Dispatch）— 功能查验清单
 
 > 更新：2026-07-29  

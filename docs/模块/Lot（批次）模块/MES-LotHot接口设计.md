@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # Lot Hot / Priority — 架构设计
 
 > 定位：急单信号与派工加权；**不改** qty / status / 工艺快照  

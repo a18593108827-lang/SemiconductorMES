@@ -1,3 +1,12 @@
+---
+type: 架构
+module: Report
+status: done
+slices: []
+aligns: []
+updated: 2026-09-10
+---
+
 # MES 报表（Report）— 架构设计
 
 > 定位：班会 / 对账级**事后复盘**——可筛选的 Move（过站）与 Hold 分布；**只读、不下写**  

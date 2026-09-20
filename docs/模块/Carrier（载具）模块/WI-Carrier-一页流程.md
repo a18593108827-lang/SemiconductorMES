@@ -1,3 +1,12 @@
+---
+type: WI
+module: Carrier
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # 载具作业 — 一页流程
 
 > 适用：MES 薄 Carrier（台账 + 绑解 + TrackIn 闸）  

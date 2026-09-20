@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-08-07
+---
+
 # 条件/可选分支 — 接口设计（架构）
 
 > 范围：Route 配置 branch 边 + TrackOut 按结果码选边  

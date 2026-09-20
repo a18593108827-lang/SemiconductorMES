@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Dispatch
+status: done
+slices: []
+aligns: []
+updated: 2026-07-29
+---
+
 # MES 派工（Dispatch）— 数据库设计
 
 > 对齐：`MES-Dispatch功能文档.md`  

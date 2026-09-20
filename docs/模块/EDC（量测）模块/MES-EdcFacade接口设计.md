@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: EDC
+status: done
+slices: []
+aligns: []
+updated: 2026-09-02
+---
+
 # EdcFacade — 接口设计（架构）
 
 > 范围：EDC-4 = 对外门面 + 权限种子 + 应急配置；**不**改 Lot 状态、**不**写 TRACK_OUT  

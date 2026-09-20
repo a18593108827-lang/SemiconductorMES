@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-07
+---
+
 # Lot Split 分批 — 接口设计（架构）
 
 > 定位：把一个在制 Lot 拆成可独立 Track 的子 Lot，数量守恒 + 谱系可追  

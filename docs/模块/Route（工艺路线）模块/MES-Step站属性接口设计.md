@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-07-31
+---
+
 # Step 站属性（eqp_type 强校验）— 接口设计（架构）
 
 > 范围：Step / RouteStep 站属性定义 + Dispatch / TrackIn 设备类型校验  

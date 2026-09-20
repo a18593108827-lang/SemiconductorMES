@@ -1,3 +1,12 @@
+---
+type: 方案
+module: 
+status: draft
+slices: []
+aligns: []
+updated: 2026-09-18
+---
+
 # 半导 MES AI 集成 — 产品分析（调研稿）
 
 > 版本：v0.1（产品分析，非详设）

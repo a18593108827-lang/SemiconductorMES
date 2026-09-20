@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: History
+status: done
+slices: []
+aligns: []
+updated: 2026-09-15
+---
+
 # MES 客诉追溯包（Complaint Trace Package）— 接口设计
 
 > 定位：以锚点 Lot 组装「影响面 + 履历摘要 + 可选遏制」的可交证据包；支撑客诉 / 8D D3 / 客户审计  

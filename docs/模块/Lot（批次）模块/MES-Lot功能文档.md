@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # MES 批次（Lot）功能文档
 
 > 定位：批次主数据；放行绑 Route 版本快照（**语义属 Track 事务**，现接口暂挂 Lot）  

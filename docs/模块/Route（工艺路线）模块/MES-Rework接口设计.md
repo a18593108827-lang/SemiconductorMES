@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-07-30
+---
+
 # Rework 回流 — 接口设计（架构）
 
 > 范围：Route 配置边 + Track 执行事务  

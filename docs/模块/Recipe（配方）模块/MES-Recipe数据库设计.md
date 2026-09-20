@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Recipe
+status: done
+slices: []
+aligns: []
+updated: 2026-07-30
+---
+
 # MES 配方（Recipe）— 数据库设计
 
 > 对齐：`MES-Recipe功能文档.md`  

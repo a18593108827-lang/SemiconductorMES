@@ -1,3 +1,12 @@
+---
+type: 业务清单
+module: 
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # 大厂 MES 业务清单
 
 参考：ISA-95、ISA-88、SEMI E10/E30/E40、华为/富士康/三星/台积电/西门子/罗克韦尔等实践。

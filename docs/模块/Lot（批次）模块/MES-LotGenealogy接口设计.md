@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # Lot Genealogy 谱系查询 — 架构设计
 
 > 定位：只读还原 Lot 分合批血缘（向上祖先 / 向下子孙），支撑遏制与客诉追溯  

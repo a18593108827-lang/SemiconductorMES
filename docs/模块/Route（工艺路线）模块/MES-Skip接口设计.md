@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-08-05
+---
+
 # Skip 跳站 — 接口设计（架构）
 
 > 范围：Route 配置可跳路径 + Track 独立跳站事务  

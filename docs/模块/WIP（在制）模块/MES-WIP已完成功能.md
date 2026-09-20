@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: WIP
+status: done
+slices: []
+aligns: []
+updated: 2026-07-27
+---
+
 # MES 在制（WIP）— 功能查验清单
 
 > 更新：2026-07-27  

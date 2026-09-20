@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Carrier
+status: done
+slices: []
+aligns: []
+updated: 2026-09-10
+---
+
 # MES 载具（Carrier）— 一期功能清单
 
 > 前提：Lot / Track / History 一期已齐；片级 Wafer、SECS Adapter、MCS **未齐**  

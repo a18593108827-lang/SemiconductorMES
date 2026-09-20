@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Dispatch
+status: done
+slices: []
+aligns: []
+updated: 2026-07-29
+---
+
 # MES 派工（Dispatch）功能文档
 
 > 定位：短周期**选机 / 建议机**——过滤 + 排序 + Reserve；不替代 Track，不是 APS  

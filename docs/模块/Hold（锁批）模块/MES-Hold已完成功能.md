@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Hold
+status: done
+slices: []
+aligns: []
+updated: 2026-08-13
+---
+
 # MES 锁批（Hold）— 功能查验清单
 
 > 更新：2026-08-13  

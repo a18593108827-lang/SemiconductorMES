@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Recipe
+status: done
+slices: []
+aligns: []
+updated: 2026-07-30
+---
+
 # MES 配方（Recipe）功能文档
 
 > 定位：工艺**参数版本**与 Step/Eqp **资格绑定**——回答「这站这机能不能用、用哪版配方」  

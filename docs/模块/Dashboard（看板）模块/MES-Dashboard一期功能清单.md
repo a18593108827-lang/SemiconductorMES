@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Dashboard
+status: done
+slices: []
+aligns: []
+updated: 2026-09-08
+---
+
 # MES 看板（Dashboard）— 一期功能清单
 
 > 前提：WIP / Hold / Equipment / Alarm / Track 履历已齐；`/app/dashboard` 现 mock  

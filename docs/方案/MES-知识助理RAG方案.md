@@ -1,3 +1,12 @@
+---
+type: 方案
+module: 
+status: draft
+slices: []
+aligns: []
+updated: 
+---
+
 # 半导 MES 知识助理（RAG）方案
 
 > 版本：v0.1（考察稿）  

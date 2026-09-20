@@ -1,3 +1,12 @@
+---
+type: 业务清单
+module: 
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # 半导体 / 芯片 MES 业务清单（目标版）
 
 > 定位：晶圆厂（Fab）+ 封测厂（OSAT）制造执行目标蓝图  

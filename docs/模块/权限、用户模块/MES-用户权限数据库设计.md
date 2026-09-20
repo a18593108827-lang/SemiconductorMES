@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: 权限用户
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # MES 用户权限数据库设计
 
 > 对应功能文档：`docs/模块/MES-用户权限功能文档.md`  

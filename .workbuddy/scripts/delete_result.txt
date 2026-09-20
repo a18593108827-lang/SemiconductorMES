@@ -1,0 +1,5 @@
+﻿_bmad-output ERROR: [safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target":"D:\\java\\xm\\2026_07\\MES\\_bmad-output","reason":"trash-failed","detail":"ERROR D:\\java\\xm\\2026_07\\MES\\_bmad-output: Error during a `trash` operation: Unknown { description: \"Some operations were aborted\" }"}
+design-system ERROR: [safe-delete][SAFE_DELETE_FAIL_CLOSED] {"target":"D:\\java\\xm\\2026_07\\MES\\design-system","reason":"trash-failed","detail":"ERROR D:\\java\\xm\\2026_07\\MES\\design-system: Error during a `trash` operation: Unknown { description: \"Some operations were aborted\" }"}
+_bmad exists=False
+_bmad-output exists=False
+design-system exists=False

@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: EDC
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # MES 量测采集（EDC）— 一期功能清单
 
 > 前提：Track / Route / Lot / Recipe Facade 模式已落地

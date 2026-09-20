@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: History
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # HistoryFacade — 接口设计（架构）
 
 > 范围：H-1～H-5 = 只读门面 + 分页查询 + 设备反查索引 + 管理端调查台  

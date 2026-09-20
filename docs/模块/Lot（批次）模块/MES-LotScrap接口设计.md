@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # Lot Scrap 报废 — 接口设计（架构）
 
 > 定位：把在制 Lot 的不良数量从 WIP 中正式核销，数量/状态可审计  

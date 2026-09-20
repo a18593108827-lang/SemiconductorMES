@@ -1,3 +1,12 @@
+---
+type: 架构
+module: SPC
+status: done
+slices: []
+aligns: []
+updated: 2026-09-02
+---
+
 # MES 量测趋势预警（SPC）— 架构设计
 
 > 定位：只读观察 EDC 点 → 控制限 / 判异 → Alarm；**不**改 Lot 状态、**不**挡 TrackOut  

@@ -1,3 +1,12 @@
+---
+type: UI
+module: 
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # MES UI 页面规范
 
 依据：`PRODUCT.md` · `DESIGN.md`  

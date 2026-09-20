@@ -1,3 +1,12 @@
+---
+type: 方案
+module: 
+status: draft
+slices: []
+aligns: []
+updated: 
+---
+
 # 半导 MES AI 赋能方案（考察稿）
 
 > 版本：v0.1  

@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: WIP
+status: done
+slices: []
+aligns: []
+updated: 2026-07-27
+---
+
 # MES 在制（WIP）功能文档
 
 > 定位：在制**只读**视图——回答「现在有哪些货、卡在哪站、什么状态」  

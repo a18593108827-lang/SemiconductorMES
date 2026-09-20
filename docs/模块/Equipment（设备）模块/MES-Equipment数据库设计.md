@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Equipment
+status: done
+slices: []
+aligns: []
+updated: 2026-07-28
+---
+
 # MES 设备（Equipment）— 数据库设计
 
 > 对齐：`MES-Equipment功能文档.md`  

@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Hold
+status: done
+slices: []
+aligns: []
+updated: 2026-07-28
+---
+
 # MES 锁批（Hold）— 数据库设计
 
 > 对齐：`MES-Hold功能文档.md`  

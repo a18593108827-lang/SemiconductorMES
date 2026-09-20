@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Equipment
+status: in-progress
+slices: []
+aligns: []
+updated: 2026-07-28
+---
+
 # MES 设备（Equipment）功能文档
 
 > 定位：可派工 / 可开工的**资源目录**——主数据 + 业务态；不替代 Track，不做 SECS/GEM  

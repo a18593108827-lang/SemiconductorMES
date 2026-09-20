@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: 权限用户
+status: done
+slices: []
+aligns: []
+updated: 2026-07-24
+---
+
 # MES 用户权限功能文档
 
 > 方案：本地账号管理 + MES 内权限审批  

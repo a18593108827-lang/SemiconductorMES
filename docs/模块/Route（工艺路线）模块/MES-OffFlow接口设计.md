@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-08-06
+---
+
 # Temporary Off-Flow — 接口设计（架构）
 
 > 范围：Route 配置旁路入口边 + Track Enter / Resume 事务  

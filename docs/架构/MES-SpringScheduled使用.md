@@ -1,3 +1,12 @@
+---
+type: 架构
+module: 
+status: done
+slices: []
+aligns: []
+updated: 2026-08-13
+---
+
 # Spring `@Scheduled` 使用说明
 
 > 定位：本进程定时任务（起步单体）  

@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-08-13
+---
+
 # Queue Time — 接口设计（架构）
 
 > 范围：Route 定义时间窗约束 + Track 计时/超时处置 + Hold/Alarm 消费  

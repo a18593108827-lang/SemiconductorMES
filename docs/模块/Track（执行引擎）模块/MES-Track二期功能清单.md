@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-12
+---
+
 # MES 执行引擎（Track）— 二期功能清单
 
 > 前提：一期 Release / TrackIn / TrackOut / Hold / Rework / Skip / Off-Flow + Split / Merge / Scrap / Bonus 已落地；Dispatch Reserve 钩子、Queue Time 开窗结算已落地  

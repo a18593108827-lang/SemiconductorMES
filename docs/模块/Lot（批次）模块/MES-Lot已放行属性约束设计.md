@@ -1,3 +1,12 @@
+---
+type: 架构
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # Lot 已放行属性约束 — 架构 / 接口设计
 
 > 定位：Release 后字段可写性护栏；**不是**独立业务模块、**不新增**路径  

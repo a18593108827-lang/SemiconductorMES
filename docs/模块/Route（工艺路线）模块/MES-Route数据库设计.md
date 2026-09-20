@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # MES 工艺路线（Route）数据库设计
 
 > 对应功能文档：`docs/模块/Route（工艺路线）模块/MES-Route功能文档.md`  

@@ -1,3 +1,12 @@
+---
+type: WI
+module: Carrier
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # WI-Carrier-02 载具异常处理与开闸检查表
 
 > 版本：v1 · 与 WI-01 配套  

@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: 权限用户
+status: done
+slices: []
+aligns: []
+updated: 2026-07-24
+---
+
 # MES 用户权限 — 已完成功能查验
 
 > 更新：2026-07-24  

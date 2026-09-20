@@ -1,3 +1,12 @@
+---
+type: 架构
+module: 权限用户
+status: done
+slices: []
+aligns: []
+updated: 2026-09-10
+---
+
 # MES 菜单权限方案
 
 > 状态：已落地种子 + `/auth/info` 菜单树 + 侧栏/Tab 按权限显隐 + 账号设置入口  

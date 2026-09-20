@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Hold
+status: done
+slices: []
+aligns: []
+updated: 2026-07-28
+---
+
 # MES 锁批（Hold）功能文档
 
 > 定位：质量闸门——**暂停** Lot 前进；不替代 Track，只在 Track 前拦截  

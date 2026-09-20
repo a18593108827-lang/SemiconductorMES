@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: EDC
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # MES 量测采集（EDC）— 已完成功能（查验清单）
 
 > 对齐：`MES-EDC功能文档.md`

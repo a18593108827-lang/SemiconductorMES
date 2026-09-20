@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # MES 批次（Lot）— 数据库设计
 
 > 对齐：`MES-Lot功能文档.md`、`MES-LotSplit接口设计.md`、`MES-LotMerge接口设计.md`、`MES-LotGenealogy接口设计.md`、`MES-LotScrap接口设计.md`、`MES-LotBonus接口设计.md`  

@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Hold
+status: done
+slices: []
+aligns: []
+updated: 2026-08-06
+---
+
 # Future Hold — 接口设计（架构）
 
 > 定位：预约锁批——到站才变成真正的 Hold  

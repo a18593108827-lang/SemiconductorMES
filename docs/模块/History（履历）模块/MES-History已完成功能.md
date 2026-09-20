@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: History
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # MES 履历追溯（History）— 已完成功能（查验清单）
 
 > 对齐：`MES-History功能文档.md` · `MES-History接口设计.md`  

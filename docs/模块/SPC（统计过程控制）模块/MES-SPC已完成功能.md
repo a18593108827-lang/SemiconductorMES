@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: SPC
+status: done
+slices: []
+aligns: []
+updated: 2026-09-02
+---
+
 # MES SPC — 已完成功能
 
 > 对齐：`MES-SPC一期功能清单.md` · `MES-SPC架构设计.md`  

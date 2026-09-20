@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-07-30
+---
+
 # MES 工艺路线（Route）— 功能查验清单
 
 > 更新：2026-07-30  

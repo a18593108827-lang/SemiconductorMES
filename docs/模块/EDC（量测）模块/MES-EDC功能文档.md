@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: EDC
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # MES 量测采集（EDC）功能文档
 
 > 定位：站级**量测真相** + **Spec 单笔判定** + 对 Track/SPC 的 **Facade**  

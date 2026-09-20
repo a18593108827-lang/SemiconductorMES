@@ -1,3 +1,12 @@
+---
+type: 进度
+module: 
+status: done
+slices: []
+aligns: []
+updated: 2026-09-10
+---
+
 # MES 实施进度与下一步
 
 > 更新：2026-09-10  
@@ -91,10 +100,28 @@ Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**（Carrier 架构
 | 架构总册 | `docs/架构/半导MES架构设计.md` |
 | 定时任务 | `docs/架构/MES-SpringScheduled使用.md` |
 | 业务总单 | `docs/业务清单/MES-半导体业务清单.md` |
+| 文档总账 | `docs/INDEX.md`（按 type / module / status 检索，自动生成） |
+| 根级上下文 | `AGENTS.md`（AI 会话第一入口） |
+| 意图目录 | `docs/intent/`（新需求唯一入口，INT 编号） |
+| 模板 | `docs/_templates/`（INT / plan / EVAL / AGENTS 骨架） |
 
 ---
 
-## 5. 待决策（从架构抄录，落地前拍板）
+## 5. 文档体系重构（AI 原生 SDLC 对齐）
+
+方案：`docs/架构/MES-AI原生SDLC文档体系重构方案.md`（2026-09-20 批准）
+
+| 切片 | 交付 | 状态 |
+|------|------|------|
+| Doc-1 | 根级 `AGENTS.md` + `docs/_templates/` 四件模板 + `intent/`、`eval/` 目录占位 | ✅ 2026-09-20 |
+| Doc-2 | 存量文档批量补 frontmatter（只加头不动正文）+ `docs/INDEX.md` 总账 | ✅ 2026-09-20 |
+| Doc-3 | 全链试运行：Agent 数据暴露（Tool Facade）走 INT → 规格 → plan → 交付 | 待启动 |
+| Doc-4 | （后置）`src/test` + `mvn test` 反馈回路 | 工程排期 |
+| Doc-5 | （后置）eval 启用 + CI 挂 frontmatter 状态校验 | 依赖 Doc-4 |
+
+---
+
+## 6. 待决策（从架构抄录，落地前拍板）
 
 | 项 | 选项 | 影响 |
 |----|------|------|

@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Route
+status: done
+slices: []
+aligns: []
+updated: 2026-07-24
+---
+
 # MES 工艺路线（Route）功能文档
 
 > 定位：工艺「定义」——有序工序清单与版本；执行由 Track 负责  

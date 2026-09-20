@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: History
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # MES 履历追溯（History）— 一期功能清单
 
 > 前提：Track 已写 `mes_tx_log`；Genealogy P0 已闭环  

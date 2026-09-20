@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # MES 执行引擎（Track）功能文档
 
 > 定位：工艺「执行」中枢——一切改变 Lot **当前位置 / 加工态** 的动作均为 Transaction  

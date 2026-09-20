@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: Alarm
+status: done
+slices: []
+aligns: []
+updated: 2026-09-04
+---
+
 # MES 告警（Alarm）— 一期功能清单
 
 > 前提：`AlarmService.raise` 已被 QTime / ProcessTime / SPC 调用；Hold 最小集已齐  

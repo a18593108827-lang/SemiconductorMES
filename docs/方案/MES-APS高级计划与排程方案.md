@@ -1,3 +1,12 @@
+---
+type: 方案
+module: 
+status: draft
+slices: []
+aligns: []
+updated: 
+---
+
 # APS（高级计划与排程）方案
 
 > 版本：v0.1（考察稿）  

@@ -1,3 +1,12 @@
+---
+type: 架构
+module: 
+status: done
+slices: []
+aligns: []
+updated: 
+---
+
 # 半导体制造执行系统（MES）架构设计参考
 
 > 版本：v0.1（参考稿）  

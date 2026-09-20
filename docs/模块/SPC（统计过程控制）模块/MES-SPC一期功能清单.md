@@ -1,3 +1,12 @@
+---
+type: 功能清单
+module: SPC
+status: done
+slices: []
+aligns: []
+updated: 2026-09-02
+---
+
 # MES 量测趋势预警（SPC）— 一期功能清单
 
 > 前提：EDC 一期 P0 已齐（点在 `mes_edc_collection*`；TrackOut 只认 OOS）；AlarmService.raise 已有  

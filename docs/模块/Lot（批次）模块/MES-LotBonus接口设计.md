@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Lot
+status: done
+slices: []
+aligns: []
+updated: 2026-08-10
+---
+
 # Lot Bonus 数量调整 — 接口设计（架构）
 
 > 定位：盘点/计量导致的 WIP 数量纠偏，**不进报废口径**，数量可审计  

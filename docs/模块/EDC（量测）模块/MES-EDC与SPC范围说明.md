@@ -1,3 +1,12 @@
+---
+type: 架构
+module: EDC
+status: done
+slices: []
+aligns: []
+updated: 2026-09-02
+---
+
 # EDC 与 SPC — 范围说明
 
 > 用途：量测相关开工边界；避免把 SPC 当成 TrackOut 门禁前置  

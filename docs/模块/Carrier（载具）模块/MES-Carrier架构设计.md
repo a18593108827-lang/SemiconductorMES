@@ -1,3 +1,12 @@
+---
+type: 架构
+module: Carrier
+status: done
+slices: []
+aligns: []
+updated: 2026-09-11
+---
+
 # MES 载具（Carrier）— 架构设计
 
 > 定位：FOUP/Carrier 的**台账 + Lot 绑定 + 过站闸数据源**；物理容器真相在本模块，工艺状态仍只由 Track 写  

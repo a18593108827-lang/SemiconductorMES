@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-12
+---
+
 # Move — 接口设计（架构）
 
 > 范围：`wait` 站间合法移站（不经加工）+ 履历 + context/`canMove` + 现场台入口  

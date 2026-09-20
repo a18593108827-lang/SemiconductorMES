@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-11
+---
+
 # MES 执行引擎（Track）— 数据库设计（草案）
 
 > 对齐：`MES-Track功能文档.md`、`MES-Lot数据库设计.md`、`MES-LotScrap接口设计.md`、`MES-LotBonus接口设计.md`、`MES-ProcessTime接口设计.md`  

@@ -1,3 +1,12 @@
+---
+type: 数据库设计
+module: WIP
+status: done
+slices: []
+aligns: []
+updated: 2026-07-27
+---
+
 # MES 在制（WIP）— 数据库设计
 
 > 对齐：`MES-WIP功能文档.md`、`MES-Track数据库设计.md`  

@@ -1,3 +1,12 @@
+---
+type: 功能文档
+module: History
+status: done
+slices: []
+aligns: []
+updated: 2026-08-19
+---
+
 # MES 履历追溯（History）功能文档
 
 > 定位：Track 事务的**只读调查面**；不改状态、不另写真相  

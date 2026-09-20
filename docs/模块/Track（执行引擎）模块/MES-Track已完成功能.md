@@ -1,3 +1,12 @@
+---
+type: 已完成功能
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-13
+---
+
 # MES 执行引擎（Track）— 功能查验清单
 
 > 更新：2026-08-13  

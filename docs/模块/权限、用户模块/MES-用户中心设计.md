@@ -1,3 +1,12 @@
+---
+type: 架构
+module: 权限用户
+status: done
+slices: []
+aligns: []
+updated: 2026-07-24
+---
+
 # MES 用户中心（账号设置）设计
 
 > 状态：**已完成**（账号设置 + 强制改密前后端 + API 兜底）  

@@ -1,3 +1,12 @@
+---
+type: 架构
+module: 
+status: draft
+slices: []
+aligns: []
+updated: 2026-09-18
+---
+
 # MES Agent 数据暴露 — 架构规划
 
 > 版本：v0.1（规划稿，非详设）  

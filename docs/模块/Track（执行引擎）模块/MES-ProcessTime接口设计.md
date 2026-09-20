@@ -1,3 +1,12 @@
+---
+type: 接口设计
+module: Track
+status: done
+slices: []
+aligns: []
+updated: 2026-08-11
+---
+
 # Process Time — 接口设计（架构）
 
 > 范围：Route 步骤加工时长上下限 + TrackIn 开计时 + TrackOut 校验 + context 展示  

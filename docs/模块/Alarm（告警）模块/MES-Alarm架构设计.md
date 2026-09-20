@@ -1,3 +1,12 @@
+---
+type: 架构
+module: Alarm
+status: done
+slices: []
+aligns: []
+updated: 2026-09-14
+---
+
 # MES 告警（Alarm）— 架构设计
 
 > 定位：业务/质量事件的**统一告警台**——记、认、关、推；**不**替代 Hold，**不**挡 TrackOut，**不**收机台 GEM  
