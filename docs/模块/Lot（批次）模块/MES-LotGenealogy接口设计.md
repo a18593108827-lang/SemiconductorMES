@@ -4,7 +4,7 @@ module: Lot
 status: done
 slices: []
 aligns: []
-updated: 2026-08-10
+updated: 2026-09-20
 ---
 
 # Lot Genealogy 谱系查询 — 架构设计
@@ -315,6 +315,17 @@ Merge:  Main   ◄──merge── Source1   （表：parent=Main, child=Source
 ### 7.3 与 API direction
 
 P0 前端固定请求 `both&depth=5`；深追用本地「展开」，不再做双向/向上/向下主切换（避免术语干扰）。
+
+### 7.4 Service 内部扩展（CP-3 登记，2026-09-20）
+
+客诉追溯包 CP-3（`docs/模块/History（履历）模块/CP-3-plan.md`）复用影响面展开结果：
+
+| 变更 | 说明 |
+|------|------|
+| `MesLotImpactFlatVO` 增加 `tree`（`MesLotGenealogyNodeVO`，可空） | `flattenImpact` 内部本就先 `buildGenealogyTree` 再展平（`MesLotServiceImpl`）；挂树零额外遍历 |
+| `genealogy()` 调用方约定 | Complaint **get** 现查允许调；Complaint **build** 同请求禁再调（复用 `flat.tree`） |
+
+HTTP 契约（§5）不变；preview 调用方可忽略 `tree` 字段。
 
 ---
 

@@ -4,7 +4,7 @@ module: Alarm
 status: done
 slices: []
 aligns: []
-updated: 2026-09-14
+updated: 2026-09-20
 ---
 
 # MES 告警（Alarm）— 架构设计
@@ -134,6 +134,8 @@ AlarmFacade 或 AlarmQuery（读，HTTP）
 `payload`：`Map` → JSON 落库；约定常用键 `lotId, lotNo, eqpId, eqpCode, chartId, stepId, ruleCode`（有则写，不强校验）。
 
 调用方 **禁止** 依赖返回值做事务分支；需要联动走码表策略或本域自管（如 QTime 已 Hold）。
+
+**Facade 只读批量扩展（CP-3 登记，2026-09-20）：** 客诉追溯包装配块需要按 Lot 批量取未关闭告警——`AlarmFacade.listUnclearedForLots(Collection<Long> lotIds)`：一次 IN，口径与 `countUnclearedForLots` 一致（OPEN+ACK 且 entity=LOT），排序 `lastRaiseAt DESC, id DESC`（与 `listUncleared` 同）；空入参 → 空列表。调用方：`ComplaintPackageAssembler`（History 包）。
 
 ---
 

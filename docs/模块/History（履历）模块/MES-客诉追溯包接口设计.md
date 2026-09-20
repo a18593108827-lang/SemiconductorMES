@@ -2,9 +2,9 @@
 type: 接口设计
 module: History
 status: done
-slices: []
+slices: [CP-1, CP-2, CP-3]
 aligns: []
-updated: 2026-09-15
+updated: 2026-09-20
 ---
 
 # MES 客诉追溯包（Complaint Trace Package）— 接口设计
@@ -14,8 +14,8 @@ updated: 2026-09-15
 > 对齐：`MES-LotGenealogy接口设计.md` GN-6 · `MES-History一期功能清单.md` P2 · 业务清单 §10  
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
-> 更新：2026-09-15  
-> 状态：**CP-1 ✅ · CP-2 ✅** · CP-3+ 未做  
+> 更新：2026-09-20（CP-3 对齐：包号数字后缀 max + UK 重读 max 带抖动、装配失败隔离、Alarm 批量只读、build 复用 flatten 树）  
+> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅** · CP-4+ 未做  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -51,11 +51,11 @@ as-built / 审计证据     → 本包 histories + holds + alarms + scraps
 
 | # | 约束 | 说明 |
 |---|------|------|
-| A1 | 高内聚 | 圈人、装配、导出、触发遏制的**编排**全部在 `ComplaintPackageFacade`；禁止 Controller / 前端拼装多源当真相 |
-| A2 | 低耦合 | Facade **只**依赖：`MesLotService`（或 Lot 只读谱系门面）、`HistoryFacade`、`HoldService`、可选 `AlarmFacade`；**零** `mes_tx_log` / `mes_lot_genealogy` / `mes_hold` Mapper |
+| A1 | 高内聚 | 圈人、装配、导出、触发遏制的**编排**全部经 `ComplaintPackageFacade`；禁止 Controller / 前端拼装多源当真相。包内可拆 Allocator / Writer / Assembler，不算出界 |
+| A2 | 低耦合 | Facade **只**依赖：`MesLotService`（或 Lot 只读谱系门面）、`HistoryFacade`、`HoldService`、`AlarmFacade`；**零** `mes_tx_log` / `mes_lot_genealogy` / `MesHoldMapper` / `MesAlarmMapper` |
 | A3 | 读 SSOT | 谱系边只认 genealogy；履历只认 HistoryFacade；锁态只认 Hold；禁止本包缓存「是否 held」当写后真相 |
 | A4 | 写正交 | 本包**永不**改 Lot.status / WIP / Route / Track 门禁；遏制**只**经 `HoldService.create` |
-| A5 | 装配无写副作用 | `preview` / `build` / `export` **只读**；不得因导出隐式 Hold |
+| A5 | 装配无工艺写副作用 | `preview` / 装配 / `export` 不改 Lot.status / WIP / Track；不得因导出隐式 Hold。`build` **只写**本包审计表（包头+成员），不算工艺写 |
 | A6 | 影响面算法唯一 | 成员 Lot 集合**只**由 genealogy 遍历得到；禁止前端传任意 lotId 列表冒充影响面（contain 可再收窄，见 §7） |
 | A7 | 深度上限 | `depth` 默认 5、上限 20（与 Genealogy 对齐）；超限截断并在 VO 标 `truncated=true` |
 | A8 | 成员上限 | 单包成员 Lot ≤ **200**；超限拒绝并提示缩小 depth / 换锚点（防拖垮导出与批量 Hold） |
@@ -75,17 +75,18 @@ as-built / 审计证据     → 本包 histories + holds + alarms + scraps
 | P6 | 把 Scrap/Bonus 画进谱系树当边 | 与 Genealogy 原则冲突 |
 | P7 | 包内存「冻结履历全文」当唯一真相且不允许按现网重算 | 真相在 tx_log；包只存成员快照 + 元数据 |
 | P8 | contain 失败回滚已成功 Hold 的其它 Lot（要求全局原子） | 大厂 interim containment 允许部分成功；须返回明细 |
+| P9 | Facade 同类自调用 / 私有方法 `@Transactional` / **`build()` 自身带事务** / Writer 事务内 catch 后继续插 | 代理无效或 rollback-only：包头已插成员失败不回滚，或撞 `UnexpectedRollbackException` |
 
 ---
 
 ## 2. 模块边界
 
 ```
-ComplaintPackageFacade（History 包内）
-  ├── MesLotService.genealogy / 影响面展开（只读）
+ComplaintPackageFacade（编排；包内 Allocator / Writer / Assembler）
+  ├── MesLotService.flattenImpact（含已建树）/ genealogy（仅 get 现查）
   ├── HistoryFacade.listByLot / query（只读）
   ├── HoldService.listByLot 或等价只读 + create（遏制时）
-  ├── AlarmFacade（可选只读：按 Lot 未关闭告警摘要）
+  ├── AlarmFacade.countUnclearedForLots / listUnclearedForLots（只读）
   └── 本地：mes_complaint_package + member（包头审计，非履历真相）
 
 Track   = 不感知本包；继续只写 tx_log / genealogy
@@ -110,7 +111,8 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 |--------|------|------|
 | P0 | DDL 包头 + 成员；开关；权限 | ✅ CP-1 |
 | P0 | `preview`：影响面 + 计数摘要（不落库） | ✅ CP-2 |
-| P0 | `build`：落包头/成员 + 装配 VO | ⏳ |
+| P0 | `build`：落包头/成员 + 装配 VO | ✅ CP-3 |
+| P0 | `list`：包分页查询（Admin 入口数据源） | ✅ CP-3 |
 | P0 | `export`：JSON 下载（含清单） | ⏳ |
 | P0 | Admin：History / Lot 入口生成与下载 | ⏳ |
 | P1 | `contain`：对成员（或子集）批量 Hold | ⏳ |
@@ -122,7 +124,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 |------|------|------|
 | CP-1 | DDL + 权限 + `enabled`；空 Facade 骨架 | ✅ |
 | CP-2 | 影响面展开算法 + `preview` | ✅ |
-| CP-3 | `build` + 包头审计 + 装配 VO | History / Hold 只读 |
+| CP-3 | `build` + 包头审计 + 装配 VO + `list` 分页 | ✅ History / Hold 只读；Alarm `listUnclearedForLots`；Lot flatten 回带树 |
 | CP-4 | `GET export` JSON；Admin 按钮 | CP-3 |
 | CP-5 | `contain` + 锁序 + 部分成功明细 | Hold |
 | CP-6 | ZIP / 封面（可选） | CP-4 |
@@ -196,7 +198,7 @@ UK：`(package_id, lot_id)`。
 
 **禁止**自行 DFS Mapper；必须走 Lot 已有谱系实现（或抽 `LotGenealogyQuery` 只读组件供 LotService 与 Facade 共用——抽公共时仍零 Mapper 泄漏到 Complaint 包）。
 
-预览与 build **同一算法**；build 将结果落入 member 表。
+预览与 build **同一算法**（`flattenImpact`）；build 将结果落入 member 表。`flattenImpact` 须把已建树挂到返回值（`MesLotImpactFlatVO.tree`），build 同请求装配 `genealogy` **复用该树**，禁止再走一遍 `genealogy()`。get 的 `genealogy` 块现查 `MesLotService.genealogy`（成员以表为准，树允许与快照略漂）。
 
 ---
 
@@ -240,10 +242,10 @@ Body：preview 字段 + 可选 `reasonCode` / `remark`。
 
 | 块 | 来源 | 上限 |
 |----|------|------|
-| `genealogy` | 锚点树（可截断展示） | depth 同包 |
-| `historiesByLot` | 每成员 `HistoryFacade.listByLot` | 每 Lot 最近 **100** 条 |
-| `holdsByLot` | Hold 只读 | active + 最近关闭各有上限 |
-| `alarmsByLot` | Alarm 只读未关闭 | 可选；无 Facade 则空 |
+| `genealogy` | build 复用本次 flatten 树；get 现查 `genealogy()` | depth 同包 |
+| `historiesByLot` | 每成员 `HistoryFacade.listByLot`（本侧切尾端） | 每 Lot 最近 **100** 条 |
+| `holdsByLot` | `HoldService.listByLot`，本侧按 `active` / `released` 拆 | 各 20 |
+| `alarmsByLot` | `AlarmFacade.listUnclearedForLots`（一次 IN；`lastRaiseAt DESC, id DESC`） | 每 Lot 未关闭 20 |
 
 ### 6.3 Get
 
@@ -281,6 +283,23 @@ P1：`format=zip` → JSON + `README.txt`（包号、锚点、成员数、生成
 
 响应：`ComplaintContainResultVO`：`succeeded[]` / `skipped[]`（已 held）/ `failed[]`（lotId + code + message）。
 
+### 6.6 List（分页）
+
+`GET /complaint-packages`  
+权限：`complaint:view`
+
+查询参数（均可选）：`anchorLotId`、`status`（READY/CONTAINING/CONTAINED）、`from`/`to`（create_time 范围）、`page`（默认 1）、`size`（默认 20、上限 **截成** 100，不 400）。
+
+响应：`PageResult<ComplaintPackageListVO>` —— 包头摘要（packageId / packageNo / anchorLotNo / direction / depth / memberCount / truncated / status / createTime），**不含成员明细**（点开走 §6.3 Get）；按 create_time 倒序。
+
+### 6.7 说明
+
+build 与 Get 响应**同形**（单一 `ComplaintPackageVO`）；装配块（genealogy / historiesByLot / holdsByLot / alarmsByLot）在 **insert 事务提交后**组装——事务只包包头+成员写入，禁止把装配查询裹进未提交事务（见 §8.1）。
+
+写入事务必须落在独立 Writer Bean 的 public `@Transactional` 或 `TransactionTemplate` 上；禁止 Facade 同类自调用 / 私有方法事务 / **`build()` 带 `@Transactional`**（外层事务会使 catch UK 后仍 rollback-only）。UK 冲突必须在 Writer 代理外捕获，只改 `package_no` 再调 Writer public 方法；禁止在 Writer 事务内 catch 后继续插。
+
+**HTTP 成功边界：** 包头+成员提交成功即 build 成功。装配按块、按 Lot 失败隔离（该块/该 Lot 空列表，其它继续）；失败必记 WARN（packageNo + lotId + 块名）。不得因某成员 `listByLot` 404 把已落库的包打成 500（否则客户端按 A9 再 build 会留下孤儿包）。
+
 ---
 
 ## 7. 遏制语义（Containment）
@@ -288,7 +307,7 @@ P1：`format=zip` → JSON + `README.txt`（包号、锚点、成员数、生成
 对齐 8D D3：**先隔离嫌疑，再查根因**；与 Track 门禁正交（仍只认 active Hold）。
 
 ```
-preview/build（只读） → 人确认影响面
+preview/build（不遏制） → 人确认影响面
        ↓
 contain → 对每个目标 Lot：HoldService.create
        ↓
@@ -328,7 +347,21 @@ build 写包头/成员：单事务插入 package + members；**不**锁业务 Lo
 
 ### 8.3 包号并发
 
-`package_no` 日序：DB 序列 / 表计数行锁 / `INSERT` 遇 UK 重试 ≤3；禁止应用层无锁 `max+1`。
+`package_no` 格式 `CP-yyyyMMdd-序号`；日期取 JVM `LocalDate.now()`（与现网 DATETIME 同一时钟，单时区）。
+
+候选 = 当日 **数字后缀** max(seq)+1（无行则 1）。取数：
+
+```sql
+SELECT MAX(CAST(SUBSTRING_INDEX(package_no, '-', -1) AS UNSIGNED))
+FROM mes_complaint_package
+WHERE package_no LIKE CONCAT('CP-', #{ymd}, '-%')
+```
+
+或查出当日号后在 Java 解析后缀。**禁止** `ORDER BY package_no DESC LIMIT 1`（无零填充时 `…-9` > `…-10`）。**禁止** `COUNT(*)+1`。
+
+序列化手段 = `INSERT` 遇 `uk_complaint_package_no` 时，在 Writer 代理外 **重读 max(seq)+1 + `ThreadLocalRandom.nextInt(3)`**，只改 `package_no` 后重开写入事务，≤3，耗尽 `COMPLAINT_PACKAGE_NO_CONFLICT`。冲突后重读 MAX **必须**（不是 COUNT；纯 seq++ 会同频 herd）。
+
+**禁止** 无 UK 保护的 max+1 落库。成员 UK `(package_id, lot_id)` 不得走此重试（算法 bug，换错码）。
 
 ---
 
@@ -341,6 +374,7 @@ build 写包头/成员：单事务插入 package + members；**不**锁业务 Lo
 | `COMPLAINT_PACKAGE_TOO_LARGE` | 成员 > 200 |
 | `COMPLAINT_PACKAGE_LOT_NOT_IN_PACKAGE` | contain 的 lotIds 越界 |
 | `COMPLAINT_PACKAGE_CONTAIN_IN_PROGRESS` | 他请求正在 contain 同包 |
+| `COMPLAINT_PACKAGE_NO_CONFLICT` | `uk_complaint_package_no` 重试耗尽（≤3）；成员 UK 不得用此码 |
 | `COMPLAINT_PACKAGE_VOID` | 已作废不可 contain/export（若做 VOID） |
 
 Lot 不存在等复用现网 404 / Lot 错码。
@@ -377,8 +411,11 @@ Lot 不存在等复用现网 404 / Lot 错码。
 5. export JSON 含 packageNo、锚点、成员、履历块；无 Yield/OEE 字段  
 6. contain：已 held 进 skipped；未 held 进 succeeded；非法 lotId 拒整单  
 7. 两请求同时 contain 同包：一侧 `CONTAIN_IN_PROGRESS` 或串行成功；无死锁  
-8. Complaint 包 **零** tx_log/genealogy/hold Mapper 引用（依赖检查）  
+8. Complaint 包 **零** tx_log / genealogy / Hold / Alarm Mapper 引用（依赖检查）  
 9. Track 包无 Complaint 依赖  
+10. list 按 create_time 倒序；anchorLotId / status / 时间范围筛选生效；size>100 截成 100  
+11. 成员 insert 失败则无孤立包头；同日并发 build `package_no` **唯一**（`NO_CONFLICT` 偶发可接受）  
+12. 某成员履历/Hold 查询失败：包仍可 get，members 完整；装配失败有 WARN 日志  
 
 ---
 
@@ -395,7 +432,8 @@ Lot 不存在等复用现网 404 / Lot 错码。
 
 ## 14. 实施备注（给开发）
 
-- 包名建议：`com.mes.history.complaint` 或 `com.mes.complaint`；Facade 名 `ComplaintPackageFacade`  
-- 装配并行：成员履历可用有界线程池并行查，但 **contain 禁止并行写**  
+- 包名：现网已是 `com.mes.complaint`；Facade 名 `ComplaintPackageFacade`  
+- 包内拆 `ComplaintPackageNoAllocator` / `ComplaintPackageWriter` / `ComplaintPackageAssembler`；Facade 只编排；`build()` 不加 `@Transactional`  
+- 装配并行：成员履历可用有界线程池并行查（CP-3 先串行），但 **contain 禁止并行写**  
 - 大包 export：流式写 JSON，避免一次性巨型 VO 撑爆堆  
 - 原因码种子 `CUSTOMER_COMPLAINT` 归 Hold 字典；本包不自建第二字典  

@@ -10,12 +10,13 @@ updated: 2026-09-20
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-20 · 共 92 篇
+> 生成：2026-09-20 · 共 93 篇
 
 ## 状态汇总
 
 | 状态 | 篇数 |
 |------|------|
+| approved | 1 |
 | done | 84 |
 | draft | 6 |
 | in-progress | 2 |
@@ -41,7 +42,7 @@ updated: 2026-09-20
 | Spring `@Scheduled` 使用说明 | — | done ✅ | 2026-08-13 | `架构/MES-SpringScheduled使用.md` |
 | MES 服务架构演进决策 — 单体、Spring Cloud 与外围系统 | — | in-progress | 2026-09-18 | `架构/MES-服务架构演进决策.md` |
 | 半导体制造执行系统（MES）架构设计参考 | — | done ✅ | — | `架构/半导MES架构设计.md` |
-| MES 告警（Alarm）— 架构设计 | Alarm | done ✅ | 2026-09-14 | `模块/Alarm（告警）模块/MES-Alarm架构设计.md` |
+| MES 告警（Alarm）— 架构设计 | Alarm | done ✅ | 2026-09-20 | `模块/Alarm（告警）模块/MES-Alarm架构设计.md` |
 | MES 载具（Carrier）— 架构设计 | Carrier | done ✅ | 2026-09-11 | `模块/Carrier（载具）模块/MES-Carrier架构设计.md` |
 | MES 看板（Dashboard）— 架构设计 | Dashboard | done ✅ | 2026-09-08 | `模块/Dashboard（看板）模块/MES-Dashboard架构设计.md` |
 | EDC 与 SPC — 范围说明 | EDC | done ✅ | 2026-09-02 | `模块/EDC（量测）模块/MES-EDC与SPC范围说明.md` |
@@ -88,10 +89,10 @@ updated: 2026-09-20
 |------|------|------|------|------|
 | EdcFacade — 接口设计（架构） | EDC | done ✅ | 2026-09-02 | `模块/EDC（量测）模块/MES-EdcFacade接口设计.md` |
 | HistoryFacade — 接口设计（架构） | History | done ✅ | 2026-08-19 | `模块/History（履历）模块/MES-History接口设计.md` |
-| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-09-15 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
+| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-09-20 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
 | Future Hold — 接口设计（架构） | Hold | done ✅ | 2026-08-06 | `模块/Hold（锁批）模块/MES-FutureHold接口设计.md` |
 | Lot Bonus 数量调整 — 接口设计（架构） | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotBonus接口设计.md` |
-| Lot Genealogy 谱系查询 — 架构设计 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotGenealogy接口设计.md` |
+| Lot Genealogy 谱系查询 — 架构设计 | Lot | done ✅ | 2026-09-20 | `模块/Lot（批次）模块/MES-LotGenealogy接口设计.md` |
 | Lot Hot / Priority — 架构设计 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotHot接口设计.md` |
 | Lot Merge 合批 — 接口设计（架构） | Lot | done ✅ | 2026-08-07 | `模块/Lot（批次）模块/MES-LotMerge接口设计.md` |
 | Lot Scrap 报废 — 接口设计（架构） | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotScrap接口设计.md` |
@@ -131,7 +132,7 @@ updated: 2026-09-20
 | MES 派工（Dispatch）— 功能查验清单 | Dispatch | done ✅ | 2026-07-29 | `模块/Dispatch（派工）模块/MES-Dispatch已完成功能.md` |
 | MES 量测采集（EDC）— 已完成功能（查验清单） | EDC | done ✅ | 2026-08-19 | `模块/EDC（量测）模块/MES-EDC已完成功能.md` |
 | MES 设备（Equipment）— 功能查验清单 | Equipment | done ✅ | 2026-07-28 | `模块/Equipment（设备）模块/MES-Equipment已完成功能.md` |
-| MES 履历追溯（History）— 已完成功能（查验清单） | History | done ✅ | 2026-08-19 | `模块/History（履历）模块/MES-History已完成功能.md` |
+| MES 履历追溯（History）— 已完成功能（查验清单） | History | done ✅ | 2026-09-20 | `模块/History（履历）模块/MES-History已完成功能.md` |
 | MES 锁批（Hold）— 功能查验清单 | Hold | done ✅ | 2026-08-13 | `模块/Hold（锁批）模块/MES-Hold已完成功能.md` |
 | MES 批次（Lot）— 功能查验清单 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-Lot已完成功能.md` |
 | MES 配方（Recipe）— 功能查验清单 | Recipe | done ✅ | 2026-07-30 | `模块/Recipe（配方）模块/MES-Recipe已完成功能.md` |
@@ -142,11 +143,17 @@ updated: 2026-09-20
 | MES 在制（WIP）— 功能查验清单 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP已完成功能.md` |
 | MES 用户权限 — 已完成功能查验 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户权限已完成功能.md` |
 
+### plan（1 篇）
+
+| 文档 | 模块 | 状态 | 更新 | 路径 |
+|------|------|------|------|------|
+| CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页 | History | approved | 2026-09-20 | `模块/History（履历）模块/CP-3-plan.md` |
+
 ### 进度（1 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
-| MES 实施进度与下一步 | — | done ✅ | 2026-09-10 | `架构/MES-实施进度与下一步.md` |
+| MES 实施进度与下一步 | — | done ✅ | 2026-09-20 | `架构/MES-实施进度与下一步.md` |
 
 ### 业务清单（2 篇）
 

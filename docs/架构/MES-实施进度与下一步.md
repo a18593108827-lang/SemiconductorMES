@@ -4,12 +4,12 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-09-10
+updated: 2026-09-20
 ---
 
 # MES 实施进度与下一步
 
-> 更新：2026-09-10  
+> 更新：2026-09-20  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 ---
 
@@ -27,7 +27,7 @@ updated: 2026-09-10
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
 | EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；OOS Auto-Hold / `EDC_COLLECT` 已做；见 `docs/模块/EDC（量测）模块/` |
-| History | ✅ 一期 P0 | 写在 Track；`HistoryFacade` + `/app/history` 调查台 + 设备反查；见 `docs/模块/History（履历）模块/` |
+| History | ✅ 一期 P0 + 客诉包 CP-3 | 写在 Track；`HistoryFacade` + `/app/history`；客诉包 build/get/list ✅；export/contain 后置 |
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 | Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
 | Dashboard | ✅ 一期已完成 | overview 真数 + Admin 看板（铺满视口）；见 `docs/模块/Dashboard（看板）模块/` |

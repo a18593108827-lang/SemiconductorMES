@@ -2,16 +2,16 @@
 type: 已完成功能
 module: History
 status: done
-slices: []
+slices: [CP-1, CP-2, CP-3]
 aligns: []
-updated: 2026-08-19
+updated: 2026-09-20
 ---
 
 # MES 履历追溯（History）— 已完成功能（查验清单）
 
 > 对齐：`MES-History功能文档.md` · `MES-History接口设计.md`  
-> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍只在 Track  
-> 更新：2026-08-19
+> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍只在 Track；客诉追溯包 CP-1～CP-3 已落地  
+> 更新：2026-09-20
 
 ---
 
@@ -68,6 +68,27 @@ updated: 2026-08-19
 | `history:list` | ✅ 菜单 + 调查接口（种子 id=280） |
 | `track:view` | ✅ 仅现场本 Lot `GET /lots/{id}/history` |
 
+## 6. 客诉追溯包（Complaint Package）
+
+> 对齐：`MES-客诉追溯包接口设计.md`（CP-1～CP-3 完成登记，2026-09-20）
+
+| 项 | 状态 |
+|----|------|
+| DDL `mes_complaint_package` / `mes_complaint_package_member` | ✅ `migrate_complaint_package.sql`；ASSIGN_ID 雪花主键 |
+| 权限 `complaint:view` / `build` / `contain`（330/331/332，挂 280 下） | ✅ admin / process_eng / supervisor 三角色种子 |
+| 开关 `mes.complaint-package.enabled`（默认 false）+ `max-members`（200）+ `history-per-lot`（100） | ✅ |
+| 包结构 `com.mes.complaint`（controller / dto / entity / facade / mapper / vo） | ✅ |
+| `GET /complaint-packages/enabled`（`complaint:view`，不因 false 抛错） | ✅ 联调探测 |
+| `POST /complaint-packages/preview`（`complaint:view`） | ✅ 复用 `MesLotService.flattenImpact`；含 truncated / memberCount / summary |
+| 摘要 activeHoldCount / scrapLotCount / openAlarmCount | ✅ `HoldService.hasActive` + `AlarmFacade.countUnclearedForLots`（只读 Facade，零业务表 Mapper） |
+| 成员超上限 `COMPLAINT_PACKAGE_TOO_LARGE`；开关关 `COMPLAINT_PACKAGE_DISABLED` | ✅ |
+| CP-3 `POST /complaint-packages` build（`complaint:build`） | ✅ 事务只包包头+成员；Writer Bean；UK 重读 max+抖动；装配提交后 |
+| CP-3 `GET /complaint-packages/{id}` | ✅ 成员以表为准；装配块现查；与 build 同 `ComplaintPackageVO` |
+| CP-3 `GET /complaint-packages` list | ✅ 包头分页；size 截 100；create_time 倒序 |
+| 装配 genealogy / historiesByLot / holdsByLot / alarmsByLot | ✅ flatten 回带树；履历尾端 N；Hold `active`/`released` 各 20；Alarm `listUnclearedForLots` |
+| 包内 Allocator / Writer / Assembler | ✅ Facade 只编排；`build()` 无 `@Transactional` |
+| CP-4 `export`+Admin / CP-5 `contain` / CP-6 ZIP | ⏳ 未做（接口设计 §3） |
+
 ---
 
 ## 关联
@@ -75,4 +96,5 @@ updated: 2026-08-19
 - `MES-History一期功能清单.md`
 - `MES-History功能文档.md`
 - `MES-History接口设计.md`
+- `MES-客诉追溯包接口设计.md`
 - `MES-Track数据库设计.md` §2
