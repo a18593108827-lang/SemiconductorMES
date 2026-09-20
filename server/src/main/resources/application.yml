@@ -33,6 +33,8 @@ mes:
   dispatch:
     # 设备预约超时（分钟），默认 30
     reserve-ttl-minutes: 30
+    # false=跳过 CRITICAL 未关闭禁派；Hold 闸仍生效
+    block-critical-alarm-enabled: true
   recipe:
     # true=TrackIn 强制要求配方绑定解析成功；默认 false
     require-binding: false
@@ -61,3 +63,17 @@ mes:
   alarm:
     # false=raise 空操作；查询仍可读历史
     enabled: true
+    # false=忽略码表 HOLD_LOT（风暴止血）；与 enabled 正交
+    hold-on-raise-enabled: true
+  carrier:
+    # false=Facade 写路径拒（应急）
+    enabled: true
+    # true=TrackIn 强制已绑载具；默认 false 不挡存量线
+    track-in-required: true
+    # true=TrackIn 强制扫码比对 carrier_code；默认 false 不挡存量线
+    track-in-scan-required: true
+  complaint-package: # 客诉_追溯包
+    # false=业务拒 COMPLAINT_PACKAGE_DISABLED；默认关不挡现网
+    enabled: false
+    max-members: 200 # 客诉最大成员数
+    history-per-lot: 100 # 每批历史记录数

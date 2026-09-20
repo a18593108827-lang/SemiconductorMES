@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS mes_alarm_code (
     code               VARCHAR(64)    NOT NULL COMMENT '告警码 PK',
     name               VARCHAR(128)   NOT NULL COMMENT '展示名',
     level              VARCHAR(16)    NOT NULL COMMENT 'CRITICAL/WARNING/INFO',
-    on_raise           VARCHAR(16)    NOT NULL DEFAULT 'NONE' COMMENT 'NONE/HOLD_LOT；一期仅 NONE',
+    on_raise           VARCHAR(16)    NOT NULL DEFAULT 'NONE' COMMENT 'NONE/HOLD_LOT；种子默认 NONE',
     hold_reason_code   VARCHAR(32)             COMMENT 'on_raise=HOLD_LOT 时用',
     enabled            TINYINT        NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
     remark             VARCHAR(256)            COMMENT '备注',

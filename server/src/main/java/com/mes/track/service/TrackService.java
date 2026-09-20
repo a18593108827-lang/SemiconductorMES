@@ -22,8 +22,8 @@ public interface TrackService {
     /** 放行：绑 active 版本，进首站 wait */
     TrackReleaseResultVO release(Long lotId);
 
-    /** 开工：wait → processing */
-    TrackTxnResultVO trackIn(Long lotId, Long eqpId);
+    /** 开工：wait → processing；carrierCode 为现场扫码（扫码闸开时校验） */
+    TrackTxnResultVO trackIn(Long lotId, Long eqpId, String carrierCode);
 
     /** 分批：父保留余量，子继承快照与当前站 */
     TrackSplitResultVO split(Long parentLotId, List<TrackSplitChildDTO> children, String reasonCode, String remark);

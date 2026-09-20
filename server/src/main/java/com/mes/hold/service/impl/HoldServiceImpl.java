@@ -4,7 +4,9 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mes.common.AssertUtil;
+import com.mes.common.BusinessException;
 import com.mes.common.PageResult;
+import com.mes.common.ResultCode;
 import com.mes.hold.dto.MesHoldCreateDTO;
 import com.mes.hold.dto.MesHoldQuery;
 import com.mes.hold.entity.MesHold;
@@ -12,6 +14,7 @@ import com.mes.hold.entity.MesHoldReason;
 import com.mes.hold.mapper.MesHoldMapper;
 import com.mes.hold.mapper.MesHoldReasonMapper;
 import com.mes.hold.service.HoldService;
+import com.mes.hold.vo.HoldReasonAggVO;
 import com.mes.hold.vo.MesHoldVO;
 import com.mes.lot.entity.MesLot;
 import com.mes.lot.mapper.MesLotMapper;
@@ -25,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +60,42 @@ public class HoldServiceImpl implements HoldService {
     private final MesTxLogMapper mesTxLogMapper;
     private final SysUserMapper sysUserMapper;
     private final WipProjectionService wipProjectionService;
+
+    /**
+     * 看板等只要个数：active Hold 的 COUNT(*)，不分页、不拼 VO。
+     */
+    @Override
+    public long countActive() {
+        Long n = mesHoldMapper.selectCount(new LambdaQueryWrapper<MesHold>()
+                .eq(MesHold::getStatus, STATUS_ACTIVE));
+        return n == null ? 0L : n;
+    }
+
+    /**
+     * 报表按原因聚合：以 hold_time 落入窗为准（含已释放）。
+     */
+    @Override
+    public List<HoldReasonAggVO> summarizeByReason(LocalDate from, LocalDate toInclusive) {
+        if (from == null || toInclusive == null) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "from / to 不能为空");
+        }
+        if (toInclusive.isBefore(from)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "to 不能早于 from");
+        }
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime endExclusive = toInclusive.plusDays(1).atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+        List<HoldReasonAggVO> rows = mesHoldMapper.aggregateByReasonInHoldTimeRange(start, endExclusive, now);
+        if (rows == null || rows.isEmpty()) {
+            return Collections.emptyList();
+        }
+        for (HoldReasonAggVO row : rows) {
+            if (row.getAvgDurationMinutes() != null && row.getAvgDurationMinutes() < 0) {
+                row.setAvgDurationMinutes(0L);
+            }
+        }
+        return rows;
+    }
 
     @Override
     public PageResult<MesHoldVO> page(MesHoldQuery query) {
@@ -97,6 +138,29 @@ public class HoldServiceImpl implements HoldService {
                 .eq(MesHold::getLotId, lotId)
                 .orderByDesc(MesHold::getHoldTime));
         if (rows.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return toVoList(rows);
+    }
+
+    /** 批量只读：一次 IN，不重复校验 Lot 存在。调用方（ComplaintPackageAssembler）已校验。 */
+    @Override
+    public List<MesHoldVO> listByLots(Collection<Long> lotIds) {
+        if (lotIds == null || lotIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> ids = lotIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<MesHold> rows = mesHoldMapper.selectList(new LambdaQueryWrapper<MesHold>()
+                .in(MesHold::getLotId, ids)
+                .orderByDesc(MesHold::getHoldTime)
+                .orderByDesc(MesHold::getId));
+        if (rows == null || rows.isEmpty()) {
             return Collections.emptyList();
         }
         return toVoList(rows);

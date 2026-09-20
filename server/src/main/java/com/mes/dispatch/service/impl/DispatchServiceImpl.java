@@ -12,6 +12,8 @@ import com.mes.dispatch.service.DispatchService;
 import com.mes.dispatch.vo.DispatchCandidateItemVO;
 import com.mes.dispatch.vo.DispatchCandidatesVO;
 import com.mes.dispatch.vo.DispatchReserveVO;
+import com.mes.alarm.facade.AlarmFacade;
+import com.mes.alarm.vo.AlarmVO;
 import com.mes.equipment.entity.MesEqp;
 import com.mes.equipment.mapper.MesEqpMapper;
 import com.mes.equipment.service.MesEqpService;
@@ -55,6 +57,8 @@ public class DispatchServiceImpl implements DispatchService {
     private final MesEqpMapper mesEqpMapper;
     private final MesDispatchReserveMapper mesDispatchReserveMapper;
     private final HoldService holdService;
+    /** Critical 禁派只读查询，不碰告警写路径 */
+    private final AlarmFacade alarmFacade;
     private final MesEqpService mesEqpService;
     private final RecipeFacade recipeFacade;
     private final StepEqpTypeGuard stepEqpTypeGuard;
@@ -62,6 +66,10 @@ public class DispatchServiceImpl implements DispatchService {
     /** 预约超时分钟数，默认 30 */
     @Value("${mes.dispatch.reserve-ttl-minutes:30}")
     private int reserveTtlMinutes;
+
+    /** false=跳过 CRITICAL 禁派闸；Hold 闸仍生效 */
+    @Value("${mes.dispatch.block-critical-alarm-enabled:true}")
+    private boolean blockCriticalAlarmEnabled;
 
     @Override
     public DispatchCandidatesVO listCandidates(Long lotId) {
@@ -86,6 +94,13 @@ public class DispatchServiceImpl implements DispatchService {
         }
         vo.setHeld(false);
 
+        if (blockCriticalAlarmEnabled && alarmFacade.hasBlockingCriticalForLot(lotId)) {
+            vo.setCandidates(List.of());
+            vo.setRecommendedEqpId(null);
+            vo.setMessage(lotBlockingMessage(lotId));
+            return vo;
+        }
+
         LambdaQueryWrapper<MesEqp> qw = new LambdaQueryWrapper<>();
         qw.eq(MesEqp::getEnabled, MesEqpServiceImpl.ENABLED)
                 .in(MesEqp::getStatus, MesEqpServiceImpl.STATUS_IDLE, MesEqpServiceImpl.STATUS_RUNNING);
@@ -101,9 +116,16 @@ public class DispatchServiceImpl implements DispatchService {
 
         Set<Long> blockedEqpIds = loadBlockedEqpIds(lotId);
         blockedEqpIds.addAll(loadOffFlowAnchorEqpIds(lotId));
-        Map<Long, Integer> loadMap = loadCounts(rows.stream().map(MesEqp::getId).collect(Collectors.toList()));
-
         List<Long> eqpIds = rows.stream().map(MesEqp::getId).collect(Collectors.toList());
+        // 严重未关机台并入黑名单（与预约占用等同剔）；总阀关则跳过
+        Set<Long> criticalBlockedEqpIds = Set.of();
+        if (blockCriticalAlarmEnabled) {
+            criticalBlockedEqpIds = alarmFacade.listEqpIdsWithBlockingCritical(eqpIds);
+            blockedEqpIds.addAll(criticalBlockedEqpIds);
+        }
+        // 各机当前在制/排队负载，供后面排序打分
+        Map<Long, Integer> loadMap = loadCounts(eqpIds);
+
         Set<Long> qualified = new HashSet<>(recipeFacade.listQualifiedEqpIds(lot.getCurrentStepId(), eqpIds));
 
         List<DispatchCandidateItemVO> items = new ArrayList<>();
@@ -141,6 +163,9 @@ public class DispatchServiceImpl implements DispatchService {
             vo.setRecommendedEqpId(items.get(0).getEqpId());
         } else if (rows.isEmpty()) {
             vo.setMessage("无可用设备");
+        } else if (!criticalBlockedEqpIds.isEmpty()
+                && criticalBlockedEqpIds.containsAll(eqpIds)) {
+            vo.setMessage("无可用设备（均存在未关闭的严重告警）");
         } else if (!blockedEqpIds.isEmpty() && qualified.size() == eqpIds.size()) {
             vo.setMessage("无可用设备（均被预约占用）");
         } else {
@@ -159,6 +184,7 @@ public class DispatchServiceImpl implements DispatchService {
         AssertUtil.notNull(lot, "批次不存在");
         AssertUtil.isTrue(RESERVE_LOT_STATUSES.contains(lot.getStatus()), "仅 wait/processing 可预约设备");
         holdService.assertNoActive(lot.getId());
+        assertNoBlockingCritical(lot.getId(), dto.getEqpId());
 
         mesEqpService.assertUsable(dto.getEqpId());
         assertNotOffFlowAnchored(dto.getEqpId(), lot.getId());
@@ -296,6 +322,31 @@ public class DispatchServiceImpl implements DispatchService {
             return;
         }
         throw new BusinessException("设备被 Off-Flow 批次占用：" + holder.getLotNo());
+    }
+
+    /**
+     * Reserve 写前再检：批次或目标机有未关闭 CRITICAL 则拒约。
+     * 总阀关闭时跳过；须在 Hold 断言之后调用。
+     */
+    private void assertNoBlockingCritical(Long lotId, Long eqpId) {
+        if (!blockCriticalAlarmEnabled) {
+            return;
+        }
+        if (alarmFacade.hasBlockingCriticalForLot(lotId)) {
+            throw new BusinessException(lotBlockingMessage(lotId));
+        }
+        if (alarmFacade.hasBlockingCriticalForEqp(eqpId)) {
+            throw new BusinessException("目标设备存在未关闭的严重告警，禁止预约");
+        }
+    }
+
+    /** 候选空态 / 拒约文案；能带上告警码则带上 */
+    private String lotBlockingMessage(Long lotId) {
+        AlarmVO a = alarmFacade.findFirstBlockingCriticalForLot(lotId);
+        if (a != null && StringUtils.hasText(a.getCode())) {
+            return "存在未关闭的严重告警（" + a.getCode() + "），禁止派工";
+        }
+        return "存在未关闭的严重告警，禁止派工";
     }
 
     /**

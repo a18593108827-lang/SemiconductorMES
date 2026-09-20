@@ -10,6 +10,8 @@ import com.mes.history.dto.HistoryQuery;
 import com.mes.history.facade.HistoryFacade;
 import com.mes.history.mapper.HistoryTxLogMapper;
 import com.mes.history.support.HistoryTxAssembler;
+import com.mes.history.vo.HistoryDailyCountVO;
+import com.mes.history.vo.HistoryStepCountVO;
 import com.mes.history.vo.HistoryTxVO;
 import com.mes.lot.entity.MesLot;
 import com.mes.lot.mapper.MesLotMapper;
@@ -18,8 +20,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 履历只读入口。
@@ -56,6 +64,41 @@ public class HistoryFacadeImpl implements HistoryFacade {
         }
         Collections.reverse(rows);
         return historyTxAssembler.toVoList(rows);
+    }
+
+    /**
+     * 批量：每批最近 limit 条，时间正序。一次 IN + 窗口函数；不校验 Lot 存在。
+     * Assembler 再按 history-per-lot 截更短尾端。
+     */
+    @Override
+    public List<HistoryTxVO> listByLots(java.util.Collection<Long> lotIds, int limit) {
+        if (lotIds == null || lotIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> ids = lotIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        int cap = limit <= 0 ? LOT_HISTORY_LIMIT : Math.min(limit, LOT_HISTORY_LIMIT);
+        List<MesTxLog> rows = historyTxLogMapper.selectRecentByLots(ids, cap);
+        if (rows == null || rows.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // 窗口已按 lot 内 create_time DESC, id DESC 取；分桶后翻成 ASC，与 listByLot 同口径
+        Map<Long, List<MesTxLog>> byLot = new LinkedHashMap<>();
+        for (MesTxLog row : rows) {
+            byLot.computeIfAbsent(row.getLotId(), k -> new ArrayList<>()).add(row);
+        }
+        List<MesTxLog> ordered = new ArrayList<>(rows.size());
+        for (List<MesTxLog> bucket : byLot.values()) {
+            bucket.sort(Comparator.comparing(MesTxLog::getCreateTime)
+                    .thenComparing(MesTxLog::getId));
+            ordered.addAll(bucket);
+        }
+        return historyTxAssembler.toVoList(ordered);
     }
 
     /** QE 调查：新的在前。没带批次也没带设备就拒查，别把全厂履历倒给前端。 */
@@ -109,5 +152,42 @@ public class HistoryFacadeImpl implements HistoryFacade {
             throw new BusinessException(ResultCode.NOT_FOUND, "履历不存在");
         }
         return historyTxAssembler.toVoList(List.of(row)).get(0);
+    }
+
+    /**
+     * 统计某事务类型每日数量
+     */
+    @Override
+    public List<HistoryDailyCountVO> countDailyByTxType(String txType, LocalDate from, LocalDate toInclusive) {
+        if (!StringUtils.hasText(txType) || from == null || toInclusive == null) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "txType / from / to 不能为空");
+        }
+        if (toInclusive.isBefore(from)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "to 不能早于 from");
+        }
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime endExclusive = toInclusive.plusDays(1).atStartOfDay();
+        List<HistoryDailyCountVO> rows = historyTxLogMapper.countDailyByTxType(
+                txType.trim(), start, endExclusive);
+        return rows == null ? Collections.emptyList() : rows;
+    }
+
+    /**
+     * 按工序聚合统计数量；
+     * 便于报表 byDay / byStep 对账。
+     */
+    @Override
+    public List<HistoryStepCountVO> countByStepAndTxType(String txType, LocalDate from, LocalDate toInclusive) {
+        if (!StringUtils.hasText(txType) || from == null || toInclusive == null) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "txType / from / to 不能为空");
+        }
+        if (toInclusive.isBefore(from)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "to 不能早于 from");
+        }
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime endExclusive = toInclusive.plusDays(1).atStartOfDay();
+        List<HistoryStepCountVO> rows = historyTxLogMapper.countByStepAndTxType(
+                txType.trim(), start, endExclusive);
+        return rows == null ? Collections.emptyList() : rows;
     }
 }

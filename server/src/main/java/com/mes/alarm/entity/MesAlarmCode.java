@@ -24,7 +24,7 @@ public class MesAlarmCode extends BaseEntity {
     private String name;
     /** 默认级别：CRITICAL 严重 / WARNING 警告 / INFO 提示；顶栏主要盯严重 */
     private String level;
-    /** 一响之后干啥：NONE 只记告警；HOLD_LOT 顺带锁批（一期只用 NONE） */
+    /** 一响之后干啥：NONE 只记告警；HOLD_LOT 新 OPEN 时经 HoldService 锁批 */
     private String onRaise;
     /** 若选了锁批，用哪个 Hold 原因码 */
     private String holdReasonCode;

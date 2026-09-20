@@ -64,7 +64,7 @@ public class TrackController {
     @OperLog(module = "Track", action = "TrackIn")
     @PostMapping("/track-in")
     public R<TrackTxnResultVO> trackIn(@Valid @RequestBody TrackInDTO dto) {
-        return R.ok(trackService.trackIn(dto.getLotId(), dto.getEqpId()));
+        return R.ok(trackService.trackIn(dto.getLotId(), dto.getEqpId(), dto.getCarrierCode()));
     }
 
     /** 完工：processing → 下一站 wait 或 completed */

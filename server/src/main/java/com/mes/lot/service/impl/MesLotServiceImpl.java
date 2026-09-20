@@ -16,6 +16,8 @@ import com.mes.lot.mapper.MesLotNoSeqMapper;
 import com.mes.lot.service.MesLotService;
 import com.mes.lot.vo.MesLotCreateResultVO;
 import com.mes.lot.vo.MesLotGenealogyNodeVO;
+import com.mes.lot.vo.MesLotImpactFlatVO;
+import com.mes.lot.vo.MesLotImpactMemberVO;
 import com.mes.lot.vo.MesLotStepVO;
 import com.mes.lot.vo.MesLotVO;
 import com.mes.route.entity.MesRoute;
@@ -38,11 +40,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -223,35 +227,99 @@ public class MesLotServiceImpl implements MesLotService {
     }
 
     /**
-     * 谱系树：先向下展开子批，再向上挂祖先（both 时祖先链保留当前节点的子孙）。
-     * @param direction up / down / both（默认 both）
-     * @param depth 最大层数，默认 5，上限 20
+     * 查谱系树（树形结构）。
+     * 先向下铺子孙，再向上包祖先；both 时根往往是最顶祖先，查询批在中间。
+     *
+     * @param direction up=只向上 / down=只向下 / both=两边（默认）
+     * @param depth     最多爬几层，默认 5，最大 20
      */
     @Override
     public MesLotGenealogyNodeVO genealogy(Long lotId, String direction, Integer depth) {
+        return buildGenealogyTree(lotId, direction, depth, new AtomicBoolean(false));
+    }
+
+    /**
+     * 把谱系树展平成名单（客诉圈影响面用）。
+     * 建树规则同 genealogy；每条批打上锚点/祖先/子孙；深度砍断了标 truncated。
+     *
+     * @param lotId     你点的那批（锚点）
+     * @param direction 同 genealogy
+     * @param depth     同 genealogy
+     */
+    @Override
+    public MesLotImpactFlatVO flattenImpact(Long lotId, String direction, Integer depth) {
+        // 盒子：有没有被深度截断；递归里改，外面再读（不是多线程）
+        AtomicBoolean truncated = new AtomicBoolean(false);
+        MesLotGenealogyNodeVO tree = buildGenealogyTree(lotId, direction, depth, truncated);
+        MesLotImpactFlatVO flat = new MesLotImpactFlatVO();
+        flat.setAnchorLotId(lotId);
+        flat.setAnchorLotNo(tree == null ? null : findLotNo(tree, lotId));
+        flat.setTruncated(truncated.get());
+
+        LinkedHashMap<Long, MesLotImpactMemberVO> byId = new LinkedHashMap<>();
+        MesLotGenealogyNodeVO anchorNode = findNode(tree, lotId);
+        // 把锚点那一批写进展平名单
+        if (anchorNode != null) {
+            putMember(byId, anchorNode, "ANCHOR", 0);
+        }
+        // 把锚点往上走的祖先写进展平名单
+        List<MesLotGenealogyNodeVO> path = findPath(tree, lotId);
+        if (path != null && path.size() > 1) {
+            for (int i = 0; i < path.size() - 1; i++) {
+                int depthFromAnchor = path.size() - 1 - i;
+                putMember(byId, path.get(i), "ANCESTOR", depthFromAnchor);
+            }
+        }
+        // 把锚点往下走的子孙写进展平名单
+        if (anchorNode != null) {
+            collectDescendants(anchorNode, 0, byId);
+        }
+        flat.setMembers(new ArrayList<>(byId.values()));
+        flat.setTree(tree);
+        // 补锚点批号（可能根没有批号）
+        if (flat.getAnchorLotNo() == null && !byId.isEmpty()) {
+            MesLotImpactMemberVO a = byId.get(lotId);
+            if (a != null) {
+                flat.setAnchorLotNo(a.getLotNo());
+            }
+        }
+        return flat;
+    }
+
+    /**
+     * 真正建树：genealogy / flattenImpact 共用。
+     * 顺序：先向下 fillDown，再向上 buildUp。
+     */
+    private MesLotGenealogyNodeVO buildGenealogyTree(Long lotId, String direction, Integer depth,
+                                                     AtomicBoolean truncated) {
         MesLot root = mesLotMapper.selectById(lotId);
         AssertUtil.notNull(root, "批次不存在");
-        int maxDepth = depth == null || depth <= 0 ? 5 : Math.min(depth, 20);// 默认 5 层, 上限 20
+        int maxDepth = depth == null || depth <= 0 ? 5 : Math.min(depth, 20);
         String dir = direction == null ? "both" : direction.trim().toLowerCase(Locale.ROOT);
+        AssertUtil.isTrue("up".equals(dir) || "down".equals(dir) || "both".equals(dir),
+                "direction 须为 up / down / both");
 
         MesLotGenealogyNodeVO node = toGeneNode(root, null);
-        // 递归向下展开树节点
         if ("down".equals(dir) || "both".equals(dir)) {
-            fillDown(node, maxDepth, 0);
+            fillDown(node, maxDepth, 0, truncated);
         }
-        // 递归向上展开树节点
         if ("up".equals(dir) || "both".equals(dir)) {
-            node = buildUp(node, maxDepth);
+            node = buildUp(node, maxDepth, truncated);
         }
         return node;
     }
 
-    /** 沿 split/merge 边向上包一层祖先，最多 maxDepth 层 */
-    private MesLotGenealogyNodeVO buildUp(MesLotGenealogyNodeVO current, int maxDepth) {
+    /**
+     * 向上爬：一层层把父批包在外面。
+     * 每次只跟「当前批作为 child 的最新一条边」；防环；爬满层上面还有父 → 记截断。
+     */
+    private MesLotGenealogyNodeVO buildUp(MesLotGenealogyNodeVO current, int maxDepth,
+                                          AtomicBoolean truncated) {
         MesLotGenealogyNodeVO cursor = current;
         Set<Long> visited = new HashSet<>();
         visited.add(current.getLotId());
-        for (int i = 0; i < maxDepth; i++) {
+        int i = 0;
+        for (; i < maxDepth; i++) {
             MesLotGenealogy edge = mesLotGenealogyMapper.selectOne(new LambdaQueryWrapper<MesLotGenealogy>()
                     .eq(MesLotGenealogy::getChildLotId, cursor.getLotId())
                     .in(MesLotGenealogy::getTxnType, "split", "merge")
@@ -272,12 +340,29 @@ public class MesLotServiceImpl implements MesLotService {
             parentNode.setChildren(List.of(cursor));
             cursor = parentNode;
         }
+        if (i >= maxDepth) {
+            Long more = mesLotGenealogyMapper.selectCount(new LambdaQueryWrapper<MesLotGenealogy>()
+                    .eq(MesLotGenealogy::getChildLotId, cursor.getLotId())
+                    .in(MesLotGenealogy::getTxnType, "split", "merge"));
+            if (more != null && more > 0) {
+                truncated.set(true);
+            }
+        }
         return cursor;
     }
 
-    /** 递归填充 split/merge 子节点 */
-    private void fillDown(MesLotGenealogyNodeVO node, int maxDepth, int level) {
+    /**
+     * 向下铺：把拆合出来的子批挂到 children，再递归。
+     * 到最大层数下面还有边 → 记截断，不再往下挂。
+     */
+    private void fillDown(MesLotGenealogyNodeVO node, int maxDepth, int level, AtomicBoolean truncated) {
         if (level >= maxDepth) {
+            Long more = mesLotGenealogyMapper.selectCount(new LambdaQueryWrapper<MesLotGenealogy>()
+                    .eq(MesLotGenealogy::getParentLotId, node.getLotId())
+                    .in(MesLotGenealogy::getTxnType, "split", "merge"));
+            if (more != null && more > 0) {
+                truncated.set(true);
+            }
             node.setChildren(Collections.emptyList());
             return;
         }
@@ -296,13 +381,99 @@ public class MesLotServiceImpl implements MesLotService {
                 continue;
             }
             MesLotGenealogyNodeVO childNode = toGeneNode(child, edge);
-            fillDown(childNode, maxDepth, level + 1);
+            fillDown(childNode, maxDepth, level + 1, truncated);
             kids.add(childNode);
         }
         node.setChildren(kids);
     }
 
-    /** Lot → 谱系节点（边字段来自 genealogy；根节点 edge=null） */
+    /** 往名单里加一条批；同批已加过就跳过 */
+    private static void putMember(LinkedHashMap<Long, MesLotImpactMemberVO> byId,
+                                  MesLotGenealogyNodeVO node, String relation, int depthFromAnchor) {
+        if (node == null || node.getLotId() == null || byId.containsKey(node.getLotId())) {
+            return;
+        }
+        MesLotImpactMemberVO m = new MesLotImpactMemberVO();
+        m.setLotId(node.getLotId());
+        m.setLotNo(node.getLotNo());
+        m.setRelation(relation);
+        m.setDepthFromAnchor(depthFromAnchor);
+        m.setQty(node.getQty());
+        m.setStatus(node.getStatus());
+        byId.put(node.getLotId(), m);
+    }
+
+    /** 从锚点往下，把子孙都加进名单，标成 DESCENDANT */
+    private static void collectDescendants(MesLotGenealogyNodeVO node, int depthFromAnchor,
+                                           LinkedHashMap<Long, MesLotImpactMemberVO> byId) {
+        if (node.getChildren() == null || node.getChildren().isEmpty()) {
+            return;
+        }
+        for (MesLotGenealogyNodeVO child : node.getChildren()) {
+            putMember(byId, child, "DESCENDANT", depthFromAnchor + 1);
+            collectDescendants(child, depthFromAnchor + 1, byId);
+        }
+    }
+
+    /** 在树里找某个批次节点，没有就 null */
+    private static MesLotGenealogyNodeVO findNode(MesLotGenealogyNodeVO root, Long lotId) {
+        if (root == null || lotId == null) {
+            return null;
+        }
+        if (lotId.equals(root.getLotId())) {
+            return root;
+        }
+        if (root.getChildren() == null) {
+            return null;
+        }
+        for (MesLotGenealogyNodeVO c : root.getChildren()) {
+            MesLotGenealogyNodeVO hit = findNode(c, lotId);
+            if (hit != null) {
+                return hit;
+            }
+        }
+        return null;
+    }
+
+    /** 从树根走到目标批的整条路径；找不到返回 null */
+    private static List<MesLotGenealogyNodeVO> findPath(MesLotGenealogyNodeVO root, Long lotId) {
+        List<MesLotGenealogyNodeVO> path = new ArrayList<>();
+        if (dfsPath(root, lotId, path)) {
+            return path;
+        }
+        return null;
+    }
+
+    /**
+     * 在树里找有没有这个批次。
+     * 找到：path 留下「根 → … → 该批」；找不到：回溯清掉岔路，返回 false。
+     */
+    private static boolean dfsPath(MesLotGenealogyNodeVO node, Long lotId, List<MesLotGenealogyNodeVO> path) {
+        if (node == null) {
+            return false;
+        }
+        path.add(node);
+        if (lotId.equals(node.getLotId())) {
+            return true;
+        }
+        if (node.getChildren() != null) {
+            for (MesLotGenealogyNodeVO c : node.getChildren()) {
+                if (dfsPath(c, lotId, path)) {
+                    return true;
+                }
+            }
+        }
+        path.remove(path.size() - 1);
+        return false;
+    }
+
+    /** 从树里取出某批的批号 */
+    private static String findLotNo(MesLotGenealogyNodeVO root, Long lotId) {
+        MesLotGenealogyNodeVO n = findNode(root, lotId);
+        return n == null ? null : n.getLotNo();
+    }
+
+    /** Lot 转成树上一个节点；有边就把边信息挂在这个（child）节点上 */
     private static MesLotGenealogyNodeVO toGeneNode(MesLot lot, MesLotGenealogy edge) {
         MesLotGenealogyNodeVO node = new MesLotGenealogyNodeVO();
         node.setLotId(lot.getId());
@@ -315,7 +486,7 @@ public class MesLotServiceImpl implements MesLotService {
         return node;
     }
 
-    /** 边挂在 child 端：描述「本批如何从上级产生」 */
+    /** 把谱系边写到节点上（表示「我怎么从上级来的」） */
     private static void applyEdge(MesLotGenealogyNodeVO node, MesLotGenealogy edge) {
         node.setTxnType(edge.getTxnType());
         node.setTxnTime(edge.getCreateTime());

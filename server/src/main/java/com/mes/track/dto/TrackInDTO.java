@@ -12,4 +12,7 @@ public class TrackInDTO {
 
     /** 设备 ID（一期可选） */
     private Long eqpId;
+
+    /** 现场扫码载具编码；扫码闸开时必填并比对 */
+    private String carrierCode;
 }

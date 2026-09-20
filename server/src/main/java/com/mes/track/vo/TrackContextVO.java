@@ -58,4 +58,12 @@ public class TrackContextVO {
     private TrackProcessTimeVO processTime;
     /** 量测门禁；非 processing 为 null */
     private TrackEdcVO edc;
+    /** 当前载具 ID；未绑 null */
+    private Long carrierId;
+    /** 当前载具编码；未绑 null */
+    private String carrierCode;
+    /** TrackIn 是否强制已绑（配置开且模块启用） */
+    private Boolean carrierRequired;
+    /** TrackIn 是否强制扫码比对（配置开且模块启用） */
+    private Boolean carrierScanRequired;
 }

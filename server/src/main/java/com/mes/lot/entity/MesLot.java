@@ -64,6 +64,9 @@ public class MesLot extends BaseEntity {
     /** 当前设备 ID（TrackIn 后；一期可空） */
     private Long currentEqpId;
 
+    /** 当前载具 ID；仅 CarrierFacade 绑/解维护 */
+    private Long carrierId;
+
     /** 按触发站累计返工次数 JSON，如 {"60":1} */
     private String reworkCounts;
 

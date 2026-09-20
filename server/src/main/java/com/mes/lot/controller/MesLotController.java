@@ -2,6 +2,9 @@ package com.mes.lot.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaMode;
+import com.mes.carrier.dto.LotCarrierBindDTO;
+import com.mes.carrier.facade.CarrierFacade;
+import com.mes.carrier.vo.CarrierBindingVO;
 import com.mes.common.PageResult;
 import com.mes.common.R;
 import com.mes.common.annotation.OperLog;
@@ -20,6 +23,7 @@ import com.mes.hold.vo.MesFutureHoldVO;
 import com.mes.hold.vo.MesHoldVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,6 +47,7 @@ public class MesLotController {
     private final HistoryFacade historyFacade;
     private final HoldService holdService;
     private final FutureHoldService futureHoldService;
+    private final CarrierFacade carrierFacade;
 
     /** 分页列表 */
     @SaCheckPermission("lot:list")
@@ -100,13 +105,37 @@ public class MesLotController {
         return R.ok(mesLotService.genealogy(id, direction, depth));
     }
 
-    /** 改属性 */
+    /** 改属性（不含 carrierId；绑解走 Carrier API） */
     @SaCheckPermission("lot:edit")
     @OperLog(module = "Lot", action = "改批次属性")
     @PutMapping("/{id}")
     public R<Void> update(@PathVariable Long id, @Valid @RequestBody MesLotUpdateDTO dto) {
         mesLotService.update(id, dto);
         return R.ok();
+    }
+
+    /** 绑定载具（委托 CarrierFacade） */
+    @SaCheckPermission("carrier:bind")
+    @OperLog(module = "Lot", action = "绑定载具")
+    @PostMapping("/{id}/carrier")
+    public R<CarrierBindingVO> bindCarrier(@PathVariable Long id, @Valid @RequestBody LotCarrierBindDTO dto) {
+        return R.ok(carrierFacade.bind(id, dto.getCarrierRef()));
+    }
+
+    /** 解绑载具（委托 CarrierFacade） */
+    @SaCheckPermission("carrier:bind")
+    @OperLog(module = "Lot", action = "解绑载具")
+    @DeleteMapping("/{id}/carrier")
+    public R<Void> unbindCarrier(@PathVariable Long id) {
+        carrierFacade.unbind(id);
+        return R.ok();
+    }
+
+    /** 查本批当前绑定 */
+    @SaCheckPermission(value = {"carrier:view", "lot:list"}, mode = SaMode.OR)
+    @GetMapping("/{id}/carrier")
+    public R<CarrierBindingVO> getCarrier(@PathVariable Long id) {
+        return R.ok(carrierFacade.getBinding(id));
     }
 
     /** 放行（兼容入口，逻辑委托 Track） */

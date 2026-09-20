@@ -208,6 +208,14 @@ INSERT INTO sys_permission (id, parent_id, perm_type, perm_code, perm_name, path
 (300, 290, 3, 'track:scrap',      '报废',   NULL,              NULL,              10,  1, NOW(), NOW(), 0),
 (301, 290, 3, 'track:bonus',      '数量调整', NULL,            NULL,              11,  1, NOW(), NOW(), 0),
 (302, 290, 3, 'track:abort',      '加工中止', NULL,            NULL,              12,  1, NOW(), NOW(), 0),
+(310, 0,   1, NULL,                 '复盘',   NULL,              'bar-chart-2',     50, 1, NOW(), NOW(), 0),
+(311, 310, 2, 'report:view',        '报表',   '/app/report',     'bar-chart-2',     10, 1, NOW(), NOW(), 0),
+(320, 200, 2, 'carrier:view',       '载具',   '/app/carrier',    'box',            155, 1, NOW(), NOW(), 0),
+(321, 320, 3, 'carrier:edit',       '载具编辑', NULL,            NULL,               1, 1, NOW(), NOW(), 0),
+(322, 320, 3, 'carrier:bind',       '载具绑解', NULL,            NULL,               2, 1, NOW(), NOW(), 0),
+(330, 280, 3, 'complaint:view',     '追溯包查看', NULL,          NULL,               1, 1, NOW(), NOW(), 0),
+(331, 280, 3, 'complaint:build',    '追溯包生成', NULL,          NULL,               2, 1, NOW(), NOW(), 0),
+(332, 280, 3, 'complaint:contain',  '追溯包遏制', NULL,          NULL,               3, 1, NOW(), NOW(), 0),
 -- ????
 (100, 0,   1, 'system',              '????', NULL,                   'settings', 100, 1, NOW(), NOW(), 0),
 (110, 100, 2, 'system:user',         '????', '/app/auth/users',      NULL,       10,  1, NOW(), NOW(), 0),
@@ -312,7 +320,14 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1143, 1, 258, NOW()),
 (1144, 1, 271, NOW()),
 (1145, 1, 272, NOW()),
-(1146, 1, 273, NOW())
+(1146, 1, 273, NOW()),
+(1147, 1, 311, NOW()),
+(1148, 1, 320, NOW()),
+(1149, 1, 321, NOW()),
+(1150, 1, 322, NOW()),
+(1151, 1, 330, NOW()),
+(1152, 1, 331, NOW()),
+(1153, 1, 332, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- supervisor????? + ????
@@ -348,7 +363,13 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1422, 4, 253, NOW()),
 (1423, 4, 257, NOW()),
 (1424, 4, 271, NOW()),
-(1425, 4, 272, NOW())
+(1425, 4, 272, NOW()),
+(1427, 4, 311, NOW()),
+(1428, 4, 320, NOW()),
+(1429, 4, 322, NOW()),
+(1430, 4, 330, NOW()),
+(1431, 4, 331, NOW()),
+(1432, 4, 332, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- operator??? + ??
@@ -365,7 +386,9 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1207, 2, 294, NOW()),
 (1208, 2, 302, NOW()),
 (1209, 2, 253, NOW()),
-(1210, 2, 256, NOW())
+(1210, 2, 256, NOW()),
+(1211, 2, 320, NOW()),
+(1212, 2, 322, NOW())
 ON DUPLICATE KEY UPDATE role_id = VALUES(role_id);
 
 -- process_eng??? + ????
@@ -407,6 +430,13 @@ INSERT INTO sys_role_permission (id, role_id, permission_id, create_time) VALUES
 (1339, 3, 271, NOW()),
 (1340, 3, 272, NOW()),
 (1341, 3, 273, NOW()),
+(1342, 3, 311, NOW()),
+(1343, 3, 320, NOW()),
+(1344, 3, 321, NOW()),
+(1345, 3, 322, NOW()),
+(1346, 3, 330, NOW()),
+(1347, 3, 331, NOW()),
+(1348, 3, 332, NOW()),
 (1305, 3, 250, NOW()),
 (1309, 3, 251, NOW()),
 (1310, 3, 252, NOW()),
@@ -558,6 +588,7 @@ CREATE TABLE IF NOT EXISTS mes_lot (
     current_sort_no   INT                    COMMENT '当前站顺序号',
     current_step_id   BIGINT                 COMMENT '当前工序ID',
     current_eqp_id    BIGINT                 COMMENT '当前设备ID',
+    carrier_id        BIGINT                 COMMENT '当前载具ID',
     rework_counts     VARCHAR(512)           COMMENT '按触发站累计返工次数JSON',
     off_flow          TINYINT       NOT NULL DEFAULT 0 COMMENT '是否在Off-Flow中 0/1',
     off_flow_anchor_sort INT                 COMMENT 'Off-Flow锚点站序',
@@ -586,7 +617,8 @@ CREATE TABLE IF NOT EXISTS mes_lot (
     KEY idx_lot_route (route_id),
     KEY idx_lot_route_ver (route_version_id),
     KEY idx_lot_parent (parent_lot_id),
-    KEY idx_lot_current_step (current_step_id)
+    KEY idx_lot_current_step (current_step_id),
+    KEY idx_lot_carrier (carrier_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='批次';
 
 CREATE TABLE IF NOT EXISTS mes_lot_genealogy (
@@ -734,7 +766,8 @@ INSERT INTO mes_hold_reason (
 (8006, 'OTHER',      '??',         'other',    1, '????',   NOW(), NOW(), 0),
 (8007, 'QTIME_EXCEED', 'Queue Time超时', 'quality', 1, '站间等待超限', NOW(), NOW(), 0),
 (8008, 'PROCESS_TIME_EXCEED', 'Process Time超时', 'quality', 1, '站内加工超上限，出站后锁批', NOW(), NOW(), 0),
-(8009, 'EDC_OOS', '量测超规', 'quality', 1, '采集OOS后锁批，解锁后须重采合格才能完工', NOW(), NOW(), 0)
+(8009, 'EDC_OOS', '量测超规', 'quality', 1, '采集OOS后锁批，解锁后须重采合格才能完工', NOW(), NOW(), 0),
+(8010, 'ALARM_POLICY', '告警策略锁批', 'quality', 1, 'mes_alarm_code.on_raise=HOLD_LOT 时引用', NOW(), NOW(), 0)
 ON DUPLICATE KEY UPDATE
   reason_name = VALUES(reason_name),
   category = VALUES(category),
@@ -1124,3 +1157,77 @@ CREATE TABLE IF NOT EXISTS mes_alarm (
     KEY idx_alarm_status_level_time (status, level, last_raise_at),
     KEY idx_alarm_entity (entity_type, entity_id, last_raise_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='alarm instance';
+
+CREATE TABLE IF NOT EXISTS mes_carrier (
+    id               BIGINT         NOT NULL COMMENT 'PK',
+    carrier_code     VARCHAR(64)    NOT NULL COMMENT 'carrier code',
+    carrier_type     VARCHAR(32)    NOT NULL DEFAULT 'FOUP' COMMENT 'type',
+    capacity         INT            NOT NULL DEFAULT 25 COMMENT 'slot capacity',
+    status           VARCHAR(32)    NOT NULL DEFAULT 'AVAILABLE' COMMENT 'AVAILABLE/IN_USE/QUARANTINE/SCRAPPED',
+    clean_status     VARCHAR(32)             DEFAULT 'UNKNOWN' COMMENT 'CLEAN/DIRTY/UNKNOWN',
+    location_type    VARCHAR(32)             DEFAULT 'NONE' COMMENT 'NONE/STOCKER/PORT/OHB/MANUAL',
+    location_ref     VARCHAR(128)            COMMENT 'location ref',
+    remark           VARCHAR(512)            COMMENT 'remark',
+    version          INT            NOT NULL DEFAULT 0 COMMENT 'optimistic lock',
+    create_by        BIGINT                  COMMENT 'create by',
+    create_time      DATETIME                COMMENT 'create time',
+    update_by        BIGINT                  COMMENT 'update by',
+    update_time      DATETIME                COMMENT 'update time',
+    deleted          TINYINT        NOT NULL DEFAULT 0 COMMENT 'soft delete',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_carrier_code (carrier_code),
+    KEY idx_carrier_status (status),
+    KEY idx_carrier_location (location_type, location_ref)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='carrier master';
+
+CREATE TABLE IF NOT EXISTS mes_carrier_binding (
+    id               BIGINT         NOT NULL COMMENT 'PK',
+    carrier_id       BIGINT         NOT NULL COMMENT 'carrier id',
+    lot_id           BIGINT         NOT NULL COMMENT 'lot id',
+    bind_time        DATETIME       NOT NULL COMMENT 'bind time',
+    bind_by          BIGINT                  COMMENT 'bind by',
+    create_time      DATETIME                COMMENT 'create time',
+    update_time      DATETIME                COMMENT 'update time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_binding_lot (lot_id),
+    UNIQUE KEY uk_binding_carrier (carrier_id),
+    KEY idx_binding_bind_time (bind_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='carrier current binding';
+
+CREATE TABLE IF NOT EXISTS mes_complaint_package (
+    id               BIGINT         NOT NULL COMMENT 'PK=packageId',
+    package_no       VARCHAR(64)    NOT NULL COMMENT 'CP-yyyyMMdd-seq',
+    anchor_lot_id    BIGINT         NOT NULL COMMENT 'anchor lot',
+    anchor_lot_no    VARCHAR(64)    NOT NULL COMMENT 'anchor lot no snapshot',
+    direction        VARCHAR(16)    NOT NULL COMMENT 'up/down/both',
+    depth            INT            NOT NULL COMMENT 'expand depth',
+    member_count     INT            NOT NULL DEFAULT 0 COMMENT 'member count',
+    truncated        TINYINT        NOT NULL DEFAULT 0 COMMENT 'truncated 0/1',
+    reason_code      VARCHAR(64)             COMMENT 'reason code',
+    remark           VARCHAR(512)            COMMENT 'remark',
+    status           VARCHAR(32)    NOT NULL DEFAULT 'READY' COMMENT 'READY/CONTAINING/CONTAINED/VOID',
+    create_by        BIGINT                  COMMENT 'create by',
+    create_time      DATETIME                COMMENT 'create time',
+    contain_by       BIGINT                  COMMENT 'first contain by',
+    contain_time     DATETIME                COMMENT 'first contain time',
+    update_time      DATETIME                COMMENT 'update time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_complaint_package_no (package_no),
+    KEY idx_complaint_pkg_anchor (anchor_lot_id),
+    KEY idx_complaint_pkg_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='complaint trace package header';
+
+CREATE TABLE IF NOT EXISTS mes_complaint_package_member (
+    id                 BIGINT         NOT NULL COMMENT 'PK',
+    package_id         BIGINT         NOT NULL COMMENT 'package id',
+    lot_id             BIGINT         NOT NULL COMMENT 'member lot',
+    lot_no             VARCHAR(64)    NOT NULL COMMENT 'member lot no',
+    relation           VARCHAR(32)    NOT NULL COMMENT 'ANCHOR/ANCESTOR/DESCENDANT',
+    depth_from_anchor  INT            NOT NULL DEFAULT 0 COMMENT 'depth from anchor',
+    qty_snapshot       INT                     COMMENT 'qty at build',
+    status_snapshot    VARCHAR(32)             COMMENT 'status at build',
+    create_time        DATETIME                COMMENT 'create time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_complaint_pkg_lot (package_id, lot_id),
+    KEY idx_complaint_member_lot (lot_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='complaint package members';

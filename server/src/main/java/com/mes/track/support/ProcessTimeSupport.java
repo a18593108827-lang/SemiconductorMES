@@ -153,6 +153,14 @@ public class ProcessTimeSupport {
         if (!canHold) {
             return;
         }
+        if (holdService.hasActive(lot.getId())) {
+            MesLot fresh = mesLotMapper.selectById(lot.getId());
+            if (fresh != null) {
+                lot.setStatus(fresh.getStatus());
+                lot.setVersion(fresh.getVersion());
+            }
+            return;
+        }
         try {
             MesHoldCreateDTO dto = new MesHoldCreateDTO();
             dto.setLotId(lot.getId());
@@ -166,6 +174,10 @@ public class ProcessTimeSupport {
                 lot.setVersion(fresh.getVersion());
             }
         } catch (Exception ex) {
+            if (holdService.hasActive(lot.getId())) {
+                log.warn("Process Time 超限已有锁批 lotId={}", lot.getId());
+                return;
+            }
             log.error("Process Time 超限 Hold 失败 lotId={}", lot.getId(), ex);
             throw ex instanceof RuntimeException re ? re : new BusinessException("Process Time 超限锁批失败");
         }

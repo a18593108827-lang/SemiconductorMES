@@ -32,4 +32,11 @@ public class AlarmVO {
     private Long clearBy;
     private LocalDateTime clearAt;
     private String clearRemark;
+
+    /** 详情：码表 on_raise（NONE / HOLD_LOT） */
+    private String onRaise;
+    /** 详情：码表 hold_reason_code */
+    private String holdReasonCode;
+    /** 详情：entity=LOT 时是否存在 active Hold；非 Lot 为 null */
+    private Boolean lotHoldActive;
 }

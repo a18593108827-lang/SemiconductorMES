@@ -7,6 +7,7 @@ import com.mes.alarm.entity.MesAlarmCode;
 import com.mes.alarm.mapper.MesAlarmCodeMapper;
 import com.mes.alarm.mapper.MesAlarmMapper;
 import com.mes.alarm.service.AlarmService;
+import com.mes.alarm.support.AlarmSelfHoldCodes;
 import com.mes.alarm.ws.AlarmWsPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -21,6 +24,7 @@ import java.util.Map;
 
 /**
  * raise：独立小事务落库；失败只打日志，不回滚调用方（采集 / 过站）。
+ * P1：新 OPEN 且码表 on_raise=HOLD_LOT 时经 AlarmHoldOnRaiseExecutor 调 Hold（bump 不挂）。
  */
 @Slf4j
 @Service
@@ -36,12 +40,18 @@ public class AlarmServiceImpl implements AlarmService {
     /** 提示：轻量告知，一般不用人立刻处理 */
     private static final String LEVEL_INFO = "INFO";
 
+    private static final String ON_RAISE_HOLD_LOT = "HOLD_LOT";
+
     private final MesAlarmMapper mesAlarmMapper;
     private final MesAlarmCodeMapper mesAlarmCodeMapper;
     private final AlarmWsPublisher alarmWsPublisher;
+    private final AlarmHoldOnRaiseExecutor alarmHoldOnRaiseExecutor;
 
     @Value("${mes.alarm.enabled:true}")
     private boolean enabled;
+
+    @Value("${mes.alarm.hold-on-raise-enabled:true}")
+    private boolean holdOnRaiseEnabled;
 
     /**
      * 对外入口：新开事务写库；里边抛错也吃掉，别把采集/过站带崩。
@@ -72,7 +82,8 @@ public class AlarmServiceImpl implements AlarmService {
 
         MesAlarmCode def = mesAlarmCodeMapper.selectById(alarmCode);
         String level = DEFAULT_LEVEL;
-        if (def == null || def.getEnabled() == null || def.getEnabled() != 1) {
+        boolean codeActive = def != null && def.getEnabled() != null && def.getEnabled() == 1;
+        if (!codeActive) {
             log.warn("[ALARM] 码表无或已停用 code={}，仍按 {} 落库", alarmCode, DEFAULT_LEVEL);
         } else {
             level = normalizeLevel(def.getLevel());
@@ -117,6 +128,54 @@ public class AlarmServiceImpl implements AlarmService {
         log.warn("[ALARM] open code={} id={} entity={}/{} message={} payload={}",
                 alarmCode, row.getId(), entity.type, entity.id, message, payload);
         alarmWsPublisher.publishAfterCommit(AlarmWsPublisher.ACTION_OPEN, row);
+        maybeHoldOnRaise(codeActive ? def : null, row);
+    }
+
+    /**
+     * 仅新 OPEN：码表 HOLD_LOT + Lot 实体 → 独立事务挂锁；失败不影响本告警行。
+     */
+    private void maybeHoldOnRaise(MesAlarmCode def, MesAlarm row) {
+        if (!holdOnRaiseEnabled) {
+            return;
+        }
+        if (def == null) {
+            return;
+        }
+        String onRaise = def.getOnRaise();
+        if (!StringUtils.hasText(onRaise) || !ON_RAISE_HOLD_LOT.equalsIgnoreCase(onRaise.trim())) {
+            return;
+        }
+        if (AlarmSelfHoldCodes.isSelfHold(row.getCode())) {
+            log.warn("[ALARM] HOLD_LOT 跳过：告警码已由业务自挂锁批 code={} alarmId={}",
+                    row.getCode(), row.getId());
+            return;
+        }
+        if (!MesAlarm.ENTITY_LOT.equals(row.getEntityType())
+                || row.getEntityId() == null
+                || row.getEntityId() <= 0) {
+            log.warn("[ALARM] HOLD_LOT 跳过：实体非 Lot alarmId={} entity={}/{}",
+                    row.getId(), row.getEntityType(), row.getEntityId());
+            return;
+        }
+        if (!StringUtils.hasText(def.getHoldReasonCode())) {
+            log.warn("[ALARM] HOLD_LOT 跳过：未配置锁批原因码 alarmId={} code={}",
+                    row.getId(), row.getCode());
+            return;
+        }
+        String reasonCode = def.getHoldReasonCode().trim();
+        String remark = "告警策略锁批 alarmId=" + row.getId() + " code=" + row.getCode();
+        Long lotId = row.getEntityId();
+        Runnable job = () -> alarmHoldOnRaiseExecutor.holdLotAsync(lotId, reasonCode, remark);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    job.run();
+                }
+            });
+        } else {
+            job.run();
+        }
     }
 
     /**

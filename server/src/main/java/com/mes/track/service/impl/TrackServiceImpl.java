@@ -5,6 +5,8 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.mes.carrier.facade.CarrierFacade;
+import com.mes.carrier.vo.CarrierBindingVO;
 import com.mes.common.AssertUtil;
 import com.mes.common.BusinessException;
 import com.mes.dispatch.service.DispatchService;
@@ -67,6 +69,7 @@ import com.mes.track.vo.TrackTxnResultVO;
 import com.mes.wip.service.WipProjectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -169,6 +172,16 @@ public class TrackServiceImpl implements TrackService {
     private final StepEqpTypeGuard stepEqpTypeGuard;
     private final QueueTimeSupport queueTimeSupport;
     private final ProcessTimeSupport processTimeSupport;
+    private final CarrierFacade carrierFacade;
+
+    @Value("${mes.carrier.enabled:true}")
+    private boolean carrierEnabled;
+
+    @Value("${mes.carrier.track-in-required:false}")
+    private boolean carrierTrackInRequired;
+
+    @Value("${mes.carrier.track-in-scan-required:false}")
+    private boolean carrierTrackInScanRequired;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -230,13 +243,18 @@ public class TrackServiceImpl implements TrackService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public TrackTxnResultVO trackIn(Long lotId, Long eqpId) {
+    public TrackTxnResultVO trackIn(Long lotId, Long eqpId, String carrierCode) {
         MesLot lot = requireExecutableLot(lotId);
         // Future Hold PRE：独立事务激活后，本事务 assert 拦截开工（激活不回滚）
         futureHoldService.tryActivate(lot, lot.getCurrentSortNo(), FutureHoldServiceImpl.TIMING_PRE);
         holdService.assertNoActive(lotId);
         queueTimeSupport.assertAndSettleOnTrackIn(lot);
         holdService.assertNoActive(lotId);
+        if (carrierTrackInScanRequired) {
+            carrierFacade.assertMatch(lotId, carrierCode);
+        } else if (carrierTrackInRequired) {
+            carrierFacade.assertBound(lotId);
+        }
         mesEqpService.assertUsable(eqpId);
         dispatchService.assertReserveMatch(lotId, eqpId);// 预约匹配
         dispatchService.assertNotOffFlowAnchored(eqpId, lotId);// Off-Flow 锚点占台
@@ -267,7 +285,7 @@ public class TrackServiceImpl implements TrackService {
         Long txId = writeTxLog(lot, TX_TRACK_IN, fromStatus, STATUS_PROCESSING, fromSortNo, fromSortNo,
                 current.getStepId(), eqpId, lot.getRouteVersionId(), "开工",
                 recipe != null ? recipe.getRecipeId() : null,
-                recipe != null ? recipe.getVersionId() : null, buildTrackInExt(lot, eqpId));
+                recipe != null ? recipe.getVersionId() : null, buildTrackInExt(lot, eqpId, carrierCode));
         dispatchService.consumeOnTrackIn(lotId, eqpId, txId);// 消耗预约
 
         return toTxnVo(lot, TX_TRACK_IN, false);
@@ -816,7 +834,7 @@ public class TrackServiceImpl implements TrackService {
     /**
      * 构建 TrackIn 扩展信息
      */
-    private String buildTrackInExt(MesLot lot, Long eqpId) {
+    private String buildTrackInExt(MesLot lot, Long eqpId, String scannedCarrierCode) {
         JSONObject ext = new JSONObject();
         String required = stepEqpTypeGuard.resolveRequired(lot);
         if (StringUtils.hasText(required)) {
@@ -828,6 +846,13 @@ public class TrackServiceImpl implements TrackService {
         }
         if (eqpId != null) {
             ext.set("eqpId", String.valueOf(eqpId));
+        }
+        Long carrierId = carrierFacade.getCarrierId(lot.getId());
+        if (carrierId != null) {
+            ext.set("carrierId", String.valueOf(carrierId));
+        }
+        if (carrierTrackInScanRequired && StringUtils.hasText(scannedCarrierCode)) {
+            ext.set("scannedCarrierCode", scannedCarrierCode.trim());
         }
         processTimeSupport.putTrackInExt(ext, lot);
         return ext.isEmpty() ? null : ext.toString();
@@ -1501,6 +1526,7 @@ public class TrackServiceImpl implements TrackService {
         vo.setQueueTime(queueTimeSupport.toContextVo(lot));
         vo.setProcessTime(null); // 加工中才有倒计时，下面按当前站补
         vo.setEdc(null);
+        fillCarrierContext(vo, lotId);
 
         if (lot.getRouteVersionId() != null) {
             MesRouteVersion version = mesRouteVersionMapper.selectById(lot.getRouteVersionId());
@@ -1797,6 +1823,20 @@ public class TrackServiceImpl implements TrackService {
         vo.setCompleted(completed);
         vo.setOffFlow(isOffFlow(lot));
         return vo;
+    }
+
+    /** context 载具字段：有绑写码；required/scanRequired 仅开关开时 true */
+    private void fillCarrierContext(TrackContextVO vo, Long lotId) {
+        vo.setCarrierRequired(carrierEnabled && carrierTrackInRequired);
+        vo.setCarrierScanRequired(carrierEnabled && carrierTrackInScanRequired);
+        CarrierBindingVO binding = carrierFacade.getBinding(lotId);
+        if (binding != null) {
+            vo.setCarrierId(binding.getCarrierId());
+            vo.setCarrierCode(binding.getCarrierCode());
+        } else {
+            vo.setCarrierId(null);
+            vo.setCarrierCode(null);
+        }
     }
 
     /** 是否批次是否在off-flow */

@@ -47,7 +47,7 @@ public class MesAlarm extends BaseEntity {
     private String message;
     /** 挂在哪类对象上：批次 / 机台 / 图 / 无 */
     private String entityType;
-    /** 对象主键；没有对象就写 0，别存 null */
+    /** 挂载对象主键：与 entityType 对应（Lot/Eqp/Chart 的 id）；无对象写 0 */
     private Long entityId;
     /** 去重键：同码+同对象 OPEN 时合并成一条，格式 code|type|id */
     private String dedupeKey;

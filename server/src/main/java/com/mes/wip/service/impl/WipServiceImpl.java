@@ -41,6 +41,16 @@ public class WipServiceImpl implements WipService {
     private final MesRouteMapper mesRouteMapper;
     private final MesRouteVersionMapper mesRouteVersionMapper;
 
+    /**
+     * 看板等只要个数：默认在制三态 COUNT(*)，不分页、不拼 VO。
+     */
+    @Override
+    public long count() {
+        Long n = mesWipLotMapper.selectCount(new LambdaQueryWrapper<MesWipLot>()
+                .in(MesWipLot::getStatus, DEFAULT_STATUSES));
+        return n == null ? 0L : n;
+    }
+
     @Override
     public PageResult<MesWipVO> page(MesWipQuery query) {
         long pageNo = query.getPage() <= 0 ? 1 : query.getPage();
