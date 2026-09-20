@@ -1,5 +1,11 @@
 # MES 项目长期记忆
 
+## Git 仓库约定
+- **单一仓库**：根目录 `D:/java/xm/2026_07/MES`，分支 `main`，remote origin = `github.com/a18593108827-lang/SemiconductorMES`（public）；提交身份 guocong <a18593108827@163.com>
+- 历史遗留：`server/.git` 曾是**独立仓库**（remote `.../server.git`，master，91 提交）导致「代码提交进 server 仓库、文档提交进根仓库」双历史；2026-09-20 已移至 `D:/java/xm/2026_07/_git-backup/server-dotgit-20260920` 备份并停用，现全仓单一 Git。**禁止再在子目录 `git init`**
+- 提交信息风格：`feat（模块）简述` + 正文分点；实测 `git push` 在本机沙箱/agent 环境不可用（github.com 出口被代理拦 502），须用户在自带代理的客户端执行
+- 待处理：`server/src/main/resources/application-dev.yml` 含本机弱口令与内网 IP，已随公开仓库提交，建议改环境变量占位或转 private
+
 ## 项目定位
 - 半导体制造执行系统（MES），对标 SiView / Camstar / AMAT 的 Lot Tracking 模型
 - 核心：**Track 事务为唯一执行真相**；Lot 主数据 + Route 版本快照 + Hold/Dispatch 叠加校验
