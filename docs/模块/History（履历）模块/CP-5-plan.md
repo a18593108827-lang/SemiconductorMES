@@ -1,7 +1,7 @@
 ---
 type: plan
 module: History
-status: draft
+status: approved
 slices: [CP-5]
 aligns: [MES-客诉追溯包接口设计.md]
 updated: 2026-09-21
@@ -189,4 +189,4 @@ h. 种子 SQL + schema.sql 同步；`docs/INDEX.md` 重建；文案称「遏制�
 | R11 | 占位失败按行状态分支，VOID 不报进行中 |
 | R12 | 并发验收用心跳/救援可复现，不用手工双 curl 碰运气 |
 
-**批准记录**：`status` 改为 `approved` 时，在此行写明批准人与日期（该提交即审计轨迹）。
+**批准记录**：2026-09-21 用户批准（经两轮架构审查：R1~R12 + F1~F3 全量吸收；现网契约已对码核验）。**批准后暂不动码，等用户开工指令。**

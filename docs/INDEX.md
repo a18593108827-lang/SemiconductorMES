@@ -16,9 +16,9 @@ updated: 2026-09-21
 
 | 状态 | 篇数 |
 |------|------|
-| approved | 2 |
+| approved | 3 |
 | done | 84 |
-| draft | 7 |
+| draft | 6 |
 | in-progress | 2 |
 
 ## 按类型索引
@@ -149,7 +149,7 @@ updated: 2026-09-21
 |------|------|------|------|------|
 | CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页 | History | approved | 2026-09-20 | `模块/History（履历）模块/CP-3-plan.md` |
 | CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
-| CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | draft | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
+| CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
 
 ### 进度（1 篇）
 
