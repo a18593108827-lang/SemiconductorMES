@@ -275,11 +275,13 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
             rejectOccupyMiss(id);
         }
 
+        // 三个篮子须在 try 外声明：finally 的 finish 依赖 succeeded，VO 装配又在 finish 之后（K10）
         List<ComplaintContainLotVO> succeeded = new ArrayList<>();
         List<ComplaintContainLotVO> skipped = new ArrayList<>();
         List<ComplaintContainLotVO> failed = new ArrayList<>();
-        String holdRemark = holdRemark(pkg.getPackageNo(), dto.getRemark());
         try {
+            // 占位成功后立即进入 try：此后任何异常都由 finally 的 finish 兜住，不留 60s 占位残留待救援
+            String holdRemark = holdRemark(pkg.getPackageNo(), dto.getRemark());
             for (MesComplaintPackageMember m : targets) {
                 applyOne(m, dto.getReasonCode().trim(), holdRemark, succeeded, skipped, failed);
                 if (!containWriter.heartbeat(id, token)) {
