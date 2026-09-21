@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import type { MouseHandlerDataParam } from 'recharts'
 import type { SpcSeries } from '../../api/spc'
 
 function num(v: number | string | null | undefined): number | null {
@@ -69,6 +70,19 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
   const lsl = num(series.specLsl)
   const hasMr = rows.some((r) => r.mr != null)
 
+  // 点数据即选中（两图共用）：绕开图表级 onClick 对 tooltip 状态的依赖，单击即命中
+  const pickIdx = (idx: number) => (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onSelectIdx(idx)
+  }
+
+  // 图表级点击：未落在点上时——就近选中（若有悬停索引）或清空
+  const pickNearest = (state: MouseHandlerDataParam | null | undefined) => {
+    const i = state?.activeTooltipIndex
+    const row = typeof i === 'number' ? rows[i] : undefined
+    onSelectIdx(row ? row.idx : null)
+  }
+
   return (
     <div className="space-y-3">
       <section className="rounded-md border border-border">
@@ -101,10 +115,7 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
               <LineChart
                 data={rows}
                 onClick={(state) => {
-                  // recharts 3 移除了 activePayload，改用 activeTooltipIndex（数据数组下标）
-                  const i = state?.activeTooltipIndex
-                  const row = typeof i === 'number' ? rows[i] : undefined
-                  onSelectIdx(row ? row.idx : null)
+                  pickNearest(state)
                 }}
               >
                 <CartesianGrid stroke="oklch(0.9 0 0)" strokeDasharray="3 3" />
@@ -145,14 +156,8 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
                     const { cx, cy, payload } = props
                     if (cx == null || cy == null || payload?.value == null) return null
                     const active = highlightIdx === payload.idx
-                    // 点击直接挂在数据点上：图表级 onClick 依赖 tooltip 状态（mousemove 节流后才就绪），
-                    // 首次单击常读到空索引而清空选中；此处绕开该状态，单击即命中，r=10 透明热区便于点中
-                    const pick = (e: React.MouseEvent) => {
-                      e.stopPropagation()
-                      onSelectIdx(payload.idx)
-                    }
                     return (
-                      <g onClick={pick} style={{ cursor: 'pointer' }}>
+                      <g onClick={pickIdx(payload.idx)} style={{ cursor: 'pointer' }}>
                         <circle cx={cx} cy={cy} r={10} fill="transparent" />
                         {payload.ooc ? (
                           <circle cx={cx} cy={cy} r={active ? 6 : 5} fill="oklch(0.55 0.2 25)" />
@@ -186,19 +191,33 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
             <div className="flex h-full items-center justify-center text-sm text-muted">点不够，算不出移动极差</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rows}>
+              <LineChart data={rows} onClick={(state) => pickNearest(state)}>
                 <CartesianGrid stroke="oklch(0.9 0 0)" strokeDasharray="3 3" />
                 <XAxis dataKey="idx" tick={{ fontSize: 11 }} stroke="oklch(0.48 0.01 28)" />
                 <YAxis tick={{ fontSize: 11 }} stroke="oklch(0.48 0.01 28)" domain={[0, 'auto']} />
                 <Tooltip contentStyle={{ fontSize: 12 }} formatter={(v) => [v, 'MR']} />
+                {highlightIdx != null ? (
+                  // 与 I 图共用同一选中线：同一 idx 的单值与移动极差可上下对照
+                  <ReferenceLine x={highlightIdx} stroke="oklch(0.5 0.19 295)" strokeWidth={2} />
+                ) : null}
                 <Line
                   type="monotone"
                   dataKey="mr"
                   stroke="oklch(0.55 0.1 160)"
                   strokeWidth={1.5}
-                  dot={{ r: 2.5 }}
                   connectNulls={false}
                   isAnimationActive={false}
+                  dot={(props) => {
+                    const { cx, cy, payload } = props
+                    if (cx == null || cy == null || payload?.mr == null) return null
+                    const active = highlightIdx === payload.idx
+                    return (
+                      <g onClick={pickIdx(payload.idx)} style={{ cursor: 'pointer' }}>
+                        <circle cx={cx} cy={cy} r={10} fill="transparent" />
+                        <circle cx={cx} cy={cy} r={active ? 4 : 2.5} fill="oklch(0.55 0.1 160)" />
+                      </g>
+                    )
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
