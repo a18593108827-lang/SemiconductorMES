@@ -131,7 +131,8 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
                 {usl != null ? <ReferenceLine y={usl} stroke="oklch(0.72 0.14 75)" strokeDasharray="6 4" strokeWidth={1} /> : null}
                 {lsl != null ? <ReferenceLine y={lsl} stroke="oklch(0.72 0.14 75)" strokeDasharray="6 4" strokeWidth={1} /> : null}
                 {highlightIdx != null ? (
-                  <ReferenceLine x={highlightIdx} stroke="oklch(0.55 0.12 230 / 0.4)" strokeWidth={2} />
+                  // 选中线用醒目紫色实线：与灰色网格 / 悬停光标 / 蓝控制限 / 琥珀规格线都可一眼区分
+                  <ReferenceLine x={highlightIdx} stroke="oklch(0.5 0.19 295)" strokeWidth={2} />
                 ) : null}
                 <Line
                   type="monotone"

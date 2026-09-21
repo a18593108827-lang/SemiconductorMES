@@ -518,7 +518,7 @@ export function SpcPage() {
                                 key={String(p.itemId)}
                                 className={cn(
                                   'cursor-pointer border-t border-border',
-                                  active ? 'bg-accent/10' : 'hover:bg-surface',
+                                  active ? 'bg-accent/25' : 'hover:bg-surface',
                                 )}
                                 onClick={() => setHighlightIdx(idx)}
                               >
