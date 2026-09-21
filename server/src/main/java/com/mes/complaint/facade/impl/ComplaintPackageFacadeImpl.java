@@ -3,6 +3,8 @@ package com.mes.complaint.facade.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mes.alarm.facade.AlarmFacade;
 import com.mes.common.AssertUtil;
 import com.mes.common.BusinessException;
@@ -18,6 +20,7 @@ import com.mes.complaint.mapper.MesComplaintPackageMemberMapper;
 import com.mes.complaint.support.ComplaintPackageAssembler;
 import com.mes.complaint.support.ComplaintPackageNoAllocator;
 import com.mes.complaint.support.ComplaintPackageWriter;
+import com.mes.complaint.vo.ComplaintPackageExportFile;
 import com.mes.complaint.vo.ComplaintPackageListVO;
 import com.mes.complaint.vo.ComplaintPackageMemberVO;
 import com.mes.complaint.vo.ComplaintPackagePreviewVO;
@@ -28,21 +31,24 @@ import com.mes.lot.service.MesLotService;
 import com.mes.lot.vo.MesLotImpactFlatVO;
 import com.mes.lot.vo.MesLotImpactMemberVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
- * 客诉追溯包门面：开关 / preview / build / get / page。
+ * 客诉追溯包门面：开关 / preview / build / get / page / export。
  * 编排方法不加事务；写入只走 Writer。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
@@ -56,6 +62,8 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     public static final String ERR_NOT_FOUND = "COMPLAINT_PACKAGE_NOT_FOUND";
     /** 包号并发冲突重试耗尽 */
     public static final String ERR_NO_CONFLICT = "COMPLAINT_PACKAGE_NO_CONFLICT";
+    /** 导出 format 非 json */
+    public static final String ERR_FORMAT = "COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED";
 
     /** 报废状态（摘要 scrapLotCount 判定用） */
     private static final String STATUS_SCRAPPED = "scrapped";
@@ -80,6 +88,7 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     private final ComplaintPackageAssembler assembler;
     private final MesComplaintPackageMapper packageMapper;
     private final MesComplaintPackageMemberMapper memberMapper;
+    private final ObjectMapper objectMapper;
 
     /** 配置开关是否打开 */
     @Override
@@ -201,6 +210,36 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
             records.add(toListVo(row));
         }
         return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    /** JSON 附件：assertEnabled → format → get；禁加事务 */
+    @Override
+    public ComplaintPackageExportFile exportFile(Long id, String format) {
+        assertEnabled();
+        assertFormatJson(format);
+        ComplaintPackageVO vo = get(id);
+        ObjectNode node = objectMapper.convertValue(vo, ObjectNode.class);
+        node.set("exportedAt", objectMapper.valueToTree(LocalDateTime.now()));
+        node.set("exportedBy", objectMapper.valueToTree(resolveCreateBy()));
+        try {
+            byte[] content = objectMapper.writeValueAsBytes(node);
+            return new ComplaintPackageExportFile(vo.getPackageNo() + ".json", content);
+        } catch (Exception e) {
+            // ObjectNode 写出几乎不可能失败；真失败必须留痕，否则无从排查
+            log.warn("complaint export serialize failed packageNo={}", vo.getPackageNo(), e);
+            throw new BusinessException("追溯包导出失败");
+        }
+    }
+
+    /** format：null / 空白 / json（忽略大小写）通过 */
+    private static void assertFormatJson(String format) {
+        if (!StringUtils.hasText(format)) {
+            return;
+        }
+        if ("json".equalsIgnoreCase(format.trim())) {
+            return;
+        }
+        throw new BusinessException(ERR_FORMAT + ": 不支持的导出格式");
     }
 
     /** 展平影响面并做成员上限校验（preview / build 同一算法） */

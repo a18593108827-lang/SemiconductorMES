@@ -2,16 +2,16 @@
 type: 已完成功能
 module: History
 status: done
-slices: [CP-1, CP-2, CP-3]
+slices: [CP-1, CP-2, CP-3, CP-4]
 aligns: []
-updated: 2026-09-20
+updated: 2026-09-21
 ---
 
 # MES 履历追溯（History）— 已完成功能（查验清单）
 
 > 对齐：`MES-History功能文档.md` · `MES-History接口设计.md`  
-> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍只在 Track；客诉追溯包 CP-1～CP-3 已落地  
-> 更新：2026-09-20
+> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍只在 Track；客诉追溯包 CP-1～CP-4 已落地  
+> 更新：2026-09-21
 
 ---
 
@@ -70,7 +70,7 @@ updated: 2026-09-20
 
 ## 6. 客诉追溯包（Complaint Package）
 
-> 对齐：`MES-客诉追溯包接口设计.md`（CP-1～CP-3 完成登记，2026-09-20）
+> 对齐：`MES-客诉追溯包接口设计.md`（CP-1～CP-4 完成登记，2026-09-21）
 
 | 项 | 状态 |
 |----|------|
@@ -87,7 +87,10 @@ updated: 2026-09-20
 | CP-3 `GET /complaint-packages` list | ✅ 包头分页；size 截 100；create_time 倒序 |
 | 装配 genealogy / historiesByLot / holdsByLot / alarmsByLot | ✅ flatten 回带树；履历尾端 N；Hold `active`/`released` 各 20；Alarm `listUnclearedForLots` |
 | 包内 Allocator / Writer / Assembler | ✅ Facade 只编排；`build()` 无 `@Transactional` |
-| CP-4 `export`+Admin / CP-5 `contain` / CP-6 ZIP | ⏳ 未做（接口设计 §3） |
+| CP-4 `GET /{id}/export` JSON 附件（`complaint:view`） | ✅ 复用 `get`；不写 `produces`；Spring `ObjectMapper`；format 空白/`json` 忽略大小写 |
+| CP-4 Admin 入口 History（Lot 模式）/ Lots 详情 | ✅ 共用 `ComplaintPackageDrawer`；入口 `enabled && complaint:view`；生成要 `complaint:build` |
+| CP-4 `downloadFile`（`lib/http.ts`） | ✅ JSON Content-Type 前缀分流；401 同 `request()`；filename 去引号 |
+| CP-5 `contain` / CP-6 ZIP | ⏳ 未做（接口设计 §3） |
 
 ---
 

@@ -4,6 +4,7 @@ import com.mes.common.PageResult;
 import com.mes.complaint.dto.ComplaintPackageBuildDTO;
 import com.mes.complaint.dto.ComplaintPackagePreviewDTO;
 import com.mes.complaint.dto.ComplaintPackageQuery;
+import com.mes.complaint.vo.ComplaintPackageExportFile;
 import com.mes.complaint.vo.ComplaintPackageListVO;
 import com.mes.complaint.vo.ComplaintPackagePreviewVO;
 import com.mes.complaint.vo.ComplaintPackageVO;
@@ -31,4 +32,7 @@ public interface ComplaintPackageFacade {
 
     /** 包头分页摘要 */
     PageResult<ComplaintPackageListVO> page(ComplaintPackageQuery query);
+
+    /** JSON 附件：开关 → format → 复用 get；无事务、不写库 */
+    ComplaintPackageExportFile exportFile(Long id, String format);
 }

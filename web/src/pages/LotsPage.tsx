@@ -19,7 +19,9 @@ import {
   unbindLotCarrierApi,
   type MesCarrierBinding,
 } from '../api/carrier'
+import { getComplaintEnabledApi } from '../api/complaint'
 import { GenealogyTree } from '../components/lot/GenealogyTree'
+import { ComplaintPackageDrawer } from '../components/lot/ComplaintPackageDrawer'
 import { listRoutesApi, type MesRouteItem } from '../api/route'
 import { useAuth } from '../auth/AuthContext'
 import { Button } from '../components/ui/Button'
@@ -110,6 +112,8 @@ export function LotsPage() {
   const [lotCarrier, setLotCarrier] = useState<MesCarrierBinding | null>(null)
   const [carrierRefInput, setCarrierRefInput] = useState('')
   const [carrierBusy, setCarrierBusy] = useState(false)
+  const [complaintOn, setComplaintOn] = useState(false)
+  const [pkgOpen, setPkgOpen] = useState(false)
 
   const size = 20
   const canAdd = hasPermission('lot:add')
@@ -117,6 +121,8 @@ export function LotsPage() {
   const canRelease = hasPermission('lot:release')
   const canCarrierBind = hasPermission('carrier:bind')
   const canCarrierView = hasPermission('carrier:view') || hasPermission('lot:list')
+  const canComplaintView = hasPermission('complaint:view')
+  const canComplaintBuild = hasPermission('complaint:build')
   const totalPages = Math.max(1, Math.ceil(total / size))
   const isCreated = detail?.status === 'created'
   const canEditDetail =
@@ -166,6 +172,28 @@ export function LotsPage() {
   useEffect(() => {
     void loadRouteOptions()
   }, [loadRouteOptions])
+
+  useEffect(() => {
+    if (!canComplaintView) {
+      setComplaintOn(false)
+      return
+    }
+    let cancelled = false
+    void getComplaintEnabledApi()
+      .then((on) => {
+        if (!cancelled) setComplaintOn(!!on)
+      })
+      .catch(() => {
+        if (!cancelled) setComplaintOn(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [canComplaintView])
+
+  useEffect(() => {
+    if (!detail) setPkgOpen(false)
+  }, [detail])
 
   useEffect(() => {
     if (!rootRef.current) return
@@ -743,6 +771,11 @@ export function LotsPage() {
                   {releasing ? '放行中…' : '放行'}
                 </Button>
               ) : null}
+              {canComplaintView && complaintOn ? (
+                <Button variant="secondary" onClick={() => setPkgOpen(true)}>
+                  生成追溯包
+                </Button>
+              ) : null}
             </>
           ) : detail && editing ? (
             <>
@@ -1033,6 +1066,13 @@ export function LotsPage() {
           </div>
         )}
       </Drawer>
+      <ComplaintPackageDrawer
+        open={pkgOpen}
+        onClose={() => setPkgOpen(false)}
+        anchorLotId={detail?.id}
+        anchorLotNo={detail?.lotNo ?? ''}
+        canBuild={canComplaintBuild}
+      />
     </div>
   )
 }

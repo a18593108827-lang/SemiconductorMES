@@ -2,9 +2,9 @@
 type: 接口设计
 module: History
 status: done
-slices: [CP-1, CP-2, CP-3]
+slices: [CP-1, CP-2, CP-3, CP-4]
 aligns: []
-updated: 2026-09-20
+updated: 2026-09-21
 ---
 
 # MES 客诉追溯包（Complaint Trace Package）— 接口设计
@@ -14,8 +14,8 @@ updated: 2026-09-20
 > 对齐：`MES-LotGenealogy接口设计.md` GN-6 · `MES-History一期功能清单.md` P2 · 业务清单 §10  
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
-> 更新：2026-09-20（CP-3 对齐：包号数字后缀 max + UK 重读 max 带抖动、装配失败隔离、Alarm 批量只读、build 复用 flatten 树）  
-> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅** · CP-4+ 未做  
+> 更新：2026-09-21（CP-4 对齐：export 不写 produces、失败靠 JSON Content-Type 分流、P0 内存组装不流式、FORMAT_UNSUPPORTED、format 忽略大小写）  
+> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅** · CP-5+ 未做  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -113,8 +113,8 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | P0 | `preview`：影响面 + 计数摘要（不落库） | ✅ CP-2 |
 | P0 | `build`：落包头/成员 + 装配 VO | ✅ CP-3 |
 | P0 | `list`：包分页查询（Admin 入口数据源） | ✅ CP-3 |
-| P0 | `export`：JSON 下载（含清单） | ⏳ |
-| P0 | Admin：History / Lot 入口生成与下载 | ⏳ |
+| P0 | `export`：JSON 下载（含清单） | ✅ CP-4 |
+| P0 | Admin：History / Lot 入口生成与下载 | ✅ CP-4 |
 | P1 | `contain`：对成员（或子集）批量 Hold | ⏳ |
 | P1 | ZIP（JSON + 简易 PDF/HTML 封面） | ⏳ |
 | P2 | 家族一键 Hold 深链、客诉编号对接 QMS | 后置 |
@@ -125,7 +125,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | CP-1 | DDL + 权限 + `enabled`；空 Facade 骨架 | ✅ |
 | CP-2 | 影响面展开算法 + `preview` | ✅ |
 | CP-3 | `build` + 包头审计 + 装配 VO + `list` 分页 | ✅ History / Hold 只读；Alarm `listUnclearedForLots`；Lot flatten 回带树 |
-| CP-4 | `GET export` JSON；Admin 按钮 | CP-3 |
+| CP-4 | `GET export` JSON；Admin 按钮 | ✅ |
 | CP-5 | `contain` + 锁序 + 部分成功明细 | Hold |
 | CP-6 | ZIP / 封面（可选） | CP-4 |
 
@@ -171,7 +171,7 @@ UK：`(package_id, lot_id)`。
 ### 4.3 不落库
 
 - 履历全文、Alarm 全文：每次 `get` / `export` **现查** Facade（避免双真相）  
-- 可选：export 文件落磁盘 **不做**（P0 流式响应）
+- 可选：export 文件落磁盘 **不做**。P0 内存组装（复用 `get` 的完整 VO 再写出）；流式须改 Assembler 边装边写，不能再复用完整 VO
 
 ### 4.4 权限种子
 
@@ -256,10 +256,20 @@ Body：preview 字段 + 可选 `reasonCode` / `remark`。
 ### 6.4 Export
 
 `GET /complaint-packages/{id}/export?format=json`  
-权限：`complaint:view`  
-`Content-Disposition: attachment; filename="{packageNo}.json"`  
+权限：`complaint:view`
 
-JSON 根对象 = Get VO + `exportedAt` + `exportedBy`。  
+成功（与现网其它接口一样 HTTP 200，但**不**包 `R<>`）：
+
+- `ResponseEntity<byte[]>` 自设头；`@GetMapping` **不写** `produces`（避免失败时的 `R<>` 被当成二进制）
+- `Content-Type: application/octet-stream`
+- `Content-Disposition: attachment; filename="{packageNo}.json"`（packageNo 纯 ASCII；实现用 Spring `ContentDisposition.attachment().filename(name)` **不带 charset**——带 charset 只产出 `filename*=` 形式）
+
+失败：走全局异常，`Content-Type: application/json;charset=UTF-8`，body 仍是 `R<>`（HTTP 200，看 body `code`）。前端以 Content-Type **前缀** `application/json` 分流。
+
+`format`：`null` / 空白（trim 后空）或 `json`（忽略大小写）等价；其它值 `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`。ZIP 归 CP-6。VOID：P0 不拦。前端从 `filename=` 取名时去掉引号。
+
+JSON 根对象 = Get VO + `exportedAt` + `exportedBy`。序列化必须用 Spring 容器 `ObjectMapper`（Long 为字符串、JavaTime 与 `get` 同形）。`exportedAt` 与 `createTime` 同一 JVM 本地时钟。
+
 P1：`format=zip` → JSON + `README.txt`（包号、锚点、成员数、生成时间）。
 
 ### 6.5 Contain（P1）
@@ -375,7 +385,8 @@ WHERE package_no LIKE CONCAT('CP-', #{ymd}, '-%')
 | `COMPLAINT_PACKAGE_LOT_NOT_IN_PACKAGE` | contain 的 lotIds 越界 |
 | `COMPLAINT_PACKAGE_CONTAIN_IN_PROGRESS` | 他请求正在 contain 同包 |
 | `COMPLAINT_PACKAGE_NO_CONFLICT` | `uk_complaint_package_no` 重试耗尽（≤3）；成员 UK 不得用此码 |
-| `COMPLAINT_PACKAGE_VOID` | 已作废不可 contain/export（若做 VOID） |
+| `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED` | export 的 `format` trim 后非空且非 json（忽略大小写）；ZIP 归 CP-6 |
+| `COMPLAINT_PACKAGE_VOID` | 已作废不可 contain/export（若做 VOID；P0 不拦） |
 
 Lot 不存在等复用现网 404 / Lot 错码。
 
@@ -435,5 +446,5 @@ Lot 不存在等复用现网 404 / Lot 错码。
 - 包名：现网已是 `com.mes.complaint`；Facade 名 `ComplaintPackageFacade`  
 - 包内拆 `ComplaintPackageNoAllocator` / `ComplaintPackageWriter` / `ComplaintPackageAssembler`；Facade 只编排；`build()` 不加 `@Transactional`  
 - 装配并行：成员履历可用有界线程池并行查（CP-3 先串行），但 **contain 禁止并行写**  
-- 大包 export：流式写 JSON，避免一次性巨型 VO 撑爆堆  
+- 大包 export：P0 内存组装（VO + byte[]）；流式须改 Assembler 边装边写，不能复用完整 `get` VO。只把已有 `byte[]` 塞进 `StreamingResponseBody` 不算解决  
 - 原因码种子 `CUSTOMER_COMPLAINT` 归 Hold 字典；本包不自建第二字典  

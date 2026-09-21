@@ -21,7 +21,9 @@ import {
 import { listEqpsApi, type MesEqpItem } from '../api/eqp'
 import { queryHistoryApi, type HistorySeverity, type HistoryTxItem } from '../api/history'
 import { listLotsApi, type MesLotItem } from '../api/lot'
+import { getComplaintEnabledApi } from '../api/complaint'
 import { useAuth } from '../auth/AuthContext'
+import { ComplaintPackageDrawer } from '../components/lot/ComplaintPackageDrawer'
 import { Button } from '../components/ui/Button'
 import { Drawer } from '../components/ui/Drawer'
 import { useToast } from '../components/ui/Toast'
@@ -209,6 +211,8 @@ export function HistoryPage() {
   const toast = useToast()
   const navigate = useNavigate()
   const canView = hasPermission('history:list')
+  const canComplaintView = hasPermission('complaint:view')
+  const canComplaintBuild = hasPermission('complaint:build')
 
   const [mode, setMode] = useState<Mode>('lot')
   const [txFilter, setTxFilter] = useState<TxFilter>('all')
@@ -240,6 +244,8 @@ export function HistoryPage() {
   const [queried, setQueried] = useState(false)
   const [flashId, setFlashId] = useState<string | null>(null)
   const [detail, setDetail] = useState<HistoryTxItem | null>(null)
+  const [complaintOn, setComplaintOn] = useState(false)
+  const [pkgOpen, setPkgOpen] = useState(false)
 
   const size = 50
   const totalPages = Math.max(1, Math.ceil(total / size))
@@ -253,6 +259,28 @@ export function HistoryPage() {
 
   const groups = useMemo(() => groupByDay(visibleRows), [visibleRows])
   const alertCount = useMemo(() => rows.filter((r) => severityOf(r) !== 'info').length, [rows])
+
+  useEffect(() => {
+    if (!canComplaintView) {
+      setComplaintOn(false)
+      return
+    }
+    let cancelled = false
+    void getComplaintEnabledApi()
+      .then((on) => {
+        if (!cancelled) setComplaintOn(!!on)
+      })
+      .catch(() => {
+        if (!cancelled) setComplaintOn(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [canComplaintView])
+
+  useEffect(() => {
+    if (!selectedLot) setPkgOpen(false)
+  }, [selectedLot])
 
   const timeLabel =
     timePreset === 'all'
@@ -395,6 +423,7 @@ export function HistoryPage() {
     setLoadFailed(false)
     setDetail(null)
     setFlashId(null)
+    setPkgOpen(false)
   }
 
   const applyTimePreset = (key: TimePreset) => {
@@ -574,6 +603,11 @@ export function HistoryPage() {
           <Search className="size-4" aria-hidden />
           搜索
         </Button>
+        {mode === 'lot' && selectedLot && canComplaintView && complaintOn ? (
+          <Button variant="secondary" onClick={() => setPkgOpen(true)}>
+            生成追溯包
+          </Button>
+        ) : null}
 
         <div ref={timeWrapRef} className="relative">
           <button
@@ -867,6 +901,13 @@ export function HistoryPage() {
           </div>
         ) : null}
       </Drawer>
+      <ComplaintPackageDrawer
+        open={pkgOpen}
+        onClose={() => setPkgOpen(false)}
+        anchorLotId={selectedLot?.id}
+        anchorLotNo={selectedLot?.lotNo ?? ''}
+        canBuild={canComplaintBuild}
+      />
     </div>
   )
 }
