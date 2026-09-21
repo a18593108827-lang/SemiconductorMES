@@ -14,8 +14,8 @@ updated: 2026-09-21
 > 对齐：`MES-LotGenealogy接口设计.md` GN-6 · `MES-History一期功能清单.md` P2 · 业务清单 §10  
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
-> 更新：2026-09-21（CP-4 对齐：export 不写 produces、失败靠 JSON Content-Type 分流、P0 内存组装不流式、FORMAT_UNSUPPORTED、format 忽略大小写）  
-> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅** · CP-5+ 未做  
+> 更新：2026-09-21（CP-5 对齐：contain token 占位、心跳续命、结束 CAS 认 token、双权限 AND、ContainWriter 拆分；Hold.create 无行锁）  
+> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅** · CP-5 计划已吸收架构审查、未批不动码  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -61,7 +61,7 @@ as-built / 审计证据     → 本包 histories + holds + alarms + scraps
 | A8 | 成员上限 | 单包成员 Lot ≤ **200**；超限拒绝并提示缩小 depth / 换锚点（防拖垮导出与批量 Hold） |
 | A9 | 幂等 | 同锚点重复 `build` 生成新 `packageId`（每次一包）；`contain` 对已 active Hold 的 Lot **跳过**，不抛、计入 `skipped` |
 | A10 | 灰度 | 功能开关 `mes.complaint-package.enabled` 默认 **false**；关则 HTTP 拒 `COMPLAINT_PACKAGE_DISABLED` |
-| A11 | 并发 | 见 §8；读无长锁；写遏制锁序 LotId 升序；禁止无序并行 `HoldService.create` |
+| A11 | 并发 | 见 §8；读无长锁；写遏制锁序 LotId 升序；同包 token 占位串行；禁止无序并行 `HoldService.create`；禁止外层事务 `FOR UPDATE` 罩整段 contain |
 
 **禁止**
 
@@ -82,7 +82,7 @@ as-built / 审计证据     → 本包 histories + holds + alarms + scraps
 ## 2. 模块边界
 
 ```
-ComplaintPackageFacade（编排；包内 Allocator / Writer / Assembler）
+ComplaintPackageFacade（编排；包内 Allocator / Writer / Assembler / ContainWriter）
   ├── MesLotService.flattenImpact（含已建树）/ genealogy（仅 get 现查）
   ├── HistoryFacade.listByLot / query（只读）
   ├── HoldService.listByLot 或等价只读 + create（遏制时）
@@ -152,6 +152,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | status | `READY` / `CONTAINING` / `CONTAINED` / `VOID`（P0 仅 READY；contain 后 CONTAINED） |
 | create_by / create_time | 审计 |
 | contain_by / contain_time | 可选；首次 contain 成功写入 |
+| contain_token | 可空；contain 占位所有权（UUID），结束 CAS 匹配后清空 |
 
 **真相顺序：** 成员身份关系仍以 `mes_lot_genealogy` 为准；包头只记录「当时圈了谁」。
 
@@ -179,7 +180,7 @@ UK：`(package_id, lot_id)`。
 |------|------|
 | `complaint:view` | preview / get / export |
 | `complaint:build` | build |
-| `complaint:contain` | contain（强权限；建议与 `hold:create` 同时具备才开放按钮） |
+| `complaint:contain` | contain（与 `hold:create` **同时**具备：后端 AND 鉴权 + 前端才渲染按钮） |
 
 ---
 
@@ -275,7 +276,7 @@ P1：`format=zip` → JSON + `README.txt`（包号、锚点、成员数、生成
 ### 6.5 Contain（P1）
 
 `POST /complaint-packages/{id}/contain`  
-权限：`complaint:contain` + 实际执行时仍走 `HoldService` 鉴权语义（服务层以系统/当前用户写 create）。
+权限：`complaint:contain` **AND** `hold:create`（Controller `SaMode.AND`）。`HoldService.create` 服务层本身不鉴权，必须在本接口拦住。
 
 ```json
 {
@@ -291,7 +292,7 @@ P1：`format=zip` → JSON + `README.txt`（包号、锚点、成员数、生成
 | reasonCode | Hold 原因码（须已启用）；种子建议 `CUSTOMER_COMPLAINT` |
 | remark | 建议带 `packageNo` |
 
-响应：`ComplaintContainResultVO`：`succeeded[]` / `skipped[]`（已 held）/ `failed[]`（lotId + code + message）。
+响应：`ComplaintContainResultVO`：`succeeded[]` / `skipped[]`（create 报「已存在生效中的锁批」）/ `failed[]`（lotId + lotNo + code + message）+ **重读后的**包 status / containBy / containTime。skip 禁止预读 `hasActive`。
 
 ### 6.6 List（分页）
 
@@ -348,12 +349,14 @@ build 写包头/成员：单事务插入 package + members；**不**锁业务 Lo
 
 | 项 | 约定 |
 |----|------|
-| 锁序 | 目标 `lotId` **升序**逐个处理；每个 `HoldService.create` 自带该 Lot 锁（复用 Hold 实现） |
-| 事务 | **每 Lot 独立事务**（`REQUIRES_NEW` 或 Facade 循环调带事务的 create）；一笔失败不回滚其它成功 |
-| 死锁 | 禁止多线程无序并行 contain 同一包；同包 contain **串行**（包行 `SELECT … FOR UPDATE` 或 status=`CONTAINING` 乐观占位） |
-| 占位 | 进入 contain：`READY|CONTAINED` → `CONTAINING`；结束改回 `CONTAINED` 或原状态；崩溃残留 `CONTAINING` → 下次 contain 允许抢（超时阈值秒可覆盖） |
-| 幂等 | 已 active → skip；重复 contain 安全 |
-| 与 Track | Hold.create 与 Track 锁序遵循现网 Hold 契约；本包不引入第二锁序 |
+| 锁序 | 目标 `lotId` **升序**逐个处理。Hold.create **无** Lot `FOR UPDATE`，靠 `mes_lot.version`；版本冲突记 failed 继续。本包不引入第二锁序 |
+| 事务 | **每 Lot 独立事务**（Facade 无事务，循环调带 `@Transactional` 的 create）；禁止外层事务 / 包行 `FOR UPDATE` 罩整段循环（会把 create 并进大事务） |
+| 死锁 | 禁止多线程无序并行 contain 同一包；同包 **token 占位串行** |
+| 占位 | `READY\|CONTAINED`（或过期 `CONTAINING`）→ 写入 `contain_token`+`CONTAINING`；结束 CAS 必须 `status=CONTAINING AND contain_token=:mine` 才改回 `CONTAINED` 或原状态（`contain_time` 空=READY，非空=CONTAINED）并清空 token |
+| 心跳 | 每处理一 Lot 刷新 `update_time`（仍匹配 token）；心跳失败 = 丢权，**停止后续 create** |
+| 救援 | `CONTAINING` 且 `update_time` 早于 `mes.complaint-package.contain-rescue-seconds`（默认 60）允许下一请求换 token 抢占 |
+| 幂等 | create 报已存在生效锁批 → skip；重复 contain 安全 |
+| 与 Track | 不新增锁序；不宣称 Hold 与 Track 行锁对齐 |
 
 ### 8.3 包号并发
 
@@ -386,7 +389,7 @@ WHERE package_no LIKE CONCAT('CP-', #{ymd}, '-%')
 | `COMPLAINT_PACKAGE_CONTAIN_IN_PROGRESS` | 他请求正在 contain 同包 |
 | `COMPLAINT_PACKAGE_NO_CONFLICT` | `uk_complaint_package_no` 重试耗尽（≤3）；成员 UK 不得用此码 |
 | `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED` | export 的 `format` trim 后非空且非 json（忽略大小写）；ZIP 归 CP-6 |
-| `COMPLAINT_PACKAGE_VOID` | 已作废不可 contain/export（若做 VOID；P0 不拦） |
+| `COMPLAINT_PACKAGE_VOID` | 包行已是 VOID 时 contain 拒；作废 API / export 拒 VOID 后置 |
 
 Lot 不存在等复用现网 404 / Lot 错码。
 
@@ -410,6 +413,7 @@ Lot 不存在等复用现网 404 / Lot 错码。
 | `mes.complaint-package.enabled` | `false` | 总开关 |
 | `mes.complaint-package.max-members` | `200` | 可配，硬上限建议 ≤500 |
 | `mes.complaint-package.history-per-lot` | `100` | 装配履历条数 |
+| `mes.complaint-package.contain-rescue-seconds` | `60` | CONTAINING 无心跳超过此时长允许下一请求换 token 抢占 |
 
 ---
 
@@ -421,7 +425,7 @@ Lot 不存在等复用现网 404 / Lot 错码。
 4. build 后 member 与当时 preview 一致；随后他处再 Split **不改**已落包成员  
 5. export JSON 含 packageNo、锚点、成员、履历块；无 Yield/OEE 字段  
 6. contain：已 held 进 skipped；未 held 进 succeeded；非法 lotId 拒整单  
-7. 两请求同时 contain 同包：一侧 `CONTAIN_IN_PROGRESS` 或串行成功；无死锁  
+7. 两请求同时 contain 同包：一侧 `COMPLAINT_PACKAGE_CONTAIN_IN_PROGRESS` 或串行成功；token 同一时刻至多一个心跳成功；无死锁。禁把「双终端同时 curl」当唯一验收  
 8. Complaint 包 **零** tx_log / genealogy / Hold / Alarm Mapper 引用（依赖检查）  
 9. Track 包无 Complaint 依赖  
 10. list 按 create_time 倒序；anchorLotId / status / 时间范围筛选生效；size>100 截成 100  
@@ -444,7 +448,8 @@ Lot 不存在等复用现网 404 / Lot 错码。
 ## 14. 实施备注（给开发）
 
 - 包名：现网已是 `com.mes.complaint`；Facade 名 `ComplaintPackageFacade`  
-- 包内拆 `ComplaintPackageNoAllocator` / `ComplaintPackageWriter` / `ComplaintPackageAssembler`；Facade 只编排；`build()` 不加 `@Transactional`  
+- 包内拆 `ComplaintPackageNoAllocator` / `ComplaintPackageWriter` / `ComplaintPackageAssembler` / `ComplaintPackageContainWriter`；Facade 只编排；`build()` / `contain()` 不加 `@Transactional`  
 - 装配并行：成员履历可用有界线程池并行查（CP-3 先串行），但 **contain 禁止并行写**  
+- contain 占位/心跳/结束 CAS 只在 ContainWriter；结束 CAS 必须认 `contain_token`；丢心跳即停后续 create  
 - 大包 export：P0 内存组装（VO + byte[]）；流式须改 Assembler 边装边写，不能复用完整 `get` VO。只把已有 `byte[]` 塞进 `StreamingResponseBody` 不算解决  
 - 原因码种子 `CUSTOMER_COMPLAINT` 归 Hold 字典；本包不自建第二字典  
