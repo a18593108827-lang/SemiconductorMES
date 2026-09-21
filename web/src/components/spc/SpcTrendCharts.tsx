@@ -101,8 +101,10 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
               <LineChart
                 data={rows}
                 onClick={(state) => {
-                  const i = state?.activePayload?.[0]?.payload?.idx
-                  onSelectIdx(typeof i === 'number' ? i : null)
+                  // recharts 3 移除了 activePayload，改用 activeTooltipIndex（数据数组下标）
+                  const i = state?.activeTooltipIndex
+                  const row = typeof i === 'number' ? rows[i] : undefined
+                  onSelectIdx(row ? row.idx : null)
                 }}
               >
                 <CartesianGrid stroke="oklch(0.9 0 0)" strokeDasharray="3 3" />
