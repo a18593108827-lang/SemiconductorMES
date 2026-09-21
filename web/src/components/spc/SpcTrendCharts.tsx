@@ -145,22 +145,31 @@ export function SpcTrendCharts({ series, highlightIdx, onSelectIdx }: Props) {
                     const { cx, cy, payload } = props
                     if (cx == null || cy == null || payload?.value == null) return null
                     const active = highlightIdx === payload.idx
-                    if (payload.ooc) {
-                      return <circle cx={cx} cy={cy} r={active ? 6 : 5} fill="oklch(0.55 0.2 25)" />
+                    // 点击直接挂在数据点上：图表级 onClick 依赖 tooltip 状态（mousemove 节流后才就绪），
+                    // 首次单击常读到空索引而清空选中；此处绕开该状态，单击即命中，r=10 透明热区便于点中
+                    const pick = (e: React.MouseEvent) => {
+                      e.stopPropagation()
+                      onSelectIdx(payload.idx)
                     }
-                    if (payload.oos) {
-                      return (
-                        <circle
-                          cx={cx}
-                          cy={cy}
-                          r={active ? 5 : 4}
-                          fill="oklch(0.98 0.01 90)"
-                          stroke="oklch(0.72 0.14 75)"
-                          strokeWidth={2}
-                        />
-                      )
-                    }
-                    return <circle cx={cx} cy={cy} r={active ? 4.5 : 3} fill="oklch(0.4 0.02 250)" />
+                    return (
+                      <g onClick={pick} style={{ cursor: 'pointer' }}>
+                        <circle cx={cx} cy={cy} r={10} fill="transparent" />
+                        {payload.ooc ? (
+                          <circle cx={cx} cy={cy} r={active ? 6 : 5} fill="oklch(0.55 0.2 25)" />
+                        ) : payload.oos ? (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={active ? 5 : 4}
+                            fill="oklch(0.98 0.01 90)"
+                            stroke="oklch(0.72 0.14 75)"
+                            strokeWidth={2}
+                          />
+                        ) : (
+                          <circle cx={cx} cy={cy} r={active ? 4.5 : 3} fill="oklch(0.4 0.02 250)" />
+                        )}
+                      </g>
+                    )
                   }}
                   activeDot={{ r: 5 }}
                 />
