@@ -73,7 +73,7 @@ mes:
     # true=TrackIn 强制扫码比对 carrier_code；默认 false 不挡存量线
     track-in-scan-required: true
   complaint-package: # 客诉_追溯包
-    # false=业务拒 COMPLAINT_PACKAGE_DISABLED；默认关不挡现网
-    enabled: false
+    # false=业务拒 COMPLAINT_PACKAGE_DISABLED；默认关不挡现网（dev 已开启联调）
+    enabled: true
     max-members: 200 # 客诉最大成员数
     history-per-lot: 100 # 每批历史记录数
