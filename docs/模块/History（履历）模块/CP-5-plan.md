@@ -10,7 +10,7 @@ updated: 2026-09-21
 
 > 对齐：`MES-客诉追溯包接口设计.md` §3 / §4 / §6.5 / §7 / §8.2 / §9 / §10 / §11 / §12 · 状态：draft（**未批不动码**）  
 > 前置：CP-3 ✅（build/get/list）· CP-4 ✅（export + 入口，验收闭环）  
-> 已吸收架构审查 R1～R12（2026-09-21）+ 二轮 F1～F3（对码核验通过：@Version 仅返 0 不抛乐观锁异常、mes_hold.remark=512、seed 列清单/id 8011/category 全符；修正 K18 异常面、登记 skip 文案契约、验证方式去单测化——项目无 src/test）  
+> 已吸收架构审查 R1～R12（2026-09-21）+ 二轮 F1～F3（对码核验通过：@Version 仅返 0 不抛乐观锁异常、mes_hold.remark=512、seed 列清单/id 8011/category 全符；修正 K18 异常面、登记 skip 文案契约、验证方式去单测化——项目无 src/test）+ 三轮 F4（实测发现：`HoldServiceImpl.create` 断言顺序「先状态后已锁」导致重跑 held 批次先进 failed；修正为「先已锁后状态」，MSG_ALREADY_HELD 才能在 held 场景触发，skipped 分支复活）  
 > 已核实现网契约：`HoldService.create` 带 `@Transactional`，**无** Lot `FOR UPDATE`，靠 `mes_lot.version` 乐观锁，失败文案「数据已被他人修改，请刷新后重试」；仅 wait/processing 可锁批；`mes_hold` **无** active 唯一索引；`mes_hold_reason` 字典存在且校验启用；`GET /holds/reasons` + `listHoldReasonsApi` 可作下拉数据源
 
 ## 1. 目标与边界
@@ -44,7 +44,7 @@ updated: 2026-09-21
 | K4 | token 占位 CAS | 请求生成 UUID `token`。`UPDATE ... SET status='CONTAINING', contain_token=:token, update_time=NOW() WHERE id=? AND (status IN ('READY','CONTAINED') OR (status='CONTAINING' AND (update_time IS NULL OR update_time < NOW() - INTERVAL :n SECOND)))`。affected=0 分支见 K16。n 默认 60，配置 `mes.complaint-package.contain-rescue-seconds` |
 | K5 | 原状态恢复判别式 | **`contain_time` 即原状态**：空 → 无 succeeded 结束回 `READY`；非空 → 回 `CONTAINED` |
 | K6 | token 结束 CAS | `WHERE id=? AND status='CONTAINING' AND contain_token=:token`：succeeded>0 → `SET status='CONTAINED', contain_by=IFNULL(contain_by,:uid), contain_time=IFNULL(contain_time,NOW()), contain_token=NULL`；否则按 K5 回 READY/CONTAINED 并 `contain_token=NULL`。affected=0 → **WARN 不抛**（所有权已丢，禁止改状态） |
-| K7 | skip 只认 create | 循环内**只**调 `create`。文案含「已存在生效中的锁批」→ `skipped`。禁止 `hasActive` 预读 |
+| K7 | skip 只认 create | 循环内**只**调 `create`。文案含「已存在生效中的锁批」→ `skipped`。禁止 `hasActive` 预读。**依赖 Hold create「先已锁后状态」断言顺序契约**（F4）——顺序被改回则 held 批次报状态错，skipped 失效（Hold 文档 §6.6 已登记） |
 | K8 | reasonCode 整单前置 | `assertReasonUsable(code)` 不通过 → 整单拒；OTHER 备注必填仍由 create 兜底 |
 | K9 | lotIds 越界拒整单 | 非空 `lotIds` 必须 ⊆ 成员集合，否则 `COMPLAINT_PACKAGE_LOT_NOT_IN_PACKAGE`；null/空 = 全成员 |
 | K10 | 结果 VO 重读包头 | `succeeded[] / skipped[] / failed[]`（failed 含 lotId+lotNo+code+message）+ **结束 CAS 后 SELECT 包头** 的 status/containBy/containTime + 三段计数。禁用本地推算终态 |
@@ -189,5 +189,9 @@ h. 种子 SQL + schema.sql 同步；`docs/INDEX.md` 重建；文案称「遏制�
 | R10 | 原因码种子 ON DUPLICATE KEY |
 | R11 | 占位失败按行状态分支，VOID 不报进行中 |
 | R12 | 并发验收用心跳/救援可复现，不用手工双 curl 碰运气 |
+| F1 | K18 异常面修正：`@Version` 失败仅 `updateById` 返 0、由 Hold 转 BusinessException，**不存在** `OptimisticLockerException` |
+| F2 | K7 的 skip 判据文案契约登记进 Hold 模块文档（改动须同步 CP-5） |
+| F3 | 验证方式去单测化——项目无 `src/test`（Doc-4 后置）：SQL 造场景 + 双 curl 仅作冒烟 |
+| F4 | **`HoldServiceImpl.create` 断言顺序契约：先已锁、后状态**——已 held 批次必须命中 `MSG_ALREADY_HELD`，否则 `skipped` 分支失效。三轮**运行时实测**发现旧顺序下重跑全部落 `failed`（验收 7 不通过），已修并登记 Hold 文档；顺序再改须同步 CP-5 |
 
 **批准记录**：2026-09-21 用户批准（经两轮架构审查：R1~R12 + F1~F3 全量吸收；现网契约已对码核验）。**批准后暂不动码，等用户开工指令。**

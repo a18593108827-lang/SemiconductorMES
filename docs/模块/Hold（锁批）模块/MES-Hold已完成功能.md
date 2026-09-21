@@ -26,6 +26,7 @@ updated: 2026-09-21
 | Hold 发起 | ✅ `POST /holds` | ✅ Admin 抽屉 + 现场台面板 | `hold:create` |
 | `HoldService.assertReasonUsable` | ✅ 存在且启用；客诉 contain 整单前置 | — | — |
 | skip 文案契约 `该批次已存在生效中的锁批` | ✅ `HoldService.MSG_ALREADY_HELD`；contain 映射 skipped（改文案须同步 CP-5） | — | — |
+| `create` 断言顺序契约 | ✅ **先判已锁后判状态**——已 held 时状态断言会先挂，`MSG_ALREADY_HELD` 永远到不了；改顺序须同步 CP-5 | — | — |
 | ReleaseHold | ✅ `POST /holds/{id}/release`；QTIME 必填备注 | ✅ Admin 抽屉 + 现场台面板 | `hold:release` |
 | Track 拦截钩子 | ✅ In/Out → `assertNoActive` | — | — |
 | Hold 列表/详情 | ✅ `/holds` `/holds/{id}` `/lots/{id}/holds` | ✅ `/app/hold` | `hold:list` |

@@ -228,6 +228,7 @@ ReleaseHold 不经此拦截
 3. 原因码独立表，不写死枚举在代码里；`HoldService.assertReasonUsable` 给跨模块整单校验
 4. tx_log 用 `HOLD` / `RELEASE_HOLD`，后续类型可加
 5. `HoldService.MSG_ALREADY_HELD`（「该批次已存在生效中的锁批」）是 contain skip 稳定契约，改文案须同步 CP-5
+6. `create` 断言顺序：**先判已锁后判状态**——已 held 时状态断言会先挂，`MSG_ALREADY_HELD` 永远到不了；改顺序须同步 CP-5
 
 ---
 

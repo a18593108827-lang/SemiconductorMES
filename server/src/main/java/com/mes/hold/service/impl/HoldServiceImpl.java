@@ -171,9 +171,10 @@ public class HoldServiceImpl implements HoldService {
     public MesHoldVO create(MesHoldCreateDTO dto) {
         MesLot lot = mesLotMapper.selectById(dto.getLotId());
         AssertUtil.notNull(lot, "批次不存在");
+        // 顺序契约：先判已锁后判状态——已 held 时状态断言会先挂，MSG_ALREADY_HELD 永远到不了
+        AssertUtil.isTrue(!hasActive(lot.getId()), MSG_ALREADY_HELD);
         AssertUtil.isTrue(STATUS_WAIT.equals(lot.getStatus()) || STATUS_PROCESSING.equals(lot.getStatus()),
                 "仅等待加工或加工中批次可锁批");
-        AssertUtil.isTrue(!hasActive(lot.getId()), MSG_ALREADY_HELD);
 
         MesHoldReason reason = mesHoldReasonMapper.selectOne(new LambdaQueryWrapper<MesHoldReason>()
                 .eq(MesHoldReason::getReasonCode, dto.getReasonCode().trim())
