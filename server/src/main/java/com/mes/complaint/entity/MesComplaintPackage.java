@@ -67,6 +67,8 @@ public class MesComplaintPackage {
     private Long containBy;
     /** 首次遏制时间（CP-5 写入） */
     private LocalDateTime containTime;
+    /** contain 占位所有权，结束 CAS 匹配后清空 */
+    private String containToken;
 
     /** 更新时间（自动填充） */
     @TableField(fill = FieldFill.INSERT_UPDATE)

@@ -2,7 +2,7 @@
 type: 接口设计
 module: History
 status: done
-slices: [CP-1, CP-2, CP-3, CP-4]
+slices: [CP-1, CP-2, CP-3, CP-4, CP-5]
 aligns: []
 updated: 2026-09-21
 ---
@@ -15,7 +15,7 @@ updated: 2026-09-21
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
 > 更新：2026-09-21（CP-5 对齐：contain token 占位、心跳续命、结束 CAS 认 token、双权限 AND、ContainWriter 拆分；Hold.create 无行锁）  
-> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅** · CP-5 计划已吸收架构审查、未批不动码  
+> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅ · CP-5 ✅** · CP-6 ZIP 后置  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -115,7 +115,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | P0 | `list`：包分页查询（Admin 入口数据源） | ✅ CP-3 |
 | P0 | `export`：JSON 下载（含清单） | ✅ CP-4 |
 | P0 | Admin：History / Lot 入口生成与下载 | ✅ CP-4 |
-| P1 | `contain`：对成员（或子集）批量 Hold | ⏳ |
+| P1 | `contain`：对成员（或子集）批量 Hold | ✅ CP-5 |
 | P1 | ZIP（JSON + 简易 PDF/HTML 封面） | ⏳ |
 | P2 | 家族一键 Hold 深链、客诉编号对接 QMS | 后置 |
 | P2 | 片级成员、出货客户映射 | 后置（依赖片表 / 出货） |
@@ -126,7 +126,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | CP-2 | 影响面展开算法 + `preview` | ✅ |
 | CP-3 | `build` + 包头审计 + 装配 VO + `list` 分页 | ✅ History / Hold 只读；Alarm `listUnclearedForLots`；Lot flatten 回带树 |
 | CP-4 | `GET export` JSON；Admin 按钮 | ✅ |
-| CP-5 | `contain` + 锁序 + 部分成功明细 | Hold |
+| CP-5 | `contain` + 锁序 + 部分成功明细 | ✅ |
 | CP-6 | ZIP / 封面（可选） | CP-4 |
 
 顺序：**CP-1 → 2 → 3 → 4**；**CP-5 不得先于 2**（无影响面不能遏制）；CP-6 可后于 4。

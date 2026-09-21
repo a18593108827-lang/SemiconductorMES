@@ -168,6 +168,7 @@ h. 种子 SQL + schema.sql 同步；`docs/INDEX.md` 重建；文案称「遏制�
 | 遏制审批流 | 直接执行 | 合规双人复核 | 加审批中间态 |
 | contain 结果进导出 | 结果仅界面 | 8D 附件要遏制记录 | export VO 增 containResult |
 | 异步 contain | 同步 HTTP | 成员近上限、网关超时 | 任务表 + 查询；本切片用心跳续命 + 前端超时 ≥120s |
+| 集群 / 读写分离适配 | 现网单体单库，CAS 前提"同一包行写单点受理"成立 | 上读写分离（从库延迟）或 PXC/Galera/MGR 多主 | ① 写路径与**判定读**（`rejectOccupyMiss` 确认读、K10 终态重读）锁主库；② 多主下并发同行的落败方表现为**锁冲突异常**（1213/认证失败）而非 0 行 → occupy 视同 false、heartbeat 视同丢权、finish 视同 CAS miss（三条 try/catch）；③ CAS 语句天然幂等，代理重放安全 |
 
 ---
 

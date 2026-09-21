@@ -2,11 +2,13 @@ package com.mes.complaint.facade;
 
 import com.mes.common.PageResult;
 import com.mes.complaint.dto.ComplaintPackageBuildDTO;
+import com.mes.complaint.dto.ComplaintPackageContainDTO;
 import com.mes.complaint.dto.ComplaintPackagePreviewDTO;
 import com.mes.complaint.dto.ComplaintPackageQuery;
 import com.mes.complaint.vo.ComplaintPackageExportFile;
 import com.mes.complaint.vo.ComplaintPackageListVO;
 import com.mes.complaint.vo.ComplaintPackagePreviewVO;
+import com.mes.complaint.vo.ComplaintContainResultVO;
 import com.mes.complaint.vo.ComplaintPackageVO;
 
 /**
@@ -35,4 +37,7 @@ public interface ComplaintPackageFacade {
 
     /** JSON 附件：开关 → format → 复用 get；无事务、不写库 */
     ComplaintPackageExportFile exportFile(Long id, String format);
+
+    /** 对影响面批量 Hold；无外层事务；VO 终态重读包头 */
+    ComplaintContainResultVO contain(Long id, ComplaintPackageContainDTO dto);
 }

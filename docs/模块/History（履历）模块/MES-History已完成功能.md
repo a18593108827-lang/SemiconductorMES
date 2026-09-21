@@ -2,7 +2,7 @@
 type: 已完成功能
 module: History
 status: done
-slices: [CP-1, CP-2, CP-3, CP-4]
+slices: [CP-1, CP-2, CP-3, CP-4, CP-5]
 aligns: []
 updated: 2026-09-21
 ---
@@ -10,7 +10,7 @@ updated: 2026-09-21
 # MES 履历追溯（History）— 已完成功能（查验清单）
 
 > 对齐：`MES-History功能文档.md` · `MES-History接口设计.md`  
-> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍只在 Track；客诉追溯包 CP-1～CP-4 已落地  
+> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍在 Track；客诉追溯包 CP-1～CP-5 已落地  
 > 更新：2026-09-21
 
 ---
@@ -70,14 +70,14 @@ updated: 2026-09-21
 
 ## 6. 客诉追溯包（Complaint Package）
 
-> 对齐：`MES-客诉追溯包接口设计.md`（CP-1～CP-4 完成登记，2026-09-21）
+> 对齐：`MES-客诉追溯包接口设计.md`（CP-1～CP-5 完成登记，2026-09-21）
 
 | 项 | 状态 |
 |----|------|
 | DDL `mes_complaint_package` / `mes_complaint_package_member` | ✅ `migrate_complaint_package.sql`；ASSIGN_ID 雪花主键 |
 | 权限 `complaint:view` / `build` / `contain`（330/331/332，挂 280 下） | ✅ admin / process_eng / supervisor 三角色种子 |
-| 开关 `mes.complaint-package.enabled`（默认 false）+ `max-members`（200）+ `history-per-lot`（100） | ✅ |
-| 包结构 `com.mes.complaint`（controller / dto / entity / facade / mapper / vo） | ✅ |
+| 开关 `mes.complaint-package.enabled`（默认 false）+ `max-members`（200）+ `history-per-lot`（100）+ `contain-rescue-seconds`（60） | ✅ |
+| 包结构 `com.mes.complaint`（controller / dto / entity / facade / mapper / vo / support） | ✅ |
 | `GET /complaint-packages/enabled`（`complaint:view`，不因 false 抛错） | ✅ 联调探测 |
 | `POST /complaint-packages/preview`（`complaint:view`） | ✅ 复用 `MesLotService.flattenImpact`；含 truncated / memberCount / summary |
 | 摘要 activeHoldCount / scrapLotCount / openAlarmCount | ✅ `HoldService.hasActive` + `AlarmFacade.countUnclearedForLots`（只读 Facade，零业务表 Mapper） |
@@ -86,11 +86,14 @@ updated: 2026-09-21
 | CP-3 `GET /complaint-packages/{id}` | ✅ 成员以表为准；装配块现查；与 build 同 `ComplaintPackageVO` |
 | CP-3 `GET /complaint-packages` list | ✅ 包头分页；size 截 100；create_time 倒序 |
 | 装配 genealogy / historiesByLot / holdsByLot / alarmsByLot | ✅ flatten 回带树；履历尾端 N；Hold `active`/`released` 各 20；Alarm `listUnclearedForLots` |
-| 包内 Allocator / Writer / Assembler | ✅ Facade 只编排；`build()` 无 `@Transactional` |
+| 包内 Allocator / Writer / Assembler / ContainWriter | ✅ Facade 只编排；`build()` / `contain()` 无 `@Transactional` |
 | CP-4 `GET /{id}/export` JSON 附件（`complaint:view`） | ✅ 复用 `get`；不写 `produces`；Spring `ObjectMapper`；format 空白/`json` 忽略大小写 |
 | CP-4 Admin 入口 History（Lot 模式）/ Lots 详情 | ✅ 共用 `ComplaintPackageDrawer`；入口 `enabled && complaint:view`；生成要 `complaint:build` |
 | CP-4 `downloadFile`（`lib/http.ts`） | ✅ JSON Content-Type 前缀分流；401 同 `request()`；filename 去引号 |
-| CP-5 `contain` / CP-6 ZIP | ⏳ 未做（接口设计 §3） |
+| CP-5 `POST /{id}/contain`（`complaint:contain` AND `hold:create`） | ✅ token 占位 + 心跳 + 结束 CAS；每 Lot 独立 `HoldService.create`；skip 映射「该批次已存在生效中的锁批」 |
+| CP-5 种子 `CUSTOMER_COMPLAINT` + 列 `contain_token` | ✅ `migrate_complaint_contain.sql` |
+| CP-5 抽屉遏制区 | ✅ 原因码下拉默认客诉遏制；二次确认批次数；三段结果表 |
+| CP-6 ZIP | ⏳ 未做（接口设计 §3） |
 
 ---
 

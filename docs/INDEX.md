@@ -133,7 +133,7 @@ updated: 2026-09-21
 | MES 量测采集（EDC）— 已完成功能（查验清单） | EDC | done ✅ | 2026-08-19 | `模块/EDC（量测）模块/MES-EDC已完成功能.md` |
 | MES 设备（Equipment）— 功能查验清单 | Equipment | done ✅ | 2026-07-28 | `模块/Equipment（设备）模块/MES-Equipment已完成功能.md` |
 | MES 履历追溯（History）— 已完成功能（查验清单） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/MES-History已完成功能.md` |
-| MES 锁批（Hold）— 功能查验清单 | Hold | done ✅ | 2026-08-13 | `模块/Hold（锁批）模块/MES-Hold已完成功能.md` |
+| MES 锁批（Hold）— 功能查验清单 | Hold | done ✅ | 2026-09-21 | `模块/Hold（锁批）模块/MES-Hold已完成功能.md` |
 | MES 批次（Lot）— 功能查验清单 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-Lot已完成功能.md` |
 | MES 配方（Recipe）— 功能查验清单 | Recipe | done ✅ | 2026-07-30 | `模块/Recipe（配方）模块/MES-Recipe已完成功能.md` |
 | MES 报表（Report）— 已完成功能（查验清单） | Report | done ✅ | 2026-09-10 | `模块/Report（报表）模块/MES-Report已完成功能.md` |

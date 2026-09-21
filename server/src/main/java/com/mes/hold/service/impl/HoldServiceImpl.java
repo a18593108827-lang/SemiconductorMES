@@ -173,7 +173,7 @@ public class HoldServiceImpl implements HoldService {
         AssertUtil.notNull(lot, "批次不存在");
         AssertUtil.isTrue(STATUS_WAIT.equals(lot.getStatus()) || STATUS_PROCESSING.equals(lot.getStatus()),
                 "仅等待加工或加工中批次可锁批");
-        AssertUtil.isTrue(!hasActive(lot.getId()), "该批次已存在生效中的锁批");
+        AssertUtil.isTrue(!hasActive(lot.getId()), MSG_ALREADY_HELD);
 
         MesHoldReason reason = mesHoldReasonMapper.selectOne(new LambdaQueryWrapper<MesHoldReason>()
                 .eq(MesHoldReason::getReasonCode, dto.getReasonCode().trim())
@@ -256,6 +256,17 @@ public class HoldServiceImpl implements HoldService {
                 "解锁" + (StringUtils.hasText(remark) ? "：" + remark.trim() : ""));
 
         return toVo(hold, loadReasonNameMap(Set.of(hold.getReasonId())));
+    }
+
+    /** 原因码须存在且启用；供跨模块整单前置校验 */
+    @Override
+    public void assertReasonUsable(String code) {
+        AssertUtil.isTrue(StringUtils.hasText(code), "原因码不存在");
+        MesHoldReason reason = mesHoldReasonMapper.selectOne(new LambdaQueryWrapper<MesHoldReason>()
+                .eq(MesHoldReason::getReasonCode, code.trim())
+                .last("LIMIT 1"));
+        AssertUtil.notNull(reason, "原因码不存在");
+        AssertUtil.isTrue(Objects.equals(reason.getStatus(), HoldReasonServiceImpl.STATUS_ENABLED), "原因码已停用");
     }
 
     @Override

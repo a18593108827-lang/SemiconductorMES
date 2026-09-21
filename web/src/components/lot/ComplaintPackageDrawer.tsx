@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import {
   buildComplaintPackageApi,
+  containComplaintPackageApi,
   exportComplaintPackageApi,
   previewComplaintPackageApi,
+  type ComplaintContainResultVO,
   type ComplaintDirection,
   type ComplaintPackageMemberVO,
   type ComplaintPackagePreviewVO,
 } from '../../api/complaint'
+import { listHoldReasonsApi, type MesHoldReason } from '../../api/hold'
 import type { MesLotStatus } from '../../api/lot'
 import { Button } from '../ui/Button'
+import { useConfirm } from '../ui/ConfirmDialog'
 import { Drawer } from '../ui/Drawer'
 import { Field } from '../ui/Field'
 import { mesLotStatusLabel } from '../ui/StatusPill'
@@ -19,6 +23,15 @@ const REL_LABEL: Record<string, string> = {
   ANCHOR: '锚点',
   ANCESTOR: '上游',
   DESCENDANT: '下游',
+}
+
+const DEFAULT_CONTAIN_REASON = 'CUSTOMER_COMPLAINT'
+
+const PKG_STATUS_LABEL: Record<string, string> = {
+  READY: '已生成',
+  CONTAINING: '遏制中',
+  CONTAINED: '已遏制',
+  VOID: '已作废',
 }
 
 type Phase = 'form' | 'building' | 'built'
@@ -35,14 +48,17 @@ export function ComplaintPackageDrawer({
   anchorLotId,
   anchorLotNo,
   canBuild,
+  canContain,
 }: {
   open: boolean
   onClose: () => void
   anchorLotId: number | string | null | undefined
   anchorLotNo: string
   canBuild: boolean
+  canContain: boolean
 }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [direction, setDirection] = useState<ComplaintDirection>('both')
   const [depth, setDepth] = useState(5)
   const [reasonCode, setReasonCode] = useState('')
@@ -53,7 +69,13 @@ export function ComplaintPackageDrawer({
   const [phase, setPhase] = useState<Phase>('form')
   const [packageId, setPackageId] = useState<number | string | null>(null)
   const [packageNo, setPackageNo] = useState('')
+  const [pkgStatus, setPkgStatus] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [reasons, setReasons] = useState<MesHoldReason[]>([])
+  const [containReason, setContainReason] = useState(DEFAULT_CONTAIN_REASON)
+  const [containRemark, setContainRemark] = useState('')
+  const [containing, setContaining] = useState(false)
+  const [containResult, setContainResult] = useState<ComplaintContainResultVO | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -67,8 +89,32 @@ export function ComplaintPackageDrawer({
     setPhase('form')
     setPackageId(null)
     setPackageNo('')
+    setPkgStatus('')
     setDownloading(false)
+    setContainReason(DEFAULT_CONTAIN_REASON)
+    setContainRemark('')
+    setContaining(false)
+    setContainResult(null)
   }, [open, anchorLotId])
+
+  useEffect(() => {
+    if (!open || phase !== 'built' || !canContain) return
+    let cancelled = false
+    void listHoldReasonsApi(false)
+      .then((rows) => {
+        if (cancelled) return
+        const list = rows ?? []
+        setReasons(list)
+        const codes = new Set(list.map((r) => r.reasonCode))
+        setContainReason((cur) => (codes.has(cur) ? cur : codes.has(DEFAULT_CONTAIN_REASON) ? DEFAULT_CONTAIN_REASON : (list[0]?.reasonCode ?? '')))
+      })
+      .catch(() => {
+        if (!cancelled) setReasons([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, phase, canContain])
 
   const currentKey = `${direction}|${depth}`
   const paramsMatch = previewKey === currentKey
@@ -77,8 +123,9 @@ export function ComplaintPackageDrawer({
 
   const summary = preview?.summary
   const members = preview?.members ?? []
-
   const truncated = preview?.truncated === true
+  const containCount = members.length
+  const reasonName = reasons.find((r) => r.reasonCode === containReason)?.reasonName ?? containReason
 
   async function doPreview() {
     if (anchorLotId == null) return
@@ -111,6 +158,7 @@ export function ComplaintPackageDrawer({
       })
       setPackageId(vo.packageId)
       setPackageNo(vo.packageNo)
+      setPkgStatus(vo.status)
       setPhase('built')
     } catch (e) {
       setPhase('form')
@@ -127,6 +175,31 @@ export function ComplaintPackageDrawer({
       toast.error(e instanceof ApiError ? e.message : '下载失败')
     } finally {
       setDownloading(false)
+    }
+  }
+
+  /** 二次确认后 contain；徽标用响应里重读的 status */
+  async function doContain() {
+    if (packageId == null || !canContain || containing || !containReason) return
+    const ok = await confirm({
+      title: '确认遏制',
+      message: `将对 ${containCount} 个批次发起锁批，原因：${reasonName}`,
+      confirmText: '遏制',
+      danger: true,
+    })
+    if (!ok) return
+    setContaining(true)
+    try {
+      const vo = await containComplaintPackageApi(packageId, {
+        reasonCode: containReason,
+        remark: containRemark.trim() || undefined,
+      })
+      setContainResult(vo)
+      setPkgStatus(vo.status)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : '遏制失败')
+    } finally {
+      setContaining(false)
     }
   }
 
@@ -171,7 +244,9 @@ export function ComplaintPackageDrawer({
 
         {phase === 'built' ? (
           <p className="text-sm text-ink">
-            已生成 <span className="font-mono">{packageNo}</span>。证据以导出时刻为准。
+            已生成 <span className="font-mono">{packageNo}</span>
+            {pkgStatus ? ` · ${PKG_STATUS_LABEL[pkgStatus] ?? pkgStatus}` : ''}
+            。证据以导出时刻为准。
           </p>
         ) : (
           <>
@@ -272,7 +347,84 @@ export function ComplaintPackageDrawer({
             </table>
           </div>
         ) : null}
+
+        {phase === 'built' && canContain ? (
+          <div className="space-y-3 rounded-md border border-border p-3">
+            <p className="text-sm font-medium text-ink">遏制</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="text-xs font-medium text-muted">原因码</span>
+                <select
+                  className="h-9 rounded-md border border-border bg-bg px-3 text-sm text-ink"
+                  value={containReason}
+                  disabled={containing}
+                  onChange={(e) => setContainReason(e.target.value)}
+                >
+                  {reasons.map((r) => (
+                    <option key={r.reasonCode} value={r.reasonCode}>
+                      {r.reasonName} ({r.reasonCode})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Field
+                label="备注"
+                name="containRemark"
+                value={containRemark}
+                maxLength={512}
+                disabled={containing}
+                onChange={(e) => setContainRemark(e.target.value)}
+                placeholder="可选"
+              />
+            </div>
+            <Button
+              loading={containing}
+              disabled={packageId == null || !containReason}
+              onClick={() => void doContain()}
+            >
+              遏制
+            </Button>
+            {containResult ? (
+              <div className="space-y-2 text-sm">
+                <p className="text-xs text-muted">
+                  成功 {containResult.succeededCount} · 跳过 {containResult.skippedCount} · 失败 {containResult.failedCount}
+                </p>
+                <ContainGroup title="成功" rows={containResult.succeeded} />
+                <ContainGroup title="跳过" rows={containResult.skipped} />
+                <ContainGroup title="失败" rows={containResult.failed} showMessage />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </Drawer>
+  )
+}
+
+/** 遏制三段分组；失败组展开 message */
+function ContainGroup({
+  title,
+  rows,
+  showMessage,
+}: {
+  title: string
+  rows: ComplaintContainResultVO['succeeded']
+  showMessage?: boolean
+}) {
+  if (!rows.length) return null
+  return (
+    <details open={showMessage && rows.some((r) => r.message)}>
+      <summary className="cursor-pointer text-xs text-muted">
+        {title} {rows.length}
+      </summary>
+      <ul className="mt-1 space-y-0.5 font-mono text-[13px] text-ink">
+        {rows.map((r) => (
+          <li key={String(r.lotId)}>
+            {r.lotNo}
+            {showMessage && r.message ? ` · ${r.message}` : ''}
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }

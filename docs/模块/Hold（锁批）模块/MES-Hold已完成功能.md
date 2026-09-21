@@ -4,12 +4,12 @@ module: Hold
 status: done
 slices: []
 aligns: []
-updated: 2026-08-13
+updated: 2026-09-21
 ---
 
 # MES 锁批（Hold）— 功能查验清单
 
-> 更新：2026-08-13  
+> 更新：2026-09-21（登记 `assertReasonUsable` 与 skip 文案契约，供客诉包 CP-5）  
 > 状态：**最小集 ✅**；**Future Hold P0（FH-1～3）✅**；**QTIME 到期自动 Hold ✅**；FH-4/FH-5 后置不做  
 > 需求依据：`MES-Hold功能文档.md` · `MES-Hold数据库设计.md` · `MES-FutureHold接口设计.md`
 
@@ -24,6 +24,8 @@ updated: 2026-08-13
 |------|------|------|--------|
 | 原因码字典 | ✅ `GET/PUT /holds/reasons` | ⏳ 维护页未做（下拉已用启用码） | `hold:list` / `hold:create` |
 | Hold 发起 | ✅ `POST /holds` | ✅ Admin 抽屉 + 现场台面板 | `hold:create` |
+| `HoldService.assertReasonUsable` | ✅ 存在且启用；客诉 contain 整单前置 | — | — |
+| skip 文案契约 `该批次已存在生效中的锁批` | ✅ `HoldService.MSG_ALREADY_HELD`；contain 映射 skipped（改文案须同步 CP-5） | — | — |
 | ReleaseHold | ✅ `POST /holds/{id}/release`；QTIME 必填备注 | ✅ Admin 抽屉 + 现场台面板 | `hold:release` |
 | Track 拦截钩子 | ✅ In/Out → `assertNoActive` | — | — |
 | Hold 列表/详情 | ✅ `/holds` `/holds/{id}` `/lots/{id}/holds` | ✅ `/app/hold` | `hold:list` |

@@ -77,3 +77,4 @@ mes:
     enabled: true
     max-members: 200 # 客诉最大成员数
     history-per-lot: 100 # 每批历史记录数
+    contain-rescue-seconds: 60 # CONTAINING 无心跳超过此时长允许换 token 抢占

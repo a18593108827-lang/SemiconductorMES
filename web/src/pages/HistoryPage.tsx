@@ -213,6 +213,7 @@ export function HistoryPage() {
   const canView = hasPermission('history:list')
   const canComplaintView = hasPermission('complaint:view')
   const canComplaintBuild = hasPermission('complaint:build')
+  const canComplaintContain = hasPermission('complaint:contain') && hasPermission('hold:create')
 
   const [mode, setMode] = useState<Mode>('lot')
   const [txFilter, setTxFilter] = useState<TxFilter>('all')
@@ -907,6 +908,7 @@ export function HistoryPage() {
         anchorLotId={selectedLot?.id}
         anchorLotNo={selectedLot?.lotNo ?? ''}
         canBuild={canComplaintBuild}
+        canContain={canComplaintContain}
       />
     </div>
   )

@@ -123,6 +123,7 @@ export function LotsPage() {
   const canCarrierView = hasPermission('carrier:view') || hasPermission('lot:list')
   const canComplaintView = hasPermission('complaint:view')
   const canComplaintBuild = hasPermission('complaint:build')
+  const canComplaintContain = hasPermission('complaint:contain') && hasPermission('hold:create')
   const totalPages = Math.max(1, Math.ceil(total / size))
   const isCreated = detail?.status === 'created'
   const canEditDetail =
@@ -1072,6 +1073,7 @@ export function LotsPage() {
         anchorLotId={detail?.id}
         anchorLotNo={detail?.lotNo ?? ''}
         canBuild={canComplaintBuild}
+        canContain={canComplaintContain}
       />
     </div>
   )

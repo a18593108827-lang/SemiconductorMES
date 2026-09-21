@@ -70,3 +70,34 @@ export function buildComplaintPackageApi(body: {
 export function exportComplaintPackageApi(id: number | string, fileName?: string) {
   return downloadFile(`/complaint-packages/${id}/export?format=json`, fileName)
 }
+
+export interface ComplaintContainLotVO {
+  lotId: number | string
+  lotNo: string
+  code: string | null
+  message: string | null
+}
+
+export interface ComplaintContainResultVO {
+  succeeded: ComplaintContainLotVO[]
+  skipped: ComplaintContainLotVO[]
+  failed: ComplaintContainLotVO[]
+  succeededCount: number
+  skippedCount: number
+  failedCount: number
+  status: string
+  containBy: number | string | null
+  containTime: string | null
+}
+
+/** 批量遏制；超时 120s（同步 HTTP，成员多时偏长） */
+export function containComplaintPackageApi(
+  id: number | string,
+  body: { lotIds?: string[]; reasonCode: string; remark?: string },
+) {
+  return request<ComplaintContainResultVO>(`/complaint-packages/${id}/contain`, {
+    method: 'POST',
+    body,
+    signal: AbortSignal.timeout(120_000),
+  })
+}

@@ -39,8 +39,14 @@ public interface HoldService {
      */
     List<MesHoldVO> listByLots(Collection<Long> lotIds);
 
+    /** contain skip 判据；改文案须同步客诉包 CP-5 */
+    String MSG_ALREADY_HELD = "该批次已存在生效中的锁批";
+
     /** 发起锁批 */
     MesHoldVO create(MesHoldCreateDTO dto);
+
+    /** 校验原因码是否存在且启用 */
+    void assertReasonUsable(String code);
 
     /** 解锁 */
     MesHoldVO release(Long id, String remark);

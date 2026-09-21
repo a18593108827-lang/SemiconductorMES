@@ -1,12 +1,15 @@
 package com.mes.complaint.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import com.mes.common.PageResult;
 import com.mes.common.R;
 import com.mes.complaint.dto.ComplaintPackageBuildDTO;
+import com.mes.complaint.dto.ComplaintPackageContainDTO;
 import com.mes.complaint.dto.ComplaintPackagePreviewDTO;
 import com.mes.complaint.dto.ComplaintPackageQuery;
 import com.mes.complaint.facade.ComplaintPackageFacade;
+import com.mes.complaint.vo.ComplaintContainResultVO;
 import com.mes.complaint.vo.ComplaintPackageExportFile;
 import com.mes.complaint.vo.ComplaintPackageListVO;
 import com.mes.complaint.vo.ComplaintPackagePreviewVO;
@@ -26,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 客诉追溯包 HTTP。CP-1 开关；CP-2 preview；CP-3 build / get / list；CP-4 export。
+ * 客诉追溯包 HTTP。CP-1 开关；CP-2 preview；CP-3 build / get / list；CP-4 export；CP-5 contain。
  */
 @RestController
 @RequestMapping("/complaint-packages")
@@ -81,5 +84,13 @@ public class MesComplaintPackageController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
                 .body(file.content());
+    }
+
+    /** 批量遏制；须同时具备 complaint:contain 与 hold:create */
+    @SaCheckPermission(value = {"complaint:contain", "hold:create"}, mode = SaMode.AND)
+    @PostMapping("/{id}/contain")
+    public R<ComplaintContainResultVO> contain(@PathVariable Long id,
+                                               @Valid @RequestBody ComplaintPackageContainDTO dto) {
+        return R.ok(complaintPackageFacade.contain(id, dto));
     }
 }

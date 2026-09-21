@@ -767,7 +767,8 @@ INSERT INTO mes_hold_reason (
 (8007, 'QTIME_EXCEED', 'Queue Time超时', 'quality', 1, '站间等待超限', NOW(), NOW(), 0),
 (8008, 'PROCESS_TIME_EXCEED', 'Process Time超时', 'quality', 1, '站内加工超上限，出站后锁批', NOW(), NOW(), 0),
 (8009, 'EDC_OOS', '量测超规', 'quality', 1, '采集OOS后锁批，解锁后须重采合格才能完工', NOW(), NOW(), 0),
-(8010, 'ALARM_POLICY', '告警策略锁批', 'quality', 1, 'mes_alarm_code.on_raise=HOLD_LOT 时引用', NOW(), NOW(), 0)
+(8010, 'ALARM_POLICY', '告警策略锁批', 'quality', 1, 'mes_alarm_code.on_raise=HOLD_LOT 时引用', NOW(), NOW(), 0),
+(8011, 'CUSTOMER_COMPLAINT', '客诉遏制', 'customer', 1, '追溯包contain默认原因', NOW(), NOW(), 0)
 ON DUPLICATE KEY UPDATE
   reason_name = VALUES(reason_name),
   category = VALUES(category),
@@ -1210,6 +1211,7 @@ CREATE TABLE IF NOT EXISTS mes_complaint_package (
     create_time      DATETIME                COMMENT 'create time',
     contain_by       BIGINT                  COMMENT 'first contain by',
     contain_time     DATETIME                COMMENT 'first contain time',
+    contain_token    VARCHAR(36)             COMMENT 'contain owner token',
     update_time      DATETIME                COMMENT 'update time',
     PRIMARY KEY (id),
     UNIQUE KEY uk_complaint_package_no (package_no),

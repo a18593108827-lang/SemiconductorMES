@@ -12,7 +12,7 @@ updated: 2026-07-28
 > 定位：质量闸门——**暂停** Lot 前进；不替代 Track，只在 Track 前拦截  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.9、§6.2；业界 Hold Reason / Lot on Hold  
 > 一期状态：**最小集已落地**（后端 + Admin/现场 UI；原因码维护页可后补）  
-> 更新：2026-07-28  
+> 更新：2026-09-21  
 > 查验：`MES-Hold已完成功能.md`
 
 ---
@@ -225,8 +225,9 @@ ReleaseHold 不经此拦截
 
 1. Hold **实体化**（`mes_hold`），不靠只改 Lot.status
 2. Track **只调** `HoldService.hasActive(lotId)`，不写死业务
-3. 原因码独立表，不写死枚举在代码里
+3. 原因码独立表，不写死枚举在代码里；`HoldService.assertReasonUsable` 给跨模块整单校验
 4. tx_log 用 `HOLD` / `RELEASE_HOLD`，后续类型可加
+5. `HoldService.MSG_ALREADY_HELD`（「该批次已存在生效中的锁批」）是 contain skip 稳定契约，改文案须同步 CP-5
 
 ---
 

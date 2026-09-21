@@ -10,6 +10,7 @@ import com.mes.common.AssertUtil;
 import com.mes.common.BusinessException;
 import com.mes.common.PageResult;
 import com.mes.complaint.dto.ComplaintPackageBuildDTO;
+import com.mes.complaint.dto.ComplaintPackageContainDTO;
 import com.mes.complaint.dto.ComplaintPackagePreviewDTO;
 import com.mes.complaint.dto.ComplaintPackageQuery;
 import com.mes.complaint.entity.MesComplaintPackage;
@@ -18,14 +19,18 @@ import com.mes.complaint.facade.ComplaintPackageFacade;
 import com.mes.complaint.mapper.MesComplaintPackageMapper;
 import com.mes.complaint.mapper.MesComplaintPackageMemberMapper;
 import com.mes.complaint.support.ComplaintPackageAssembler;
+import com.mes.complaint.support.ComplaintPackageContainWriter;
 import com.mes.complaint.support.ComplaintPackageNoAllocator;
 import com.mes.complaint.support.ComplaintPackageWriter;
+import com.mes.complaint.vo.ComplaintContainLotVO;
+import com.mes.complaint.vo.ComplaintContainResultVO;
 import com.mes.complaint.vo.ComplaintPackageExportFile;
 import com.mes.complaint.vo.ComplaintPackageListVO;
 import com.mes.complaint.vo.ComplaintPackageMemberVO;
 import com.mes.complaint.vo.ComplaintPackagePreviewVO;
 import com.mes.complaint.vo.ComplaintPackageSummaryVO;
 import com.mes.complaint.vo.ComplaintPackageVO;
+import com.mes.hold.dto.MesHoldCreateDTO;
 import com.mes.hold.service.HoldService;
 import com.mes.lot.service.MesLotService;
 import com.mes.lot.vo.MesLotImpactFlatVO;
@@ -40,13 +45,17 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 客诉追溯包门面：开关 / preview / build / get / page / export。
- * 编排方法不加事务；写入只走 Writer。
+ * 客诉追溯包门面：开关 / preview / build / get / page / export / contain。
+ * 编排方法不加事务；写入只走 Writer / ContainWriter。
  */
 @Slf4j
 @Service
@@ -64,6 +73,12 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     public static final String ERR_NO_CONFLICT = "COMPLAINT_PACKAGE_NO_CONFLICT";
     /** 导出 format 非 json */
     public static final String ERR_FORMAT = "COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED";
+    /** contain 的 lotIds 越界 */
+    public static final String ERR_LOT_NOT_IN = "COMPLAINT_PACKAGE_LOT_NOT_IN_PACKAGE";
+    /** 同包正在 contain */
+    public static final String ERR_IN_PROGRESS = "COMPLAINT_PACKAGE_CONTAIN_IN_PROGRESS";
+    /** 包行已 VOID */
+    public static final String ERR_VOID = "COMPLAINT_PACKAGE_VOID";
 
     /** 报废状态（摘要 scrapLotCount 判定用） */
     private static final String STATUS_SCRAPPED = "scrapped";
@@ -80,11 +95,16 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     @Value("${mes.complaint-package.max-members:200}")
     private int maxMembers;
 
+    /** CONTAINING 无心跳超过此时长允许换 token 抢占 */
+    @Value("${mes.complaint-package.contain-rescue-seconds:60}")
+    private int containRescueSeconds;
+
     private final MesLotService mesLotService;
     private final HoldService holdService;
     private final AlarmFacade alarmFacade;
     private final ComplaintPackageNoAllocator noAllocator;
     private final ComplaintPackageWriter writer;
+    private final ComplaintPackageContainWriter containWriter;
     private final ComplaintPackageAssembler assembler;
     private final MesComplaintPackageMapper packageMapper;
     private final MesComplaintPackageMemberMapper memberMapper;
@@ -229,6 +249,164 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
             log.warn("complaint export serialize failed packageNo={}", vo.getPackageNo(), e);
             throw new BusinessException("追溯包导出失败");
         }
+    }
+
+    /** token 占位后逐 Lot create；无外层事务；finally 结束 CAS 后重读包头 */
+    @Override
+    public ComplaintContainResultVO contain(Long id, ComplaintPackageContainDTO dto) {
+        assertEnabled();
+        AssertUtil.notNull(id, "包 id 不能为空");
+        AssertUtil.notNull(dto, "参数不能为空");
+        holdService.assertReasonUsable(dto.getReasonCode());
+
+        MesComplaintPackage pkg = packageMapper.selectById(id);
+        AssertUtil.notNull(pkg, ERR_NOT_FOUND + ": 追溯包不存在");
+        if (MesComplaintPackage.STATUS_VOID.equals(pkg.getStatus())) {
+            throw new BusinessException(ERR_VOID + ": 追溯包已作废");
+        }
+
+        List<MesComplaintPackageMember> members = memberMapper.selectList(
+                new LambdaQueryWrapper<MesComplaintPackageMember>()
+                        .eq(MesComplaintPackageMember::getPackageId, id));
+        List<MesComplaintPackageMember> targets = resolveTargets(members, dto.getLotIds());
+
+        String token = UUID.randomUUID().toString();
+        if (!containWriter.occupy(id, token, containRescueSeconds)) {
+            rejectOccupyMiss(id);
+        }
+
+        List<ComplaintContainLotVO> succeeded = new ArrayList<>();
+        List<ComplaintContainLotVO> skipped = new ArrayList<>();
+        List<ComplaintContainLotVO> failed = new ArrayList<>();
+        String holdRemark = holdRemark(pkg.getPackageNo(), dto.getRemark());
+        try {
+            for (MesComplaintPackageMember m : targets) {
+                applyOne(m, dto.getReasonCode().trim(), holdRemark, succeeded, skipped, failed);
+                if (!containWriter.heartbeat(id, token)) {
+                    break;
+                }
+            }
+        } finally {
+            containWriter.finish(id, token, !succeeded.isEmpty(), resolveCreateBy());
+        }
+
+        MesComplaintPackage latest = packageMapper.selectById(id);
+        AssertUtil.notNull(latest, ERR_NOT_FOUND + ": 追溯包不存在");
+        ComplaintContainResultVO vo = new ComplaintContainResultVO();
+        vo.setSucceeded(succeeded);
+        vo.setSkipped(skipped);
+        vo.setFailed(failed);
+        vo.setSucceededCount(succeeded.size());
+        vo.setSkippedCount(skipped.size());
+        vo.setFailedCount(failed.size());
+        vo.setStatus(latest.getStatus());
+        vo.setContainBy(latest.getContainBy());
+        vo.setContainTime(latest.getContainTime());
+        return vo;
+    }
+
+    /** 单 Lot create；已锁跳过（skipped），业务/运行时错进 failed，不中断循环 */
+    private void applyOne(MesComplaintPackageMember m, String reasonCode, String holdRemark,
+                          List<ComplaintContainLotVO> succeeded,
+                          List<ComplaintContainLotVO> skipped,
+                          List<ComplaintContainLotVO> failed) {
+        MesHoldCreateDTO create = new MesHoldCreateDTO();
+        create.setLotId(m.getLotId());
+        create.setReasonCode(reasonCode);
+        create.setRemark(holdRemark);
+        try {
+            holdService.create(create);
+            succeeded.add(lotVo(m, null, null));
+        } catch (BusinessException e) {
+            String msg = e.getMessage() == null ? "" : e.getMessage();
+            if (msg.contains(HoldService.MSG_ALREADY_HELD)) {
+                skipped.add(lotVo(m, null, null));
+            } else {
+                failed.add(lotVo(m, failCode(e), msg));
+            }
+        } catch (RuntimeException e) {
+            String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            failed.add(lotVo(m, "ERROR", msg));
+        }
+    }
+
+    /** 占位失败：按当前行状态报进行中 / 作废 / 不存在 */
+    private void rejectOccupyMiss(Long id) {
+        MesComplaintPackage row = packageMapper.selectById(id);
+        if (row == null) {
+            throw new BusinessException(ERR_NOT_FOUND + ": 追溯包不存在");
+        }
+        if (MesComplaintPackage.STATUS_CONTAINING.equals(row.getStatus())) {
+            throw new BusinessException(ERR_IN_PROGRESS + ": 该追溯包正在遏制");
+        }
+        if (MesComplaintPackage.STATUS_VOID.equals(row.getStatus())) {
+            throw new BusinessException(ERR_VOID + ": 追溯包已作废");
+        }
+        throw new BusinessException(ERR_NOT_FOUND + ": 追溯包不存在");
+    }
+
+    /** 把“用户给的 lotIds + 包成员表”解析成一份确定的目标清单：空 lotIds=全员；非空须 必须是 成员；结果按 lotId 升序 */
+    private List<MesComplaintPackageMember> resolveTargets(List<MesComplaintPackageMember> members,
+                                                           List<String> lotIds) {
+        List<MesComplaintPackageMember> sorted = new ArrayList<>(members == null ? List.of() : members);
+        sorted.sort(Comparator.comparing(MesComplaintPackageMember::getLotId, Comparator.nullsLast(Long::compareTo)));
+        if (lotIds == null || lotIds.isEmpty()) {
+            return sorted;
+        }
+        Set<Long> memberIds = sorted.stream()
+                .map(MesComplaintPackageMember::getLotId)
+                .collect(Collectors.toSet());
+        Set<Long> requested = new LinkedHashSet<>();
+        for (String raw : lotIds) {
+            if (!StringUtils.hasText(raw)) {
+                throw new BusinessException(ERR_LOT_NOT_IN + ": 批次不在本包影响面内");
+            }
+            try {
+                requested.add(Long.parseLong(raw.trim()));
+            } catch (NumberFormatException e) {
+                throw new BusinessException(ERR_LOT_NOT_IN + ": 批次不在本包影响面内");
+            }
+        }
+        for (Long lotId : requested) {
+            if (!memberIds.contains(lotId)) {
+                throw new BusinessException(ERR_LOT_NOT_IN + ": 批次不在本包影响面内");
+            }
+        }
+        List<MesComplaintPackageMember> out = new ArrayList<>();
+        for (MesComplaintPackageMember m : sorted) {
+            if (requested.contains(m.getLotId())) {
+                out.add(m);
+            }
+        }
+        return out;
+    }
+
+    /** Hold 备注拼 [包号]；超 512 截尾保前缀 */
+    private static String holdRemark(String packageNo, String remark) {
+        String prefix = "[" + (packageNo == null ? "" : packageNo) + "]";
+        String body = StringUtils.hasText(remark) ? remark.trim() : "";
+        String out = body.isEmpty() ? prefix : prefix + " " + body;
+        return out.length() > 512 ? out.substring(0, 512) : out;
+    }
+
+    /** 三段明细行 */
+    private static ComplaintContainLotVO lotVo(MesComplaintPackageMember m, String code, String message) {
+        ComplaintContainLotVO vo = new ComplaintContainLotVO();
+        vo.setLotId(m.getLotId());
+        vo.setLotNo(m.getLotNo());
+        vo.setCode(code);
+        vo.setMessage(message);
+        return vo;
+    }
+
+    /** failed.code：有 COMPLAINT_PACKAGE_ 前缀则抽出，否则 HOLD */
+    private static String failCode(BusinessException e) {
+        String m = e.getMessage();
+        if (m != null && m.startsWith("COMPLAINT_PACKAGE_")) {
+            int colon = m.indexOf(':');
+            return colon > 0 ? m.substring(0, colon).trim() : m;
+        }
+        return "HOLD";
     }
 
     /** format：null / 空白 / json（忽略大小写）通过 */
