@@ -4,7 +4,7 @@ module:
 status: draft
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # 半导 MES AI 赋能方案（考察稿）

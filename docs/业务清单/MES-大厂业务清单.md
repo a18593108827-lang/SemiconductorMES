@@ -4,7 +4,7 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # 大厂 MES 业务清单

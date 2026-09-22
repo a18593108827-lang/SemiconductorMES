@@ -4,7 +4,7 @@ module:
 status: draft
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # 半导 MES 知识助理（RAG）方案

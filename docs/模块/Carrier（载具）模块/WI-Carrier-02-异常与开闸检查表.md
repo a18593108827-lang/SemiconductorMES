@@ -4,7 +4,7 @@ module: Carrier
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # WI-Carrier-02 载具异常处理与开闸检查表

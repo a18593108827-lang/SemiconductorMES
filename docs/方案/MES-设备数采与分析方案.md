@@ -4,7 +4,7 @@ module:
 status: draft
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # 半导 MES 设备数据采集与分析方案

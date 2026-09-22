@@ -4,7 +4,7 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # MES UI 页面规范

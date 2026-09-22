@@ -4,7 +4,7 @@ module: 权限用户
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # MES 用户权限数据库设计

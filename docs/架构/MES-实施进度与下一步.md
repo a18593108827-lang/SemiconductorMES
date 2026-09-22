@@ -4,12 +4,12 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-09-21
+updated: 2026-09-22
 ---
 
 # MES 实施进度与下一步
 
-> 更新：2026-09-21  
+> 更新：2026-09-22  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 ---
 
@@ -56,7 +56,7 @@ Report 查验：`docs/模块/Report（报表）模块/MES-Report已完成功能.
 12. ~~**Dashboard 看板真数**~~ ✅ KPI + 设备矩阵 + 报警流 + TrackOut 趋势；见 Dashboard 清单  
 13. ~~**Report 基础报表**~~ ✅ Rep-1～4（Move/Hold + Admin + 复盘/报表侧栏）  
 
-Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**（Carrier 架构稿已立：`docs/模块/Carrier（载具）模块/MES-Carrier架构设计.md`）。
+Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Carrier（载具）模块/`）；**Adapter（SECS/GEM）/ Alarm→Hold 策略 / 片级 Wafer 等本轮不动**。下一步方向待厂型拍板 → `docs/方案/MES-厂型选型分析.md`。
 ## 3. 与业界预期（对照摘要）
 
 | 能力 | 大厂常见 | 本项目预期 | 结论 |
@@ -117,14 +117,14 @@ Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**（Carrier 架构
 | Doc-2 | 存量文档批量补 frontmatter（只加头不动正文）+ `docs/INDEX.md` 总账 | ✅ 2026-09-20 |
 | Doc-3 | 全链试运行：Agent 数据暴露（Tool Facade）走 INT → 规格 → plan → 交付 | 待启动 |
 | Doc-4 | （后置）`src/test` + `mvn test` 反馈回路 | 工程排期 |
-| Doc-5 | （后置）eval 启用 + CI 挂 frontmatter 状态校验 | 依赖 Doc-4 |
+| Doc-5 | eval 启用 ✅ 2026-09-22（首条 `EVAL-0001`，见 `docs/eval/`）；CI 挂 frontmatter 状态校验**待 Doc-4** | 部分完成 |
 
 ---
 
 ## 6. 待决策（从架构抄录，落地前拍板）
 
-| 项 | 选项 | 影响 |
-|----|------|------|
-| 厂型 | 前道 / 后道 / 封测 | 是否要片级 |
-| Lot 状态枚举 | 与 Track 对齐命名 | 接口与前端 |
-| `lot:release` 是否并入 `lot:edit` | 权限粒度 | 种子数据 |
+| 项 | 选项 | 影响 | 当前建议 |
+|----|------|------|----------|
+| 厂型 | 前道 / 后道 / 封测 | 是否要片级 | **建议后道封测**（含功率 / SiC 车规）：见 `docs/方案/MES-厂型选型分析.md`；**待拍板** |
+| Lot 状态枚举 | 与 Track 对齐命名 | 接口与前端 | 沿用现网 Track 命名（未拍板） |
+| `lot:release` 是否并入 `lot:edit` | 权限粒度 | 种子数据 | 未拍板 |

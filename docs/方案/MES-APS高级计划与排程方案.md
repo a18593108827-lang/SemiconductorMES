@@ -4,7 +4,7 @@ module:
 status: draft
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # APS（高级计划与排程）方案

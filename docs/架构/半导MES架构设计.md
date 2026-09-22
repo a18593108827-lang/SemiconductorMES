@@ -4,7 +4,7 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # 半导体制造执行系统（MES）架构设计参考

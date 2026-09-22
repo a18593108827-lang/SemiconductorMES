@@ -4,12 +4,13 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-22
 ---
 
 # 半导体 / 芯片 MES 业务清单（目标版）
 
 > 定位：晶圆厂（Fab）+ 封测厂（OSAT）制造执行目标蓝图  
+> **厂型取舍**：建议优先后道封测（含功率 / SiC 车规），前道留远期 —— 分析与依据见 `docs/方案/MES-厂型选型分析.md`（**待拍板**；拍板后调整 §16 / §17 优先级）  
 > 对齐现有系统：Lot / WIP / Track / Route / Dispatch / Recipe / Equipment / Hold / Alarm / History / Report / Auth  
 > 标准参照：SEMI E10 / E30 / E40 / E90 / E94、ISA-95（半导裁剪）
 
@@ -254,6 +255,8 @@ updated:
 ---
 
 ## 16. 封测特化（OSAT，按需）— P1/P2
+
+> 厂型建议优先封测（`docs/方案/MES-厂型选型分析.md`）；拍板后本表优先级整体上调至 P0/P1。
 
 | 业务 | 优先级 | 说明 |
 |------|--------|------|

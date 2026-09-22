@@ -4,7 +4,7 @@ module: Route
 status: done
 slices: []
 aligns: []
-updated: 
+updated: 2026-09-20
 ---
 
 # MES 工艺路线（Route）数据库设计
