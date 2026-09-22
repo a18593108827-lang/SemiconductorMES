@@ -14,3 +14,6 @@ _bmad-output/
 .DS_Store
 *.iml
 *.log
+
+# 一次性验收探针 / 临时产物（保留在磁盘可重跑，但不入库；见 docs/eval/README.md 与各 plan 实施记录）
+.workbuddy/tmp/
