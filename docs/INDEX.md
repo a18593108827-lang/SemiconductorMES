@@ -17,8 +17,7 @@ updated: 2026-09-22
 | 状态 | 篇数 |
 |------|------|
 | active | 1 |
-| approved | 4 |
-| done | 84 |
+| done | 88 |
 | draft | 6 |
 | in-progress | 2 |
 
@@ -148,10 +147,10 @@ updated: 2026-09-22
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
-| CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页 | History | approved | 2026-09-20 | `模块/History（履历）模块/CP-3-plan.md` |
-| CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
-| CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
-| CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | approved | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
+| CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页 | History | done ✅ | 2026-09-20 | `模块/History（履历）模块/CP-3-plan.md` |
+| CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
+| CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
+| CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
 
 ### eval（1 篇）
 

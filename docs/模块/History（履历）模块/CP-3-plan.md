@@ -1,7 +1,7 @@
 ---
 type: plan
 module: History
-status: approved
+status: done
 slices: [CP-3]
 aligns: [MES-客诉追溯包接口设计.md]
 updated: 2026-09-20
@@ -9,7 +9,7 @@ updated: 2026-09-20
 # CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页
 
 > 对齐：`MES-客诉追溯包接口设计.md` §3/§4/§6.2/§6.3/§6.6/§6.7/§8/§9  
-> 状态：approved（2026-09-20 用户批准）· 已吸收架构审查 R1~R14（R8 双遍历由 R13 废止）  
+> 状态：done（2026-09-20 用户批准 → 2026-09-21 完成，完成态见 `MES-History已完成功能.md` §6）· 已吸收架构审查 R1~R14（R8 双遍历由 R13 废止）  
 > 二轮：Writer 冲突捕获移出事务代理、序号冲突改重读 max+抖动、Alarm 批量定序、装配失败必记日志  
 > 三轮：max(seq) 按数字后缀取值（禁字符串排序）；`build()` 不得带事务；Hold 拆 `active`/`released`；设计 §8.3 与本计划对齐
 

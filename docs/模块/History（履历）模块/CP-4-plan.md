@@ -1,14 +1,14 @@
 ---
 type: plan
 module: History
-status: approved
+status: done
 slices: [CP-4]
 aligns: [MES-客诉追溯包接口设计.md]
 updated: 2026-09-21
 ---
 # CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots）
 
-> 对齐：`MES-客诉追溯包接口设计.md` §3 / §6.4 / §9 / §10 / §12 · 状态：approved  
+> 对齐：`MES-客诉追溯包接口设计.md` §3 / §6.4 / §9 / §10 / §12 · 状态：done（2026-09-21 完成，完成态见 `MES-History已完成功能.md` §6 / §7）  
 > 前置：CP-3 ✅（build / get / list 已上线，`facade.get(id)` 装配可直接复用）  
 > 已吸收架构审查 R1～R8（2026-09-21）+ 二轮 F1～F4 + 三轮 F5～F8
 

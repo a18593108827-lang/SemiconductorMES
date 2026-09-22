@@ -1,14 +1,14 @@
 ---
 type: plan
 module: History
-status: approved
+status: done
 slices: [CP-5]
 aligns: [MES-客诉追溯包接口设计.md]
 updated: 2026-09-21
 ---
 # CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3）
 
-> 对齐：`MES-客诉追溯包接口设计.md` §3 / §4 / §6.5 / §7 / §8.2 / §9 / §10 / §11 / §12 · 状态：draft（**未批不动码**）  
+> 对齐：`MES-客诉追溯包接口设计.md` §3 / §4 / §6.5 / §7 / §8.2 / §9 / §10 / §11 / §12 · 状态：done（2026-09-21 批准并完成，批准记录见文末）  
 > 前置：CP-3 ✅（build/get/list）· CP-4 ✅（export + 入口，验收闭环）  
 > 已吸收架构审查 R1～R12（2026-09-21）+ 二轮 F1～F3（对码核验通过：@Version 仅返 0 不抛乐观锁异常、mes_hold.remark=512、seed 列清单/id 8011/category 全符；修正 K18 异常面、登记 skip 文案契约、验证方式去单测化——项目无 src/test）+ 三轮 F4（实测发现：`HoldServiceImpl.create` 断言顺序「先状态后已锁」导致重跑 held 批次先进 failed；修正为「先已锁后状态」，MSG_ALREADY_HELD 才能在 held 场景触发，skipped 分支复活）  
 > 已核实现网契约：`HoldService.create` 带 `@Transactional`，**无** Lot `FOR UPDATE`，靠 `mes_lot.version` 乐观锁，失败文案「数据已被他人修改，请刷新后重试」；仅 wait/processing 可锁批；`mes_hold` **无** active 唯一索引；`mes_hold_reason` 字典存在且校验启用；`GET /holds/reasons` + `listHoldReasonsApi` 可作下拉数据源

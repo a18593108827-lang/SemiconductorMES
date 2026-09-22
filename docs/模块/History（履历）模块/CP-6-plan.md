@@ -1,14 +1,14 @@
 ---
 type: plan
 module: History
-status: approved
+status: done
 slices: [CP-6]
 aligns: [MES-客诉追溯包接口设计.md]
 updated: 2026-09-22
 ---
 # CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面）
 
-> 对齐：`MES-客诉追溯包接口设计.md` §3（ZIP 行 / 切片表）· §4.3（不落库）· §6.4（export，P1 合同原文）· §8.1（只读不加锁）· §9 · §11 · §14 · 状态：**approved**（2026-09-22 用户批准，可动码）  
+> 对齐：`MES-客诉追溯包接口设计.md` §3（ZIP 行 / 切片表）· §4.3（不落库）· §6.4（export，P1 合同原文）· §8.1（只读不加锁）· §9 · §11 · §14 · 状态：**done**（2026-09-22 批准并完成，实施与验收记录见文末）  
 > 前置：CP-4 ✅（`exportFile` + `downloadFile` + 入口）· CP-5 ✅  
 > 已核实现网（2026-09-22 对码）：`ComplaintPackageFacade.exportFile(Long, String)` 已存在，链路 `assertEnabled → assertFormatJson → get(id) → ObjectMapper 拼 ObjectNode(+exportedAt/exportedBy) → ComplaintPackageExportFile(fileName, byte[])`；Controller `/export` 已 `ResponseEntity<byte[]>` + `APPLICATION_OCTET_STREAM` + `ContentDisposition.attachment().filename()`，**映射未写 `produces`**。本切片 Controller **只加** `Cache-Control: no-store`，不组包  
 > 现网事实：`hutool-all` 与 JDK 均可用（本切片只用 JDK `java.util.zip`，**不引依赖**）；`application.yml` 已有 `mes.complaint-package.*` 段；`docs` 内 ZIP 仅三处「后置」待更新；`History 接口设计` 无 export 条目，不动
