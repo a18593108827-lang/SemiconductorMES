@@ -260,6 +260,21 @@ h. 文档收尾（同会话）：接口设计 §3 表格 ZIP 行 → `✅ CP-6`�
 
 **仍未执行（无法在不改配置/不重启实例的前提下验证）**：验收 6 的「`enabled=false` → `COMPLAINT_PACKAGE_DISABLED`」需改 `application.yml` 并重启（会打断用户正在跑的实例）→ 留待下次启动时顺带验证，或由用户手测。验收 11 的页面部分已由用户实测（并修出一处前端缺陷，见下）。
 
+### 开关关闭分支验收（2026-09-22 15:48，副实例独立验证 · 11 项全 PASS）
+
+上条「未执行」已解除：**不改 `application.yml`、不重启用户实例**，改用命令行参数覆盖起一个**只读副实例**（`java -cp target/classes com.mes.MesApplication --server.port=18080 --mes.complaint-package.enabled=false`，与 8080 共享 MySQL / Redis；启动无 DDL 执行、`DataInitializer` 幂等），跑完即 kill。探针件：`.workbuddy/tmp/cp6-probe/disabled_branch.py`。
+
+| 断言 | 结果 |
+|------|------|
+| `GET /complaint-packages/enabled` | ✅ 200 且 `data=false`（按 CP-1 设计**不**因关而抛错） |
+| `list` / `export json` / `export zip` / `preview` / `build` / `contain` 六个入口 | ✅ 全部拒 `COMPLAINT_PACKAGE_DISABLED: 客诉追溯包已关闭` |
+| `export zip` 被拒时的响应 | ✅ 仍是 JSON 错误体，**零二进制字节**（`PK` 魔数不存在） |
+| `format=pdf`（开关关） | ✅ 报 `DISABLED` 而非 `FORMAT` → **开关先于 format 校验** |
+| `id=不存在&format=zip`（开关关） | ✅ 报 `DISABLED` 而非 `NOT_FOUND` → **开关先于 id 校验** |
+| 未登录（开关关） | ✅ 仍是 `401 未登录或登录已过期` → 鉴权不被开关吞掉 |
+
+环境留痕：验证期间用户实例 `127.0.0.1:8080` 全程照常（`enabled=true`）；副实例 18080 PID 28092 验证后已终止；`application.yml` 保持 `enabled: true` 未被改动（`git status` 为空）。用户亦自行手测确认过该分支。
+
 ### 缺陷与口径登记（2026-09-22）
 
 | # | 项 | 结论 |
