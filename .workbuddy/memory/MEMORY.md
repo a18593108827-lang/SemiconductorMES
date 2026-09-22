@@ -38,6 +38,8 @@
 - 需要「改配置才能验」的分支：**不**改 `application.yml`、**不**重启用户实例，改用命令行参数覆盖起第二实例（如 `java -cp target/classes com.mes.MesApplication --server.port=18080 --mes.complaint-package.enabled=false`，共享 MySQL/Redis）；前提先确认启动不执行 DDL 且初始化器幂等。注意 Git Bash 里 `nohup ... &` 起的服务会随 tool 调用结束被回收，长驻进程需用后台任务启动
 - 踩点：`LocalDateTime` 的 JSON 形状取决于**容器** ObjectMapper——Spring Boot 自动配置出 ISO 文本，手搓 `Jackson2ObjectMapperBuilder.json()` 出数组（`WRITE_DATES_AS_TIMESTAMPS` 未关）→ 判断序列化形状必须用真容器 Bean
 - 踩点：ZIP 的 DOS 时间秒字段是 `seconds/2`（解析本地头要 ×2）；`setTimeLocal` 必须早于 `putNextEntry`，否则本地头与中央目录时间不一致
+- 踩点：**Git Bash 的 heredoc 会吃掉 Python 代码里的反斜杠**（`re` 的 `\s` 变成 `/s`，导致正则静默不匹配）→ 需要写脚本时用 Write 工具落盘到 `.workbuddy/tmp/` 再 `python <file>`，别用 `python - <<'PY'` 内联（简单无正则的可以）
+- 文档体检基线（2026-09-22）：`docs/` 105 篇 md，INDEX 收录 98 篇；`updated` 已全量补齐（模板留空是设计如此）；**3 篇刻意不带 frontmatter**——`docs/eval/README.md`、`docs/intent/README.md`（目录导航）、`docs/_templates/AGENTS-骨架.md`（模板骨架）
 
 ## 关键文档入口
 - 根级上下文：`AGENTS.md`（AI 会话第一入口，含模块铁律与文档流程）
