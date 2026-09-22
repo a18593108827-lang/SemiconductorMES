@@ -4,19 +4,19 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-09-21
+updated: 2026-09-22
 ---
 
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-21 · 共 95 篇
+> 生成：2026-09-22 · 共 96 篇
 
 ## 状态汇总
 
 | 状态 | 篇数 |
 |------|------|
-| approved | 3 |
+| approved | 4 |
 | done | 84 |
 | draft | 6 |
 | in-progress | 2 |
@@ -89,7 +89,7 @@ updated: 2026-09-21
 |------|------|------|------|------|
 | EdcFacade — 接口设计（架构） | EDC | done ✅ | 2026-09-02 | `模块/EDC（量测）模块/MES-EdcFacade接口设计.md` |
 | HistoryFacade — 接口设计（架构） | History | done ✅ | 2026-08-19 | `模块/History（履历）模块/MES-History接口设计.md` |
-| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
+| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
 | Future Hold — 接口设计（架构） | Hold | done ✅ | 2026-08-06 | `模块/Hold（锁批）模块/MES-FutureHold接口设计.md` |
 | Lot Bonus 数量调整 — 接口设计（架构） | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotBonus接口设计.md` |
 | Lot Genealogy 谱系查询 — 架构设计 | Lot | done ✅ | 2026-09-20 | `模块/Lot（批次）模块/MES-LotGenealogy接口设计.md` |
@@ -132,7 +132,7 @@ updated: 2026-09-21
 | MES 派工（Dispatch）— 功能查验清单 | Dispatch | done ✅ | 2026-07-29 | `模块/Dispatch（派工）模块/MES-Dispatch已完成功能.md` |
 | MES 量测采集（EDC）— 已完成功能（查验清单） | EDC | done ✅ | 2026-08-19 | `模块/EDC（量测）模块/MES-EDC已完成功能.md` |
 | MES 设备（Equipment）— 功能查验清单 | Equipment | done ✅ | 2026-07-28 | `模块/Equipment（设备）模块/MES-Equipment已完成功能.md` |
-| MES 履历追溯（History）— 已完成功能（查验清单） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/MES-History已完成功能.md` |
+| MES 履历追溯（History）— 已完成功能（查验清单） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/MES-History已完成功能.md` |
 | MES 锁批（Hold）— 功能查验清单 | Hold | done ✅ | 2026-09-21 | `模块/Hold（锁批）模块/MES-Hold已完成功能.md` |
 | MES 批次（Lot）— 功能查验清单 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-Lot已完成功能.md` |
 | MES 配方（Recipe）— 功能查验清单 | Recipe | done ✅ | 2026-07-30 | `模块/Recipe（配方）模块/MES-Recipe已完成功能.md` |
@@ -143,13 +143,14 @@ updated: 2026-09-21
 | MES 在制（WIP）— 功能查验清单 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP已完成功能.md` |
 | MES 用户权限 — 已完成功能查验 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户权限已完成功能.md` |
 
-### plan（3 篇）
+### plan（4 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
 | CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页 | History | approved | 2026-09-20 | `模块/History（履历）模块/CP-3-plan.md` |
 | CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
+| CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | approved | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
 
 ### 进度（1 篇）
 

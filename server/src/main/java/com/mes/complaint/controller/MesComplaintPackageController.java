@@ -16,6 +16,7 @@ import com.mes.complaint.vo.ComplaintPackagePreviewVO;
 import com.mes.complaint.vo.ComplaintPackageVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 客诉追溯包 HTTP。CP-1 开关；CP-2 preview；CP-3 build / get / list；CP-4 export；CP-5 contain。
+ * 客诉追溯包 HTTP。CP-1 开关；CP-2 preview；CP-3 build / get / list；CP-4 export；CP-5 contain；CP-6 export zip。
  */
 @RestController
 @RequestMapping("/complaint-packages")
@@ -73,7 +74,7 @@ public class MesComplaintPackageController {
         return R.ok(complaintPackageFacade.build(dto));
     }
 
-    /** JSON 附件下载；format 原样交 Facade（开关先于 format） */
+    /** 附件下载：json / zip；format 原样交 Facade（开关先于 format）；证据包禁缓存 */
     @SaCheckPermission("complaint:view")
     @GetMapping("/{id}/export")
     public ResponseEntity<byte[]> export(@PathVariable Long id,
@@ -81,6 +82,7 @@ public class MesComplaintPackageController {
         ComplaintPackageExportFile file = complaintPackageFacade.exportFile(id, format);
         ContentDisposition cd = ContentDisposition.attachment().filename(file.fileName()).build();
         return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
                 .body(file.content());

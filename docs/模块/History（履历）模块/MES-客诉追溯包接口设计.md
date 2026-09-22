@@ -2,9 +2,9 @@
 type: 接口设计
 module: History
 status: done
-slices: [CP-1, CP-2, CP-3, CP-4, CP-5]
+slices: [CP-1, CP-2, CP-3, CP-4, CP-5, CP-6]
 aligns: []
-updated: 2026-09-21
+updated: 2026-09-22
 ---
 
 # MES 客诉追溯包（Complaint Trace Package）— 接口设计
@@ -15,7 +15,8 @@ updated: 2026-09-21
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
 > 更新：2026-09-21（CP-5 对齐：contain token 占位、心跳续命、结束 CAS 认 token、双权限 AND、ContainWriter 拆分；Hold.create 无行锁）  
-> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅ · CP-5 ✅** · CP-6 ZIP 后置  
+> 更新：2026-09-22（CP-6 落地：`format=zip` 出 `{packageNo}.zip`＝`{packageNo}.json` + `README.txt`；装配抽 `ComplaintPackageExporter`；`Cache-Control: no-store`；上限值由 Assembler 访问器传入封面）
+> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅ · CP-5 ✅ · CP-6 ✅**  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -116,7 +117,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | P0 | `export`：JSON 下载（含清单） | ✅ CP-4 |
 | P0 | Admin：History / Lot 入口生成与下载 | ✅ CP-4 |
 | P1 | `contain`：对成员（或子集）批量 Hold | ✅ CP-5 |
-| P1 | ZIP（JSON + 简易 PDF/HTML 封面） | ⏳ |
+| P1 | ZIP（JSON + `README.txt` 封面） | ✅ CP-6 |
 | P2 | 家族一键 Hold 深链、客诉编号对接 QMS | 后置 |
 | P2 | 片级成员、出货客户映射 | 后置（依赖片表 / 出货） |
 
@@ -127,7 +128,7 @@ UI      = History 调查台 / Lots 详情「生成追溯包」；只调 Facade H
 | CP-3 | `build` + 包头审计 + 装配 VO + `list` 分页 | ✅ History / Hold 只读；Alarm `listUnclearedForLots`；Lot flatten 回带树 |
 | CP-4 | `GET export` JSON；Admin 按钮 | ✅ |
 | CP-5 | `contain` + 锁序 + 部分成功明细 | ✅ |
-| CP-6 | ZIP / 封面（可选） | CP-4 |
+| CP-6 | `format=zip`：`{packageNo}.zip` = JSON + `README.txt` 封面；`no-store`；封面上限值走 Assembler 访问器 | ✅ CP-4 |
 
 顺序：**CP-1 → 2 → 3 → 4**；**CP-5 不得先于 2**（无影响面不能遏制）；CP-6 可后于 4。
 
@@ -263,15 +264,23 @@ Body：preview 字段 + 可选 `reasonCode` / `remark`。
 
 - `ResponseEntity<byte[]>` 自设头；`@GetMapping` **不写** `produces`（避免失败时的 `R<>` 被当成二进制）
 - `Content-Type: application/octet-stream`
-- `Content-Disposition: attachment; filename="{packageNo}.json"`（packageNo 纯 ASCII；实现用 Spring `ContentDisposition.attachment().filename(name)` **不带 charset**——带 charset 只产出 `filename*=` 形式）
+- `Cache-Control: no-store`（证据包禁缓存，CP-6）
+- `Content-Disposition: attachment; filename="{packageNo}.json|{packageNo}.zip"`（packageNo 纯 ASCII；实现用 Spring `ContentDisposition.attachment().filename(name)` **不带 charset**——带 charset 只产出 `filename*=` 形式）
 
 失败：走全局异常，`Content-Type: application/json;charset=UTF-8`，body 仍是 `R<>`（HTTP 200，看 body `code`）。前端以 Content-Type **前缀** `application/json` 分流。
 
-`format`：`null` / 空白（trim 后空）或 `json`（忽略大小写）等价；其它值 `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`。ZIP 归 CP-6。VOID：P0 不拦。前端从 `filename=` 取名时去掉引号。
+`format`（忽略大小写、trim 后判定）：`null` / 空白 或 `json` → JSON 单文件；`zip` → ZIP 证据包；其它值 `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`。VOID：P0 不拦。前端从 `filename=` 取名时去掉引号。
+
+**ZIP（CP-6 ✅，P1 落地）：** `{packageNo}.zip` 内含**恰好 2 个** entry，扁平无目录、纯 ASCII 名、UTF-8：
+
+| entry | 内容 |
+|-------|------|
+| `{packageNo}.json` | 与 `format=json` 同源同 `ObjectMapper`（同一次调用内 `exportedAt` / `exportedBy` 同值） |
+| `README.txt` | 封面：包号 / 锚点批次（`lotNo (id)`）/ 方向 / 深度 / 成员数 / 影响面已截断 / 每 Lot 履历上限 / 每 Lot Hold 各状态上限 / 每 Lot 未关闭告警上限 / 包状态 / `CONTAINING 为遏制进行中，不是结案快照` / 原因码 / 备注 / 生成人（id）/ 生成时间 / 导出人（id）/ 导出时间 / 文件清单 / `空履历 / 空 Hold / genealogy 空表示无数据或装配失败（见服务端 WARN）` / 口径句「本包为客诉调查证据，非 eDHR / Device History，不含良率、OEE 数据」 |
+
+实现约束（CP-6 plan K1–K15）：装配只在 `ComplaintPackageExporter`（support，只注入 `ObjectMapper`，零 Mapper / 零 Assembler 依赖）；三个上限值由 Facade 从 `ComplaintPackageAssembler.historyPerLot()`（生效值）/ `holdCap()` / `alarmCap()` 传入，封面**不**写死数字、**不**重复 `@Value`；每 entry 先 `setTimeLocal` 再 `putNextEntry`（ZIP DOS 时间 2 秒粒度、本地头与中央目录需一致）；内存一次写出（无流式、不落盘）；JSON 超 10MB 仅 WARN。
 
 JSON 根对象 = Get VO + `exportedAt` + `exportedBy`。序列化必须用 Spring 容器 `ObjectMapper`（Long 为字符串、JavaTime 与 `get` 同形）。`exportedAt` 与 `createTime` 同一 JVM 本地时钟。
-
-P1：`format=zip` → JSON + `README.txt`（包号、锚点、成员数、生成时间）。
 
 ### 6.5 Contain（P1）
 
@@ -388,7 +397,7 @@ WHERE package_no LIKE CONCAT('CP-', #{ymd}, '-%')
 | `COMPLAINT_PACKAGE_LOT_NOT_IN_PACKAGE` | contain 的 lotIds 越界 |
 | `COMPLAINT_PACKAGE_CONTAIN_IN_PROGRESS` | 他请求正在 contain 同包 |
 | `COMPLAINT_PACKAGE_NO_CONFLICT` | `uk_complaint_package_no` 重试耗尽（≤3）；成员 UK 不得用此码 |
-| `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED` | export 的 `format` trim 后非空且非 json（忽略大小写）；ZIP 归 CP-6 |
+| `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED` | export 的 `format` trim 后非空且非 json / zip（忽略大小写） |
 | `COMPLAINT_PACKAGE_VOID` | 包行已是 VOID 时 contain 拒；作废 API / export 拒 VOID 后置 |
 
 Lot 不存在等复用现网 404 / Lot 错码。
@@ -448,8 +457,8 @@ Lot 不存在等复用现网 404 / Lot 错码。
 ## 14. 实施备注（给开发）
 
 - 包名：现网已是 `com.mes.complaint`；Facade 名 `ComplaintPackageFacade`  
-- 包内拆 `ComplaintPackageNoAllocator` / `ComplaintPackageWriter` / `ComplaintPackageAssembler` / `ComplaintPackageContainWriter`；Facade 只编排；`build()` / `contain()` 不加 `@Transactional`  
+- 包内拆 `ComplaintPackageNoAllocator` / `ComplaintPackageWriter` / `ComplaintPackageAssembler` / `ComplaintPackageContainWriter` / `ComplaintPackageExporter`（导出装配：JSON 节点 / README / ZIP 打包 / 文件名）；Facade 只编排；`build()` / `contain()` / `exportFile()` 不加 `@Transactional`  
 - 装配并行：成员履历可用有界线程池并行查（CP-3 先串行），但 **contain 禁止并行写**  
 - contain 占位/心跳/结束 CAS 只在 ContainWriter；结束 CAS 必须认 `contain_token`；丢心跳即停后续 create  
-- 大包 export：P0 内存组装（VO + byte[]）；流式须改 Assembler 边装边写，不能复用完整 `get` VO。只把已有 `byte[]` 塞进 `StreamingResponseBody` 不算解决  
+- 大包 export：CP-4 JSON / CP-6 ZIP 均 P0 内存组装（VO + byte[]；ZIP 字节侧峰值约 3N，JSON 约 2N）；流式须改 Exporter 边装边写，不能复用完整 `get` VO。只把已有 `byte[]` 塞进 `StreamingResponseBody` 不算解决  
 - 原因码种子 `CUSTOMER_COMPLAINT` 归 Hold 字典；本包不自建第二字典  

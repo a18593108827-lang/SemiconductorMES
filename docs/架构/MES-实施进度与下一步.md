@@ -27,7 +27,7 @@ updated: 2026-09-21
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
 | EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；OOS Auto-Hold / `EDC_COLLECT` 已做；见 `docs/模块/EDC（量测）模块/` |
-| History | ✅ 一期 P0 + 客诉包 CP-5 | 写在 Track；`HistoryFacade` + `/app/history`；客诉包 build/get/list/export/contain ✅；ZIP 后置 |
+| History | ✅ 一期 P0 + 客诉包 CP-1～CP-6 | 写在 Track；`HistoryFacade` + `/app/history`；客诉包 build/get/list/export(JSON+ZIP)/contain ✅；片级后置 |
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 | Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
 | Dashboard | ✅ 一期已完成 | overview 真数 + Admin 看板（铺满视口）；见 `docs/模块/Dashboard（看板）模块/` |
@@ -50,7 +50,7 @@ Report 查验：`docs/模块/Report（报表）模块/MES-Report已完成功能.
 6. ~~**Dispatch（最小集）**~~ ✅  
 7. ~~**Recipe（MES 内嵌最小集）**~~ ✅ →（可选）规则表 / What-Next；APS / 独立 RMS / Adapter 后置  
 8. ~~**EDC 最小集**~~ ✅ 含现场拒出提示；P1 Auto-Hold / `EDC_COLLECT` ✅  
-9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；客诉包 CP-5 contain ✅；ZIP 后置  
+9. ~~**History（调查台）**~~ ✅ Facade + `/app/history` 真数据 + 设备反查；客诉包 CP-5 contain ✅；CP-6 ZIP 证据包（JSON + README.txt 封面）✅  
 10. ~~**SPC 趋势预警**~~ ✅ SPC-1～5；`/app/spc`；不挡 TrackOut  
 11. ~~**Alarm 告警台**~~ ✅ Alarm-1～4；见 `MES-Alarm一期功能清单.md`；P1 Hold 策略 / P2 GEM 后置  
 12. ~~**Dashboard 看板真数**~~ ✅ KPI + 设备矩阵 + 报警流 + TrackOut 趋势；见 Dashboard 清单  
@@ -66,7 +66,7 @@ Carrier / Adapter / Alarm→Hold / 片级等：**本轮不动**（Carrier 架构
 | WIP 只读投影 | 常见 | 架构已定 | 相符 |
 | 线性主路径先做 | 起步常见 | 一期不做分支 | 相符 |
 | Hold | MVP 常见 | 最小集 + Future Hold P0 已落地 | 相符 |
-| History（履历） | MVP 常见 | 写 + 调查台 + 设备反查已落地 | 相符；客诉包 contain ✅；片级 / ZIP 后置 |
+| History（履历） | MVP 常见 | 写 + 调查台 + 设备反查已落地 | 相符；客诉包 contain ✅、ZIP 导出 ✅；片级后置 |
 | Eqp + Recipe + Dispatch | 量产必备 | Eqp/Dispatch/Recipe 最小集已落地 | 相符 |
 | 片级 / Send-ahead / Experiment | 前道标配 | 非一期 | 刻意不做 |
 | PCRB 级工艺变更板 | 大厂强 | 仅有权限申请 | 后补 |

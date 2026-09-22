@@ -70,7 +70,7 @@ export function ComplaintPackageDrawer({
   const [packageId, setPackageId] = useState<number | string | null>(null)
   const [packageNo, setPackageNo] = useState('')
   const [pkgStatus, setPkgStatus] = useState('')
-  const [downloading, setDownloading] = useState(false)
+  const [downloading, setDownloading] = useState<'json' | 'zip' | null>(null)
   const [reasons, setReasons] = useState<MesHoldReason[]>([])
   const [containReason, setContainReason] = useState(DEFAULT_CONTAIN_REASON)
   const [containRemark, setContainRemark] = useState('')
@@ -90,7 +90,7 @@ export function ComplaintPackageDrawer({
     setPackageId(null)
     setPackageNo('')
     setPkgStatus('')
-    setDownloading(false)
+    setDownloading(null)
     setContainReason(DEFAULT_CONTAIN_REASON)
     setContainRemark('')
     setContaining(false)
@@ -166,15 +166,20 @@ export function ComplaintPackageDrawer({
     }
   }
 
-  async function doDownload() {
+  /** 下载证据：json 单文件 / zip 证据包（文件名以后端响应头为准） */
+  async function doDownload(format: 'json' | 'zip') {
     if (packageId == null) return
-    setDownloading(true)
+    setDownloading(format)
     try {
-      await exportComplaintPackageApi(packageId, packageNo ? `${packageNo}.json` : undefined)
+      await exportComplaintPackageApi(
+        packageId,
+        packageNo ? `${packageNo}.${format}` : undefined,
+        format,
+      )
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : '下载失败')
     } finally {
-      setDownloading(false)
+      setDownloading(null)
     }
   }
 
@@ -209,8 +214,16 @@ export function ComplaintPackageDrawer({
         <Button variant="secondary" onClick={onClose}>
           关闭
         </Button>
-        <Button loading={downloading} disabled={packageId == null} onClick={() => void doDownload()}>
-          下载证据
+        <Button
+          variant="secondary"
+          loading={downloading === 'json'}
+          disabled={packageId == null}
+          onClick={() => void doDownload('json')}
+        >
+          下载 JSON
+        </Button>
+        <Button loading={downloading === 'zip'} disabled={packageId == null} onClick={() => void doDownload('zip')}>
+          下载 ZIP
         </Button>
       </>
     ) : (

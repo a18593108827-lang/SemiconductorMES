@@ -3,8 +3,6 @@ package com.mes.complaint.facade.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mes.alarm.facade.AlarmFacade;
 import com.mes.common.AssertUtil;
 import com.mes.common.BusinessException;
@@ -20,6 +18,7 @@ import com.mes.complaint.mapper.MesComplaintPackageMapper;
 import com.mes.complaint.mapper.MesComplaintPackageMemberMapper;
 import com.mes.complaint.support.ComplaintPackageAssembler;
 import com.mes.complaint.support.ComplaintPackageContainWriter;
+import com.mes.complaint.support.ComplaintPackageExporter;
 import com.mes.complaint.support.ComplaintPackageNoAllocator;
 import com.mes.complaint.support.ComplaintPackageWriter;
 import com.mes.complaint.vo.ComplaintContainLotVO;
@@ -71,7 +70,7 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     public static final String ERR_NOT_FOUND = "COMPLAINT_PACKAGE_NOT_FOUND";
     /** 包号并发冲突重试耗尽 */
     public static final String ERR_NO_CONFLICT = "COMPLAINT_PACKAGE_NO_CONFLICT";
-    /** 导出 format 非 json */
+    /** 导出 format 非 json / zip */
     public static final String ERR_FORMAT = "COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED";
     /** contain 的 lotIds 越界 */
     public static final String ERR_LOT_NOT_IN = "COMPLAINT_PACKAGE_LOT_NOT_IN_PACKAGE";
@@ -88,6 +87,10 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     private static final int LIST_SIZE_DEFAULT = 20;
     /** list 页大小上限（超出截断） */
     private static final int LIST_SIZE_MAX = 100;
+    /** 导出格式：JSON 附件（空 / 空白等价） */
+    private static final String FORMAT_JSON = "json";
+    /** 导出格式：ZIP 证据包（JSON + README.txt） */
+    private static final String FORMAT_ZIP = "zip";
 
     @Value("${mes.complaint-package.enabled:false}")
     private boolean enabled;
@@ -106,9 +109,9 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
     private final ComplaintPackageWriter writer;
     private final ComplaintPackageContainWriter containWriter;
     private final ComplaintPackageAssembler assembler;
+    private final ComplaintPackageExporter exporter;
     private final MesComplaintPackageMapper packageMapper;
     private final MesComplaintPackageMemberMapper memberMapper;
-    private final ObjectMapper objectMapper;
 
     /** 配置开关是否打开 */
     @Override
@@ -232,21 +235,28 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
         return PageResult.of(records, result.getTotal(), result.getCurrent(), result.getSize());
     }
 
-    /** JSON 附件：assertEnabled → format → get；禁加事务 */
+    /** 附件导出：assertEnabled → format → get → Exporter（JSON / ZIP）；禁加事务 */
     @Override
     public ComplaintPackageExportFile exportFile(Long id, String format) {
         assertEnabled();
-        assertFormatJson(format);
+        String normalized = assertFormat(format);
+        // 一次取值：JSON 的 exportedAt / exportedBy 与 README 的导出行必须同值（K5）
+        LocalDateTime exportedAt = LocalDateTime.now();
+        Long exportedBy = resolveCreateBy();
         ComplaintPackageVO vo = get(id);
-        ObjectNode node = objectMapper.convertValue(vo, ObjectNode.class);
-        node.set("exportedAt", objectMapper.valueToTree(LocalDateTime.now()));
-        node.set("exportedBy", objectMapper.valueToTree(resolveCreateBy()));
         try {
-            byte[] content = objectMapper.writeValueAsBytes(node);
-            return new ComplaintPackageExportFile(vo.getPackageNo() + ".json", content);
+            if (FORMAT_ZIP.equals(normalized)) {
+                byte[] zip = exporter.toZipBytes(vo, exportedBy, exportedAt,
+                        assembler.historyPerLot(), assembler.holdCap(), assembler.alarmCap());
+                return new ComplaintPackageExportFile(exporter.zipFileName(vo.getPackageNo()), zip);
+            }
+            byte[] json = exporter.toJsonBytes(vo, exportedBy, exportedAt);
+            return new ComplaintPackageExportFile(exporter.jsonFileName(vo.getPackageNo()), json);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            // ObjectNode 写出几乎不可能失败；真失败必须留痕，否则无从排查
-            log.warn("complaint export serialize failed packageNo={}", vo.getPackageNo(), e);
+            // 序列化 / 打包失败必须留痕（K12 单点翻译，文案与 CP-4 一致）
+            log.warn("complaint export failed packageNo={} format={}", vo.getPackageNo(), normalized, e);
             throw new BusinessException("追溯包导出失败");
         }
     }
@@ -411,13 +421,14 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
         return "HOLD";
     }
 
-    /** format：null / 空白 / json（忽略大小写）通过 */
-    private static void assertFormatJson(String format) {
+    /** format 归一：null / 空白 = json；json / zip 忽略大小写；返回归一值，其它抛 ERR_FORMAT */
+    private static String assertFormat(String format) {
         if (!StringUtils.hasText(format)) {
-            return;
+            return FORMAT_JSON;
         }
-        if ("json".equalsIgnoreCase(format.trim())) {
-            return;
+        String normalized = format.trim().toLowerCase(Locale.ROOT);
+        if (FORMAT_JSON.equals(normalized) || FORMAT_ZIP.equals(normalized)) {
+            return normalized;
         }
         throw new BusinessException(ERR_FORMAT + ": 不支持的导出格式");
     }

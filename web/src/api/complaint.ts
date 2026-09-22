@@ -67,8 +67,17 @@ export function buildComplaintPackageApi(body: {
   return request<ComplaintPackageVO>('/complaint-packages', { method: 'POST', body })
 }
 
-export function exportComplaintPackageApi(id: number | string, fileName?: string) {
-  return downloadFile(`/complaint-packages/${id}/export?format=json`, fileName)
+/**
+ * 下载追溯包附件。
+ * format=json → 单文件 JSON；format=zip → `{packageNo}.zip`，内含 `{packageNo}.json` + `README.txt` 封面。
+ * 文件名以响应头 `filename=` 为准（后端给全名），fallbackName 仅兜底。
+ */
+export function exportComplaintPackageApi(
+  id: number | string,
+  fileName?: string,
+  format: 'json' | 'zip' = 'json',
+) {
+  return downloadFile(`/complaint-packages/${id}/export?format=${format}`, fileName)
 }
 
 export interface ComplaintContainLotVO {

@@ -2,16 +2,16 @@
 type: 已完成功能
 module: History
 status: done
-slices: [CP-1, CP-2, CP-3, CP-4, CP-5]
+slices: [CP-1, CP-2, CP-3, CP-4, CP-5, CP-6]
 aligns: []
-updated: 2026-09-21
+updated: 2026-09-22
 ---
 
 # MES 履历追溯（History）— 已完成功能（查验清单）
 
 > 对齐：`MES-History功能文档.md` · `MES-History接口设计.md`  
-> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍在 Track；客诉追溯包 CP-1～CP-5 已落地  
-> 更新：2026-09-21
+> 现状：只读 Facade + 调查查询 + 设备反查 + Admin 调查台已落地；写仍在 Track；客诉追溯包 CP-1～CP-6 全部落地（JSON + ZIP 导出）  
+> 更新：2026-09-22
 
 ---
 
@@ -93,9 +93,26 @@ updated: 2026-09-21
 | CP-5 `POST /{id}/contain`（`complaint:contain` AND `hold:create`） | ✅ token 占位 + 心跳 + 结束 CAS；每 Lot 独立 `HoldService.create`；skip 映射「该批次已存在生效中的锁批」 |
 | CP-5 种子 `CUSTOMER_COMPLAINT` + 列 `contain_token` | ✅ `migrate_complaint_contain.sql` |
 | CP-5 抽屉遏制区 | ✅ 原因码下拉默认客诉遏制；二次确认批次数；三段结果表 |
-| CP-6 ZIP | ⏳ 未做（接口设计 §3） |
+| CP-6 ZIP | ✅ 已落地：`format=zip` → `{packageNo}.zip`（`{packageNo}.json` + `README.txt`），见 §7 |
 
 ---
+
+## 7. 导出（CP-4 / CP-6）
+
+> 对齐：`MES-客诉追溯包接口设计.md` §6.4；实现切片 `CP-6-plan.md`（2026-09-22 批准）
+
+| 项 | 状态 |
+|----|------|
+| `ComplaintPackageExporter`（support：JSON 节点 / README / ZIP 打包 / 文件名） | ✅ 只注入 `ObjectMapper`，零 Mapper / 零 Assembler / 零 Facade 依赖（K9） |
+| `GET /{id}/export?format=json`（空 / 空白等价） | ✅ CP-4 口径逐字保持（根对象 + `exportedAt` / `exportedBy`） |
+| `GET /{id}/export?format=zip` | ✅ `{packageNo}.zip`，恰好 2 entry（`{packageNo}.json` + `README.txt`），扁平 ASCII + UTF-8 |
+| format 白名单 + 归一 | ✅ `json` / `zip` 忽略大小写、trim；其它 `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`；校验先于 `get`（404 不抢错误码） |
+| `Cache-Control: no-store` | ✅ json / zip 两分支同加 |
+| JSON 与 ZIP 内 JSON 同源 | ✅ 同一 `buildJsonNode` + 同一容器 `ObjectMapper`；`exportedAt` / `exportedBy` 一次取值两处同值 |
+| README 封面 | ✅ 包号 / 锚点 / 方向 / 深度 / 成员数 / 截断 / 三个上限 / 状态 / `CONTAINING 非结案` 句 / 原因码 / 备注（单行化）/ 生成人时间 / 导出人时间 / 文件清单 / 空块说明 / 口径句 |
+| 上限单一来源 | ✅ 封面值取 `ComplaintPackageAssembler.historyPerLot()`（生效值）/ `holdCap()` / `alarmCap()`；全包零第二处 `history-per-lot` 的 `@Value` |
+| ZIP entry 时间 | ✅ 先 `setTimeLocal` 再 `putNextEntry`（否则本地头与中央目录不一致）；DOS 2 秒粒度属正常 |
+| 前端 | ✅ 抽屉 built 态「下载 JSON」/「下载 ZIP」双按钮，loading 分流；文件名以响应头为准 |
 
 ## 关联
 

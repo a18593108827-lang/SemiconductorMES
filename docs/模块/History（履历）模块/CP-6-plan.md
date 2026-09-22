@@ -210,3 +210,33 @@ h. 文档收尾（同会话）：接口设计 §3 表格 ZIP 行 → `✅ CP-6`�
 ---
 
 **批准记录**：**2026-09-22 用户批准**（经四轮审查：一轮 K12–K14 / D4–D6；二轮对码 + JDK 21 实测 K15 / D7 / D8 / F1–F9；三轮生效值钳制 + `setTimeLocal` 时序 + 堆峰值 + Hold/告警上限入参 D9 / F10–F12；四轮 K8 两头不一致 + 验收 2 两头一致性 + K10 字节侧 2N 修正 F13–F15）。D1–D9 决策、K1–K15 约束、C1–C16 审查项全量生效。批准后按 §5 顺序 a→h 实施；**实现偏离本 plan 时先改 plan 再改码**。
+
+---
+
+## 实施记录（2026-09-22 完成）
+
+**变更文件（7）**
+
+| 文件 | 变更 |
+|------|------|
+| `support/ComplaintPackageExporter.java`（新增） | JSON 节点 / README / ZIP 打包 / 文件名；只注入 `ObjectMapper`；先 `setTimeLocal` 再 `putNextEntry` |
+| `support/ComplaintPackageAssembler.java` | 新增 `historyPerLot()`（生效值）/ `holdCap()` / `alarmCap()`；`loadHistories` 改调访问器并删除方法内钳制（K15） |
+| `facade/impl/ComplaintPackageFacadeImpl.java` | `assertFormat` 归一白名单 json/zip；`exportFile` 按归一值分支；try 只包 Exporter、异常单点翻译；移除自带 `ObjectMapper` / `ObjectNode` 序列化 |
+| `controller/MesComplaintPackageController.java` | `export` 加 `CacheControl.noStore()`（其余不动） |
+| `web/src/api/complaint.ts` | `exportComplaintPackageApi(id, fileName?, format = 'json')` |
+| `web/src/components/lot/ComplaintPackageDrawer.tsx` | `downloading: 'json' \| 'zip' \| null`；footer「下载 JSON」/「下载 ZIP」双按钮 |
+| 文档 | 接口设计 §3/§6.4/§9/§14 + 头部状态；已完成功能（slices 加 CP-6、§7 导出、§6 CP-6 ✅）；进度文档三处；`docs/INDEX.md` 重建 |
+
+**已验证（可复现）**
+
+- 后端编译：`mvn -o -DskipTests compile` → EXIT=0（零新依赖，`pom.xml` diff 为空 = 验收 9）
+- 前端：`npm run build`（`tsc -b` + `vite build`）→ 通过（验收 11 的编译面）
+- 静态核对：Exporter 无 `com.mes.*.mapper` / Mapper 字段 / Assembler / Facade（验收 10）；`exportFile` 无 `@Transactional`（验收 12）；`history-per-lot` 的 `@Value` 全仓仅 Assembler 一处（验收 13）；Exporter 生产代码引用只出现在自身与 FacadeImpl
+- **一次性探针实测（真 Spring Boot 容器 ObjectMapper + 真 Exporter）12 项全 PASS**：entry 恰 2 个且扁平 ASCII；**本地头 == 中央目录时间**（K8/F14）；ZIP 内 JSON 与 `toJsonBytes` **逐字节相同**（同源，比验收 3 的「代码阅读」更硬）；README 20 项行项齐（含上限三行 / 空块说明 / 口径句）；备注换行折成空格；**导出时间 / 生成时间与 JSON 同值同形**（K5）；`exportedBy` / `packageId` 为字符串（F2）
+- 探针件：`.workbuddy/tmp/cp6-probe/`（未入库；`Cp6Probe.java` 复用方式见文件头）
+
+**未执行（环境阻塞，待补）**
+
+- 验收 1 / 5 / 6 / 7 / 11 的真机 `curl`：本机 MySQL（3306）在，但 dev Redis `192.168.187.128:6379` 不可达 → 服务起不来，且需登录态。Redis 恢复后按 §6 验证方式执行：`format=zip|ZIP| zip ` 头与文件名、`format=pdf` → `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`（JSON 错误体、零 zip 字节）、开关关 → `DISABLED`、`format=pdf&id=不存在` → FORMAT 而非 404、空装配包/VOID 包仍出 2 entry、页面两按钮落地后缀
+
+**与 plan 的偏离**：无功能偏离。实现期加了一处防御（不在 K 约束内的加固）：`scalar()` 遇到非标量节点时回退 `node.toString()`，避免容器若被配置成 `WRITE_DATES_AS_TIMESTAMPS=true` 时封面时间/人员静默变 `-`；实测容器默认关闭该 feature，正常走标量分支（K5 仍成立：文本来自同一 `ObjectMapper`）。

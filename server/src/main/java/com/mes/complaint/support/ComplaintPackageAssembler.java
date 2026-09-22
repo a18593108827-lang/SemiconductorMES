@@ -74,6 +74,25 @@ public class ComplaintPackageAssembler {
         return vo;
     }
 
+    /**
+     * 生效的「每 Lot 履历条数」：配置 &lt; 1 时按 100 兜底。
+     * 查询（{@link #loadHistories}）与溯源包封面共用此单一来源（K15 / D7），
+     * 禁止在别处再写 `history-per-lot` 的 `@Value` 或第二份钳制。
+     */
+    public int historyPerLot() {
+        return historyPerLot < 1 ? 100 : historyPerLot;
+    }
+
+    /** 每 Lot Hold `active` / `released` 各自上限（封面用；返回常量防分叉，K15 / D9） */
+    public int holdCap() {
+        return HOLD_CAP;
+    }
+
+    /** 每 Lot 未关闭告警上限（封面用；返回常量防分叉，K15 / D9） */
+    public int alarmCap() {
+        return ALARM_CAP;
+    }
+
     /** 包头实体 → VO 头部字段 */
     private ComplaintPackageVO toHeader(MesComplaintPackage pkg) {
         ComplaintPackageVO vo = new ComplaintPackageVO();
@@ -168,7 +187,7 @@ public class ComplaintPackageAssembler {
         if (map.isEmpty()) {
             return map;
         }
-        int cap = historyPerLot < 1 ? 100 : historyPerLot;
+        int cap = historyPerLot();
         try {
             List<HistoryTxVO> rows = historyFacade.listByLots(map.keySet(), cap);
             if (rows == null || rows.isEmpty()) {
