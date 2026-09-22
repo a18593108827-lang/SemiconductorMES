@@ -267,7 +267,7 @@ Body：preview 字段 + 可选 `reasonCode` / `remark`。
 - `Cache-Control: no-store`（证据包禁缓存，CP-6）
 - `Content-Disposition: attachment; filename="{packageNo}.json|{packageNo}.zip"`（packageNo 纯 ASCII；实现用 Spring `ContentDisposition.attachment().filename(name)` **不带 charset**——带 charset 只产出 `filename*=` 形式）
 
-失败：走全局异常，`Content-Type: application/json;charset=UTF-8`，body 仍是 `R<>`（HTTP 200，看 body `code`）。前端以 Content-Type **前缀** `application/json` 分流。
+失败：走全局异常，`Content-Type: application/json;charset=UTF-8`，body 仍是 `R<>`（HTTP 200）。**业务码承载位置**（2026-09-22 实测）：`GlobalExceptionHandler` 走 `R.fail(e.getCode(), …)`，`BusinessException` 的 `code` 恒为 **500**，业务码在 `msg` **前缀**——如 `{"code":500,"msg":"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"}`；前端取 `msg` 展示，不要拿 `code` 判业务错。前端以 Content-Type **前缀** `application/json` 分流。
 
 `format`（忽略大小写、trim 后判定）：`null` / 空白 或 `json` → JSON 单文件；`zip` → ZIP 证据包；其它值 `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`。VOID：P0 不拦。前端从 `filename=` 取名时去掉引号。
 

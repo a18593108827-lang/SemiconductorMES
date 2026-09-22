@@ -240,3 +240,32 @@ h. 文档收尾（同会话）：接口设计 §3 表格 ZIP 行 → `✅ CP-6`�
 - 验收 1 / 5 / 6 / 7 / 11 的真机 `curl`：本机 MySQL（3306）在，但 dev Redis `192.168.187.128:6379` 不可达 → 服务起不来，且需登录态。Redis 恢复后按 §6 验证方式执行：`format=zip|ZIP| zip ` 头与文件名、`format=pdf` → `COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED`（JSON 错误体、零 zip 字节）、开关关 → `DISABLED`、`format=pdf&id=不存在` → FORMAT 而非 404、空装配包/VOID 包仍出 2 entry、页面两按钮落地后缀
 
 **与 plan 的偏离**：无功能偏离。实现期加了一处防御（不在 K 约束内的加固）：`scalar()` 遇到非标量节点时回退 `node.toString()`，避免容器若被配置成 `WRITE_DATES_AS_TIMESTAMPS=true` 时封面时间/人员静默变 `-`；实测容器默认关闭该 feature，正常走标量分支（K5 仍成立：文本来自同一 `ObjectMapper`）。
+
+### 验收补做（2026-09-22 15:24，Redis 恢复后，真机 HTTP）
+
+前置：dev Redis `192.168.187.128:6379` 已可达、后端在 `127.0.0.1:8080` 运行、登录 `admin`（文档登记的 dev 账号）取 token。探针件：`.workbuddy/tmp/cp6-probe/http_acceptance.py`（可重跑，自登录取 token）。
+
+**结果：26 项断言全 PASS**（4 个存量包的导出各出 2 entry）：
+
+| 验收 | 结论 |
+|------|------|
+| 1 | `format=zip` / `ZIP` / `%20zip%20` 均 200 + `PK` 魔数；`Content-Type: application/octet-stream`；`Cache-Control: no-store`；`Content-Disposition: attachment; filename="CP-20260922-1.zip"` |
+| 2 | 恰 2 个 entry（`CP-20260922-1.json` + `README.txt`，扁平 ASCII）；**本地头 == 中央目录时间**（15:24:36 两处一致）；entry 时间非 0 且 2026 年 |
+| 3 | ZIP 内 JSON 与独立 `format=json` **除 `exportedAt`/`exportedBy` 外逐字段一致**（`diff=[]`）、keys 集合相同 |
+| 4 | README 20 项行项齐（含三行上限 / 空块说明 / `CONTAINING` 非结案句 / 口径句）；导出时间字符串与 JSON `exportedAt` 同值同形；导出人为字符串 id |
+| 5 | `format=pdf` → `application/json` + `{"code":500,"msg":"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"}`，零 zip 字节 |
+| 6 | `format=pdf&id=不存在` → **FORMAT 而非 NOT_FOUND**（K3 顺序成立）；`id=不存在` → `COMPLAINT_PACKAGE_NOT_FOUND` |
+| 7 | 存量 4 包（READY / CONTAINED / READY / CONTAINED，各 2 成员）全部 200 且恰 2 entry |
+| 8 | `format=json` 与空 `format` 口径不变：`filename="….json"` + `no-store`，根含 `exportedAt`/`exportedBy` |
+
+**仍未执行（无法在不改配置/不重启实例的前提下验证）**：验收 6 的「`enabled=false` → `COMPLAINT_PACKAGE_DISABLED`」需改 `application.yml` 并重启（会打断用户正在跑的实例）→ 留待下次启动时顺带验证，或由用户手测。验收 11 的页面部分已由用户实测（并修出一处前端缺陷，见下）。
+
+### 缺陷与口径登记（2026-09-22）
+
+| # | 项 | 结论 |
+|---|----|------|
+| G1 | **前端并发下载（用户实测发现并修复）** | 抽屉拆双按钮后缺少重入保护：同时点「下载 JSON」「下载 ZIP」会并发下载，且先完成者的 `finally` 会清掉后者的 loading；抽屉重开（`packageId` 变更）后旧请求的 `finally` 还会清掉新会话状态。修法：`downloadingRef`（同步重入闸）+ `downloadSeq`（会话序号，旧请求 `finally` 不再改状态）+ 任一在途则两按钮同时 disabled。已过 `tsc -b`。责任在 CP-6 前端实现（原 CP-4 单按钮不暴露此问题） |
+| G2 | **错误码承载口径写偏（文档修正）** | 计划/接口设计原写「失败走全局异常，看 body `code`」。实测现网 `GlobalExceptionHandler` → `R.fail(e.getCode(), …)`，`BusinessException` 的 code 为 `500`，**业务码在 `msg` 前缀**（`"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"`）。已修正接口设计 §6.4 措辞；前端取 `msg` 展示，与其它模块一致 |
+| G3 | 验收探针自身两处误判（非产品问题） | ① 本地头 DOS 时间秒字段是 `seconds/2`，未 ×2 直接与 python `date_time` 比对 → 误报不一致；② 业务码断言取了 `code` 而非 `msg` → 误报 5 项 FAIL。均已修正，重跑全 PASS |
+
+**遗留（未做，可另开切片）**：`EVAL` 尚未启用（`docs/eval/` 仅有 README）——G1 这类「验收期发现的前端缺陷」是否开始走 EVAL 流程，待用户定。

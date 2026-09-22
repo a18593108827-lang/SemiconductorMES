@@ -29,9 +29,12 @@
 - 后置：Adapter(SECS/GEM)、片级 Wafer、MCS/E87、XXL-JOB
 
 ## 本机环境事实（影响验证与联调）
-- MySQL 在 `localhost:3306`（库 `mes`）；**dev Redis 在 `192.168.187.128:6379`，2026-09-22 实测不可达** → 后端服务起不来，涉及登录态/HTTP 的验收只能等 Redis 恢复
-- 项目**无 `src/test`**（Doc-4 后置）：验证一律 curl + SQL + 页面 + 静态核对；环境不可用时用**一次性探针**（真类 + 真容器 Bean，如 `SpringApplication` 取真 `ObjectMapper`）跑 PASS/FAIL 断言，探针放 `.workbuddy/tmp/` 不入库
+- MySQL 在 `localhost:3306`（库 `mes`）；dev Redis 在 `192.168.187.128:6379`（2026-09-22 上午不可达、15:24 起可达）；后端 `127.0.0.1:8080`（用户常自己起，**不要随意重启**）
+- dev 登录账号见文档登记：`admin / 123456`（`DataInitializer` 空库创建）；`POST /auth/login {userCode,password}` → `data.token`；接口无 `/api` 前缀（`/api` 只是 vite 代理重写）
+- **错误响应口径**（全项目通用）：业务异常经 `GlobalExceptionHandler` → `R.fail(e.getCode(), msg)`，**`code` 恒为 500，业务码在 `msg` 前缀**（如 `"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"`）；前端 `lib/http` 用 `msg` 展示 → 断言业务错要取 `msg`，不取 `code`
+- 项目**无 `src/test`**（Doc-4 后置）：验证一律 curl + SQL + 页面 + 静态核对；环境不可用时用**一次性探针**（真类 + 真容器 Bean，如 `SpringApplication` 取真 `ObjectMapper`）跑 PASS/FAIL 断言，探针放 `.workbuddy/tmp/` 不入库（CP-6 留了 `cp6-probe/`：`Cp6Probe.java` 进程内探针 + `http_acceptance.py` 真机 HTTP 验收，均可重跑）
 - 踩点：`LocalDateTime` 的 JSON 形状取决于**容器** ObjectMapper——Spring Boot 自动配置出 ISO 文本，手搓 `Jackson2ObjectMapperBuilder.json()` 出数组（`WRITE_DATES_AS_TIMESTAMPS` 未关）→ 判断序列化形状必须用真容器 Bean
+- 踩点：ZIP 的 DOS 时间秒字段是 `seconds/2`（解析本地头要 ×2）；`setTimeLocal` 必须早于 `putNextEntry`，否则本地头与中央目录时间不一致
 
 ## 关键文档入口
 - 根级上下文：`AGENTS.md`（AI 会话第一入口，含模块铁律与文档流程）
