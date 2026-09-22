@@ -3,7 +3,9 @@
 ## Git 仓库约定
 - **单一仓库**：根目录 `D:/java/xm/2026_07/MES`，分支 `main`，remote origin = `github.com/a18593108827-lang/SemiconductorMES`（public）；提交身份 guocong <a18593108827@163.com>
 - 历史遗留：`server/.git` 曾是**独立仓库**（remote `.../server.git`，master，91 提交）导致「代码提交进 server 仓库、文档提交进根仓库」双历史；2026-09-20 已移至 `D:/java/xm/2026_07/_git-backup/server-dotgit-20260920` 备份并停用，现全仓单一 Git。**禁止再在子目录 `git init`**
-- 提交信息风格：`feat（模块）简述` + 正文分点；实测 `git push` 在本机沙箱/agent 环境不可用（github.com 出口被代理拦 502），须用户在自带代理的客户端执行
+- 提交信息风格：`feat（模块）简述` + 正文分点；实测 `git push` 在本机沙箱/agent 环境不可用，须用户在自带代理的客户端执行
+- 推送环境实测（2026-09-22 15:35）：本机**代理 7897 是通的**（`curl -x http://127.0.0.1:7897 https://api.github.com` → 200；直连 github 失败），但**无可用凭据**——`credential.helper=helper-selector`、无 `~/.git-credentials`、无 `GITHUB_TOKEN/GH_TOKEN` 环境变量、`gh` 未安装、`git credential fill` 返回空（GCM 非交互提示被禁）→ **agent 侧只能 commit，push 必须用户执行**；用户侧命令：`git -c http.proxy=http://127.0.0.1:7897 push origin main`
+- plan 状态语义（2026-09-22 统一）：`draft`（未批）→ `approved`（可动码）→ **`done`（已实现+已验收）**；完成态同时落「已完成功能」+ 进度文档，plan 也要改 `done`（CP-3~CP-6 四份已统一，INDEX 状态列显示 `done ✅`）
 - 待处理：`server/src/main/resources/application-dev.yml` 含本机弱口令与内网 IP，已随公开仓库提交，建议改环境变量占位或转 private
 
 ## 项目定位
