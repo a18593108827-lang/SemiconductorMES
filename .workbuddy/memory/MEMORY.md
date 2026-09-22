@@ -21,11 +21,17 @@
 - 跨模块只走 Facade（CarrierFacade / RecipeFacade / EdcFacade / HistoryFacade / ReportFacade）
 - 状态变更写 `mes_tx_log`；表前缀分模块（如 mes_recipe*）
 
-## 进度（截至 2026-09-14 文档）
+## 进度（截至 2026-09-22 文档）
 - 已完成：权限用户、Route、Lot、Track（一期+二期部分）、WIP、Hold（+Future Hold P0）、Equipment、Dispatch、Recipe、EDC 一期 P0、History、SPC 1~5、Alarm 1~4、Dashboard、Report 一期
 - Carrier：C0+C1（Car-1~5）✅，C2 扫码比对（Car-6/7/8）✅
+- **客诉追溯包（History 模块，`com.mes.complaint`）：CP-1～CP-6 全部落地**——preview / build / get / list / export(JSON+ZIP) / contain；CP-6 ZIP = `{packageNo}.zip`（`{packageNo}.json` + `README.txt` 封面），装配在 `ComplaintPackageExporter`（2026-09-22，commit 6595d83）；plan 保持 `approved`、完成态落「已完成功能」（CP-3/4/5/6 同惯例）
 - 规划未实施：Agent 数据暴露架构（Tool Facade + 可选 MCP，2026-09-18 立项）、APS、数采、AI/RAG
 - 后置：Adapter(SECS/GEM)、片级 Wafer、MCS/E87、XXL-JOB
+
+## 本机环境事实（影响验证与联调）
+- MySQL 在 `localhost:3306`（库 `mes`）；**dev Redis 在 `192.168.187.128:6379`，2026-09-22 实测不可达** → 后端服务起不来，涉及登录态/HTTP 的验收只能等 Redis 恢复
+- 项目**无 `src/test`**（Doc-4 后置）：验证一律 curl + SQL + 页面 + 静态核对；环境不可用时用**一次性探针**（真类 + 真容器 Bean，如 `SpringApplication` 取真 `ObjectMapper`）跑 PASS/FAIL 断言，探针放 `.workbuddy/tmp/` 不入库
+- 踩点：`LocalDateTime` 的 JSON 形状取决于**容器** ObjectMapper——Spring Boot 自动配置出 ISO 文本，手搓 `Jackson2ObjectMapperBuilder.json()` 出数组（`WRITE_DATES_AS_TIMESTAMPS` 未关）→ 判断序列化形状必须用真容器 Bean
 
 ## 关键文档入口
 - 根级上下文：`AGENTS.md`（AI 会话第一入口，含模块铁律与文档流程）
@@ -44,3 +50,5 @@
 - 切片交付（如 Car-6→7→8），明确顺序与依赖
 - 目录路由：INT→`docs/intent/`；EVAL→`docs/eval/`；切片 plan→所属模块目录 `{切片号}-plan.md`；其余老目录原位
 - 流程铁律：plan 未批不动码（A2）；完成后同会话更新「已完成功能」+进度文档（A3）；每起事故产一条 EVAL（G5）
+- plan 定稿 ≠ plan 正确：审查（含「我改了文档你再审一遍」的复审）必须落到**代码行号 / 实测 / 反编译证据**，结论以 `F#`（事实修正）+ `C#`（绑定约束）行追加进 plan 并标注轮次；多轮审查只追加，不静默改写已批准内容
+- 实施完 = 编译 + 构建 + 静态核对 + 可执行探针断言；环境阻塞的验收条目在 plan「实施记录」显式登记「未执行 + 补做条件」，禁止拿「编译通过」当功能验收
