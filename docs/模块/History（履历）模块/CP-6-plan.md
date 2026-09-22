@@ -264,8 +264,8 @@ h. 文档收尾（同会话）：接口设计 §3 表格 ZIP 行 → `✅ CP-6`�
 
 | # | 项 | 结论 |
 |---|----|------|
-| G1 | **前端并发下载（用户实测发现并修复）** | 抽屉拆双按钮后缺少重入保护：同时点「下载 JSON」「下载 ZIP」会并发下载，且先完成者的 `finally` 会清掉后者的 loading；抽屉重开（`packageId` 变更）后旧请求的 `finally` 还会清掉新会话状态。修法：`downloadingRef`（同步重入闸）+ `downloadSeq`（会话序号，旧请求 `finally` 不再改状态）+ 任一在途则两按钮同时 disabled。已过 `tsc -b`。责任在 CP-6 前端实现（原 CP-4 单按钮不暴露此问题） |
+| G1 | **前端并发下载（用户实测发现并修复）** | 抽屉拆双按钮后缺少重入保护：同时点「下载 JSON」「下载 ZIP」会并发下载，且先完成者的 `finally` 会清掉后者的 loading；抽屉重开（`packageId` 变更）后旧请求的 `finally` 还会清掉新会话状态。修法：`downloadingRef`（同步重入闸）+ `downloadSeq`（会话序号，旧请求 `finally` 不再改状态）+ 任一在途则两按钮同时 disabled。已过 `tsc -b`。责任在 CP-6 前端实现（原 CP-4 单按钮不暴露此问题）。**已按 G5 落档 `docs/eval/EVAL-0001-追溯包抽屉并发下载重入.md`**（2026-09-22 启用 EVAL 后首条） |
 | G2 | **错误码承载口径写偏（文档修正）** | 计划/接口设计原写「失败走全局异常，看 body `code`」。实测现网 `GlobalExceptionHandler` → `R.fail(e.getCode(), …)`，`BusinessException` 的 code 为 `500`，**业务码在 `msg` 前缀**（`"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"`）。已修正接口设计 §6.4 措辞；前端取 `msg` 展示，与其它模块一致 |
 | G3 | 验收探针自身两处误判（非产品问题） | ① 本地头 DOS 时间秒字段是 `seconds/2`，未 ×2 直接与 python `date_time` 比对 → 误报不一致；② 业务码断言取了 `code` 而非 `msg` → 误报 5 项 FAIL。均已修正，重跑全 PASS |
 
-**遗留（未做，可另开切片）**：`EVAL` 尚未启用（`docs/eval/` 仅有 README）——G1 这类「验收期发现的前端缺陷」是否开始走 EVAL 流程，待用户定。
+**遗留（未做，可另开切片）**：EVAL 已于 2026-09-22 启用（首条 = G1 → `docs/eval/EVAL-0001-追溯包抽屉并发下载重入.md`）；`docs/eval/README.md` 明确「验收期缺陷亦落档」与「每条须有防复发回流点」，`plan-模板` §6 已增「副作用与并发」验收栏。

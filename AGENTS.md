@@ -30,7 +30,7 @@ Java 21 + Spring Boot（单体模块化）+ MyBatis-Plus + MySQL + Redis + Sa-To
 2. 采纳后写规格：跨模块方案 → `docs/方案/`；模块内 → `docs/模块/{模块}/` 五件套（功能文档 / 数据库设计 / 接口设计 / 功能清单 / 已完成功能）
 3. **动码前**：切片 `{切片号}-plan.md`（`docs/_templates/plan-模板.md`）必须 `status: approved`
 4. **完成后**：同会话更新该模块「已完成功能」+ `docs/架构/MES-实施进度与下一步.md`
-5. 事故/线上缺陷：`docs/_templates/EVAL-模板.md` → `docs/eval/EVAL-{N}-*.md`（后置启用）
+5. 事故/线上缺陷（含验收期缺陷）：`docs/_templates/EVAL-模板.md` → `docs/eval/EVAL-{N}-*.md`（四位递增；每条须产出一个「防复发」回流点，只修码不回流 = 未闭环）
 6. 文档总账：`docs/INDEX.md`（按 type / module / status 检索）
 
 规则详见：`docs/架构/MES-AI原生SDLC文档体系重构方案.md`

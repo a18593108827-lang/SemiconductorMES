@@ -10,12 +10,13 @@ updated: 2026-09-22
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-22 · 共 96 篇
+> 生成：2026-09-22 · 共 97 篇
 
 ## 状态汇总
 
 | 状态 | 篇数 |
 |------|------|
+| active | 1 |
 | approved | 4 |
 | done | 84 |
 | draft | 6 |
@@ -151,6 +152,12 @@ updated: 2026-09-22
 | CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | approved | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
 | CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | approved | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
+
+### eval（1 篇）
+
+| 文档 | 模块 | 状态 | 更新 | 路径 |
+|------|------|------|------|------|
+| EVAL-0001 追溯包抽屉并发下载：双按钮无重入闸，loading 错乱且旧请求清空新会话状态 | History | active | 2026-09-22 | `eval/EVAL-0001-追溯包抽屉并发下载重入.md` |
 
 ### 进度（1 篇）
 
