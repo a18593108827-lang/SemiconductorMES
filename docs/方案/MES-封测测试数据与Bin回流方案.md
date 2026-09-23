@@ -13,7 +13,7 @@ updated: 2026-09-23
 > 归属：新增 **Test（测试数据）模块** + Lot 模块扩展（Strip / 客户 Lot 映射）；状态拦截仍归 Hold / Track  
 > 对齐：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳）· `MES-厂型选型分析.md` §5 / §6（后道需补清单·第一批）· `BK-0001-测试与Bin分档.md`  
 > 前提（均已落地）：Track 唯一真相 · Lot + Genealogy · Hold 最小集 · Rework（`mes_route_edge`，含 `rework` 边与 `reason_codes`）· 客诉包 CP-1～CP-6 · CI 三闸门  
-> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁）  
+> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录）  
 > 状态：**草案**（待批准；TD-1 的 plan 另行出，plan 未批不动码）  
 > **易混：** 本方案 ≠ YMS 良率分析 · ≠ Wafer Map 图形分析 · ≠ SEMI T23 / eDHR · ≠ EAP 设备直连 · ≠ 前道片级 SlotMap
 
@@ -104,9 +104,9 @@ Wafer Lot ──┐                                                       ┌─
 | status                              | TINYINT      | N | 1 启用 / 0 停用                                       |
 | version                             | INT          | N | 乐观锁版本号：PUT 条件更新，冲突即拒（§5）                  |
 | remark                              | VARCHAR(256) | Y |                                                   |
-| create_time / update_time / deleted |              |   | 审计与软删（deleted BIGINT，作废置为主键 id，见 §3.7）  |
+| create_time / update_time / deleted |              |   | 审计与软删（`deleted` TINYINT 0/1，与全库一致；见 §3.7）  |
 
-UK：`(product_code, program_name, bin_type, bin_code, deleted)`（deleted 口径见 §3.7）。
+UK：`(product_code, program_name, bin_type, bin_code)`（**UK 不含 `deleted`**，见 §3.7）。
 
 **写入校验（服务层）**：`bin_scope` 必须与 `product_code` / `program_name` 取值一致——GLOBAL ⇒ 两字段均 `''`；PRODUCT ⇒ product_code 非空且 program_name `''`；PROGRAM ⇒ 两字段均非空；不一致拒（`TEST_BIN_SCOPE_INCONSISTENT`）。`bin_scope` 仅作人读与校验声明，**不参与解析回退**（V2 回退只看两 code 字段）。
 
@@ -160,9 +160,9 @@ UK：`(record_id, bin_type, bin_code)`。无独立审计 / 软删字段：生命
 | bin_code                                        | VARCHAR(32)  | Y | 该条最终判定档（TD-3 才细分到条，TD-1 允许留空） |
 | status                                          | VARCHAR(16)  | Y | 条级状态（TD-1 仅登记，不做流程）           |
 | remark                                          | VARCHAR(256) | Y |                               |
-| create_by / create_time / update_time / deleted |              |   | 审计与软删（deleted BIGINT，删除置为主键 id，见 §3.7） |
+| create_by / create_time / update_time / deleted |              |   | 审计与软删（`deleted` TINYINT 0/1，与全库一致；见 §3.7） |
 
-UK：`(lot_id, strip_no, deleted)`（deleted 口径见 §3.7）。索引：`lot_id`。
+UK：`(lot_id, strip_no)`（**UK 不含 `deleted`**，见 §3.7）。索引：`lot_id`。
 
 ### 3.5 `mes_lot_customer_map` — 客户 Lot 映射（Lot 模块）
 
@@ -177,9 +177,9 @@ UK：`(lot_id, strip_no, deleted)`（deleted 口径见 §3.7）。索引：`lot_
 | customer_code                     | VARCHAR(64)  | Y | 客户编码                                    |
 | qty                               | INT          | Y | 映射数量（可空）                                |
 | remark                            | VARCHAR(256) | Y |                                         |
-| create_by / create_time / deleted |              |   | 审计与软删（deleted BIGINT，删除置为主键 id，见 §3.7）      |
+| create_by / create_time / deleted |              |   | 审计与软删（`deleted` TINYINT 0/1，与全库一致；见 §3.7）      |
 
-UK：`(lot_id, map_type, external_lot_no, deleted)`（deleted 口径见 §3.7）。索引：`external_lot_no`（反向查「哪批用了这个 wafer lot」是召回主路径）。
+UK：`(lot_id, map_type, external_lot_no)`（**UK 不含 `deleted`**，见 §3.7）。索引：`external_lot_no`（反向查「哪批用了这个 wafer lot」是召回主路径）。
 
 **与 `mes_lot.customer_lot` 的关系**（P9 / D4）：现网 `mes_lot` 已有 `customer_lot VARCHAR(64)` 单字段。本方案**不复用**它作映射真相——单字段无法表达一对多 / 双向 / 数量 / 审计；它**保留为便查冗余**（兼容既有页面），真相在新表。二者冲突时以新表为准。
 
@@ -193,16 +193,24 @@ UK：`(lot_id, map_type, external_lot_no, deleted)`（deleted 口径见 §3.7）
 | 权限            | 见 §5 权限码；挂管理端                                                                                                     |
 | 菜单            | 管理端「测试数据」入口                                                                                                       |
 
-### 3.7 删除与软删策略（UK 与 `deleted` 共存）
+### 3.7 删除与软删口径（**已定：与现网一致**）
 
-现网 UK 均不含 `deleted`，软删后同键重建会撞 UK（EDC 模块已踩坑，靠「物理删再插躲开软删唯一键冲突」绕过，`MesEdcPlanServiceImpl`）。本方案逐表定口径（D13）：
+> **决策依据（2026-09-23 用户拍板，采纳方案①）**：曾考虑「`deleted` 置主键 id + UK 含 `deleted`」以支持「撤销后重建同键」，实测与现网机制**三处硬冲突**——
+> ① MP 的 `logic-delete-value` 是**字符串常量**（反编译 `GlobalConfig.java:184`：`private String logicDeleteValue = "1"`），`AbstractMethod.java:106` 的 `sqlLogicSet` 直接 `"SET " + table.getLogicDeleteSql(...)` 拼成 SQL 字面量，**无「列引用表达式」解析** → 要置 id 必须手写 UPDATE，等于放弃 MP 的逻辑删除；
+> ② `BaseEntity.java:27` 是 `Integer deleted`，而 `id-type: assign_id` 产生 **19 位雪花 id**（实测 `mes_lot.MAX(id)=2101886136844746754` vs `Integer.MAX_VALUE=2147483647`）→ **溢出 9.8 亿倍**；
+> ③ 全库 `deleted` **27 处全 tinyint**、UK 含 `deleted` 的表 **0 个**。
+> 故**放弃「置 id」手法，全部按现网口径**；代价是「撤销后重建同键」不可行（用 UPDATE 表达，见下表与 §12）。
 
 | 表 | 策略 |
 |----|------|
-| `mes_test_record` | **不删只作废**：软删 + 必填原因（留审计）；`record_no` 不复用，无同键重建需求，`deleted` 维持 TINYINT |
-| `mes_test_bin_summary` | 无独立软删；生命周期随头记录，查询一律 join 头表过滤 |
-| `mes_lot_strip` / `mes_lot_customer_map` | `deleted` 用 BIGINT：未删为 0，删除时置为主键 id；**UK 含 `deleted`** → 同键仅一行活跃，删后可重新登记 |
-| `mes_bin_def` | 不删只停用（`status=0`）；误建走「作废」（同 strip 手法，deleted BIGINT 置主键 id）；历史汇总行有 `bin_name` / `is_shippable` 快照，不依赖字典行存活（D7） |
+| **全表通用** | `deleted` 一律 **TINYINT**（0 未删 / 1 已删），与全库 27 处一致；**UK 一律不含 `deleted`**；软删走 MP 的 `@TableLogic` + 全局 `logic-delete-value: 1`，**禁止手写软删 SQL** |
+| `mes_test_record` | **不删只作废**：软删 + 必填原因（留审计）；`record_no` 不复用 → 无同键重建需求 |
+| `mes_test_bin_summary` | 无独立软删字段；生命周期随头记录，查询一律 join 头表过滤 |
+| `mes_lot_strip` | 条号写错用 `PUT` 改 `strip_no`，**不删+建**；软删后同键**不可重建**（UK 不含 deleted → 再登记会撞唯一键，由前置校验明确拒绝并提示改原行） |
+| `mes_lot_customer_map` | 同上：映射纠正优先 `PUT` 改行；「撤销后重登同键」见 §12 遗留 |
+| `mes_bin_def` | **不删只停用**（`status=0`）+ 改行；同键唯一、不复用 |
+
+**为何没有更优雅的绕法**：MySQL **不支持** PostgreSQL 式「部分唯一索引」（`CREATE UNIQUE INDEX ... WHERE deleted = 0`），故不存在第三种解法。
 
 ---
 
@@ -347,7 +355,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | D10 | 切片自 TD-1 起编号；plan 落 `docs/模块/测试数据（Test）模块/TD-1-plan.md` | 与「切片 plan 归所属模块目录」约定一致 |
 | D11 | `record_no` 用**号段表**发号（`mes_test_record_no_seq`），与 Lot 单号同机制 | 并发防撞号；复用现网 `MesLotNoSeqMapper` 先例，不新造第二套发号路径 |
 | D12 | 防重复提交靠**业务判重窗口**（V6），不靠 UK 或前端重入闸 | 重新提交生成新 record_id，`(record_id, ...)` UK 完全不设防；前端重入闸不是架构保证 |
-| D13 | 主数据软删用 **deleted 置主键 id** 手法，UK 含 `deleted` | 现网 UK 均不含 deleted → 软删后同键重建撞 UK（EDC 已踩坑）；此手法允许重新登记且保留审计 |
+| D13 | **软删一律与现网一致**：`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`；**放弃**「置主键 id」手法 | **2026-09-23 用户拍板（采纳方案①）**。原「置 id」方案与现网机制三处硬冲突：① MP 的 `logicDeleteValue` 是 String 常量（`GlobalConfig.java:184`），`AbstractMethod.java:106` 直接拼 SQL 字面量、无列引用解析 → 无法置 id；② `BaseEntity.deleted` 是 `Integer`，装不下 19 位雪花 id（实测溢出 9.8 亿倍）；③ 全库 `deleted` 27 处全 tinyint、UK 含 deleted 的表 0 个。代价：「撤销后重建同键」不可行，用 UPDATE 表达（§3.7 / §12） |
 
 ---
 
@@ -386,6 +394,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | 条级 Bin 细分 | 只到 Lot 级汇总 | 需要按条定位不良分布 | TD-3 |
 | 良率 / Wafer Map 图形 | 无 | 需要图形化失效分布分析 | YMS 范畴，另评估 |
 | 「当前有效」测试记录 | 由查询侧取最新 | 需要人工指定重测结论 | 增设 `is_current` 标志（须带审计，勿静默改历史） |
+| **软删后同键重建** | **不支持**（UK 不含 `deleted`，为与全库 27 处一致，见 §3.7） | 真出现「撤销后确需重建同键」 | 三选一：① 改 UK 含 `deleted`（须先把 `BaseEntity.deleted` 改 `Long` + 手写软删，成为全仓例外）；② 加「复活」接口（`deleted` 改回 0）；③ 该场景改物理删。**TD-1 不做** |
 | 拆批后测试记录查询语义 | 未定义（子批是否经 genealogy 回溯父批测试记录） | 客诉包 / Lot 详情需在拆批场景出分档证据 | 明确查询侧口径（建议沿 genealogy 遍历、限深度）；写入侧不改 |
 | 出货 / 编带 / 委外工序 | 无 | 后道第三批 | `MES-厂型选型分析.md` §6 第三批 |
 | EAP 试点（测试机 / 分选机直连） | 无 | 设备侧具备 SECS/GEM | 远期；A2 允许先用文件过渡 |
@@ -441,3 +450,12 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | `mes_test_record_no_seq` 并发取号的行为实测 | 需写库，本轮只读；留待 TD-1 实施期的探针（含并发压测） |
 | `GET /test/summary/by-lot/{lotId}` 的前端消费路径 | 属 plan 阶段实现细节，规格层只需契约 |
 | 拆批（split）后测试记录的查询语义 | 已登记进 §12 遗留，属 TD-1 规格待补口径 |
+
+### 裁决记录（2026-09-23）
+
+| 项 | 裁决 | 落点 |
+|----|------|------|
+| **C1** | **采纳方案 ①**：软删与现网一致（`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`），**放弃**「置主键 id」手法 | §3.7 重写 · §9 D13 改写 · §3.1 / §3.4 / §3.5 的字段说明与 UK 行同步 · §12 新增「软删后同键重建」遗留项 |
+| C2 | **待定**（权限码三级是否收敛） | — |
+| C3 | **待定**（V6 判重键是否加 `eqp_id`） | — |
+| C4 | **待定**（Bin 字典是否加 `program_version` 维度） | — |
