@@ -23,6 +23,7 @@
 - Route=定义 / Track=执行 / Dispatch=选机 / WIP=只读投影 / Hold=拦截 / History=只追加 / EDC=点真相+Spec门禁 / SPC=只读趋势+OOC Alarm 不挡 TrackOut
 - 跨模块只走 Facade（CarrierFacade / RecipeFacade / EdcFacade / HistoryFacade / ReportFacade）
 - 状态变更写 `mes_tx_log`；表前缀分模块（如 mes_recipe*）
+- **权限体系（2026-09-23 实测，加权限码前必读）**：`perm_code` 在系统里是**不透明字符串** —— ① 取码 SQL 无任何 LIKE/前缀匹配（`SysPermissionMapper:16-26` 只判 `IS NOT NULL AND <> ''`）；② 后端 `StpInterfaceImpl:20-22` 把权限码列表交 Sa-Token 匹配；③ 前端 `AuthContext.tsx:72-73` = `user.permissions.includes(code)`，**精确字符串匹配**（不是前缀匹配）；④ **菜单树靠 `parent_id` + `perm_type` 建**（`AuthServiceImpl:114-146` buildMenus），**与 permCode 的冒号层数无关**；⑤ 全仓**无** `split(':')` / `startsWith('xx:')` 解析（grep 无命中）。→ 权限码冒号几层**不影响功能**，只为命名一致；现网 50+ 码统一两级 `资源:动作`（动作名可含连字符，先例 `track:track-in` / `dispatch:reserve`）
 
 ## 进度（截至 2026-09-22 文档）
 - 已完成：权限用户、Route、Lot、Track（一期+二期部分）、WIP、Hold（+Future Hold P0）、Equipment、Dispatch、Recipe、EDC 一期 P0、History、SPC 1~5、Alarm 1~4、Dashboard、Report 一期

@@ -13,7 +13,7 @@ updated: 2026-09-23
 > 归属：新增 **Test（测试数据）模块** + Lot 模块扩展（Strip / 客户 Lot 映射）；状态拦截仍归 Hold / Track  
 > 对齐：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳）· `MES-厂型选型分析.md` §5 / §6（后道需补清单·第一批）· `BK-0001-测试与Bin分档.md`  
 > 前提（均已落地）：Track 唯一真相 · Lot + Genealogy · Hold 最小集 · Rework（`mes_route_edge`，含 `rework` 边与 `reason_codes`）· 客诉包 CP-1～CP-6 · CI 三闸门  
-> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`）  
+> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`；**C2 落地**：权限码收敛为两级）  
 > 状态：**草案**（待批准；TD-1 的 plan 另行出，plan 未批不动码）  
 > **易混：** 本方案 ≠ YMS 良率分析 · ≠ Wafer Map 图形分析 · ≠ SEMI T23 / eDHR · ≠ EAP 设备直连 · ≠ 前道片级 SlotMap
 
@@ -243,21 +243,23 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 
 | 方法   | 路径                         | 权限码                  | 说明                                                     |
 | ---- | -------------------------- | -------------------- | ------------------------------------------------------ |
-| POST | `/test/records`            | `test:record:create` | 登记测试记录 **+ Bin 汇总**（一次提交、同事务，A8）                       |
-| GET  | `/test/records`            | `test:record:view`   | 分页查询（`lotId` / `lotNo` / `stage` / 程序 / 时间范围）          |
-| GET  | `/test/records/{id}`       | `test:record:view`   | 详情（含 Bin 明细）                                           |
-| GET  | `/test/summary/by-lot/{lotId}` | `test:record:view` | 按批的测试摘要（Lot 详情页消费）；**Test 模块自有 controller**，Lot 侧不代理此端点（A7，避免 Lot 直连 `mes_test_*`） |
-| PUT  | `/test/records/{id}/void`  | `test:record:create` | 作废测试记录（原因必填，留审计；头与 Bin 汇总一并软删，A11）                    |
-| GET  | `/test/bins`               | `test:bin:view`      | Bin 字典查询（可选 `productCode` / `programName` / `binType`） |
-| POST | `/test/bins`               | `test:bin:edit`      | Bin 字典新增                                               |
-| PUT  | `/test/bins/{id}`          | `test:bin:edit`      | Bin 字典修改 / 停用（**乐观锁**：请求携带 `version`，**用 MP `@Version` 由 `updateById` 自动加条件**，影响行数为 0 即冲突 → 拒 `TEST_BIN_DEF_CONFLICT`，禁止静默覆盖。**禁止手写 version 条件更新**；现网已注册 `OptimisticLockerInnerInterceptor`，判冲突先例 `MesEdcPlanServiceImpl:141-142`） |
+| POST | `/test/records`            | `test:create` | 登记测试记录 **+ Bin 汇总**（一次提交、同事务，A8）                       |
+| GET  | `/test/records`            | `test:view` | 分页查询（`lotId` / `lotNo` / `stage` / 程序 / 时间范围）          |
+| GET  | `/test/records/{id}`       | `test:view` | 详情（含 Bin 明细）                                           |
+| GET  | `/test/summary/by-lot/{lotId}` | `test:view` | 按批的测试摘要（Lot 详情页消费）；**Test 模块自有 controller**，Lot 侧不代理此端点（A7，避免 Lot 直连 `mes_test_*`） |
+| PUT  | `/test/records/{id}/void`  | `test:void` | 作废测试记录（原因必填，留审计；头与 Bin 汇总一并软删，A11）                    |
+| GET  | `/test/bins`               | `test:view` | Bin 字典查询（可选 `productCode` / `programName` / `binType`） |
+| POST | `/test/bins`               | `test:edit-bin` | Bin 字典新增                                               |
+| PUT  | `/test/bins/{id}`          | `test:edit-bin` | Bin 字典修改 / 停用（**乐观锁**：请求携带 `version`，**用 MP `@Version` 由 `updateById` 自动加条件**，影响行数为 0 即冲突 → 拒 `TEST_BIN_DEF_CONFLICT`，禁止静默覆盖。**禁止手写 version 条件更新**；现网已注册 `OptimisticLockerInnerInterceptor`，判冲突先例 `MesEdcPlanServiceImpl:141-142`） |
 | POST | `/lots/{id}/strips`        | `lot:edit`           | Strip 批量登记（一次一条批的多条 Strip；**同事务整体成败**，请求内 `strip_no` 重复前置拒绝 `LOT_STRIP_DUPLICATE`，不靠 UK 报错兜底） |
 | GET  | `/lots/{id}/strips`        | `lot:list`           | Strip 列表                                               |
 | POST | `/lots/{id}/customer-maps` | `lot:edit`           | 客户 Lot 映射登记（INBOUND / OUTBOUND）                        |
 | GET  | `/lots/{id}/customer-maps` | `lot:list`           | 映射查询（正查）                                               |
 | GET  | `/lots/by-external-lot`    | `lot:list`           | 按外部批号反查内部批（召回主路径）                                      |
 
-**权限码新增**：`test:record:view`、`test:record:create`、`test:bin:view`、`test:bin:edit`（种子入 `sys_permission`，挂管理端菜单；现场台不挂）。错误码随实现定义，命名沿用现网 `<模块>_<语义>` 风格（如 `TEST_BIN_SUM_MISMATCH`），错误响应口径沿用「业务码在 `msg` 前缀」（见项目记忆与 `MES-客诉追溯包接口设计.md` §6.4）。
+**权限码新增（4 个，**全两级**，与现网 50+ 码风格一致）**：`test:view`（记录查询 / 详情 / 摘要 **+ Bin 字典查询**）、`test:create`（登记记录）、`test:void`（作废记录）、`test:edit-bin`（Bin 字典新增 / 修改 / 停用）。（种子入 `sys_permission`，挂管理端菜单；现场台不挂。）
+
+> **分权设计说明（C2 裁决）**：字典**查看**并入 `test:view` —— 能登记测试记录的人必然要看 Bin 字典，否则填不出来，单列无实义；字典**维护**保留独立 `test:edit-bin` —— 「只维护字典、不登记记录」的岗位真实存在（如工艺工程师维护 Bin 定义）。作废单列 `test:void`（改历史状态，敏感操作）。**注意**：现网 `perm_code` 是不透明字符串（前端 `permissions.includes()` 精确匹配、菜单树靠 `parent_id` 建），冒号层数**不影响功能**，本次收敛纯为风格一致。错误码随实现定义，命名沿用现网 `<模块>_<语义>` 风格（如 `TEST_BIN_SUM_MISMATCH`），错误响应口径沿用「业务码在 `msg` 前缀」（见项目记忆与 `MES-客诉追溯包接口设计.md` §6.4）。
 
 **登记校验（写入即拒，不留半截数据）**：
 
@@ -457,6 +459,6 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 |----|------|------|
 | **C1** | **采纳方案 ①**：软删与现网一致（`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`），**放弃**「置主键 id」手法 | §3.7 重写 · §9 D13 改写 · §3.1 / §3.4 / §3.5 的字段说明与 UK 行同步 · §12 新增「软删后同键重建」遗留项 |
 | **F2** | **采纳**：乐观锁走 MP `@Version`，不手写条件更新 | §3.1 `version` 字段说明 · §5 `PUT /test/bins/{id}` · §10 并发表 —— 三处措辞精确化 |
-| C2 | **待定**（权限码三级是否收敛） | — |
+| **C2** | **采纳**：收敛为两级 —— `test:view` / `test:create` / `test:void` / `test:edit-bin`；并把「作废」从 create 中单列出来 | §5 接口表 8 行权限码 + 「权限码新增」列表（含分权设计说明）；字典查看并入 `test:view`、字典维护保留 `test:edit-bin` |
 | C3 | **待定**（V6 判重键是否加 `eqp_id`） | — |
 | C4 | **待定**（Bin 字典是否加 `program_version` 维度） | — |
