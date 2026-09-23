@@ -211,7 +211,7 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 
 **约束**：客诉包与报表**禁止**直连 `mes_test_*` 表或其 mapper（A7 / P4）；Test 模块**禁止**引用 Hold / Track 的写路径（A1）。
 
-**包结构（重要）**：沿用**现网实际分层** `com.mes.test.{controller,dto,entity,mapper,service,service.impl,vo}`（与 `lot` / `hold` / `complaint` 一致）。注意 `AGENTS.md` §3 写的 `api / application / domain / infrastructure` 是**目标态**，现网从未采用（实测 lot、hold、complaint 三个模块一级子目录为 controller / dto / entity / mapper / service / vo / facade / support）——新模块**不与存量分叉**，见 §12 遗留。
+**包结构（重要）**：沿用**现网实际分层** `com.mes.test.{controller,dto,entity,mapper,service,service.impl,vo}`（与 `lot` / `hold` / `complaint` 一致，2026-09-23 实测）。`AGENTS.md` §3 已同步为现网分层（同日决定：按现网、代码零改动），新模块**不与存量分叉**。
 
 ---
 
@@ -354,7 +354,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 
 | 项 | 现状 | 触发条件 | 方案 |
 |----|------|----------|------|
-| **`AGENTS.md` 分层与现网不符** | `AGENTS.md` §3 写 `api/application/domain/infrastructure`，现网实际为 `controller/dto/entity/mapper/service/vo`（实测 3 个模块） | 后续任何 AI 会话按 AGENTS.md 建模块即产出不一致 | 二选一：① 把 AGENTS.md 改为现网实际（**推荐**，成本一次）；② 全仓按目标态重构（成本极高，不推荐）。**本方案选 ① 的口径**：新模块按现网 |
+| ~~`AGENTS.md` 分层与现网不符~~ **已闭环（2026-09-23）** | `AGENTS.md` §3 原写 `api/application/domain/infrastructure`（目标态，现网从未采用；实测 lot / hold / complaint 为 controller / dto / entity / mapper / service / vo / facade / support） | — | **用户决策（2026-09-23）：按现网分层，改文档、代码零改动** —— `AGENTS.md` §3 已同步为现网实际分层 |
 | 颗级 Die / ECID 序列号 | 无 | 客户要求颗级召回 | TD-3；依赖 wafer map / die mapping 数据源 |
 | STDF / CSV 自动解析 | 手工或 API 结构提交 | 测试机可导出 STDF | TD-3；先核对 STDF 记录字段（`BK-0001` 待核实 1） |
 | 条级 Bin 细分 | 只到 Lot 级汇总 | 需要按条定位不良分布 | TD-3 |

@@ -21,7 +21,7 @@
 ## 3. 技术栈与运行
 
 Java 21 + Spring Boot（单体模块化）+ MyBatis-Plus + MySQL + Redis + Sa-Token。
-包结构 `com.mes.{module}`，每模块 api / application / domain / infrastructure。
+包结构 `com.mes.{module}`（**现网实际分层**，2026-09-23 实测）：`controller` / `dto` / `entity` / `mapper` / `service`(+`service/impl`) / `vo`；按需另加 `facade` / `support` / `event` / `job` / `listener` / `aspect` / `annotation` / `ws`。新建模块一律按此，禁止自创第二套分层。
 前端 React（web/）：管理端 Admin Light + 现场台 Field Dark（大触控）。
 
 ## 4. 文档体系（会话必读流程）

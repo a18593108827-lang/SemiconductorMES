@@ -57,7 +57,7 @@ updated: 2026-09-23
 | K5 | 程序版本必填 | `program_name` / `program_version` / `test_time` 非空（V3 / A9） |
 | K6 | 允许重测 | 同批多条记录合法，**不覆盖**、不加唯一约束（A10） |
 | K7 | 快照不可漂 | 汇总行的 `bin_name` / `is_shippable` 为登记时快照；字典后改**不影响**历史（D7） |
-| K8 | Pack 结构沿用现网 | 新模块用 `controller / dto / entity / mapper / service / service.impl / vo`（实测 lot / hold / complaint 一致），**不**用 `AGENTS.md` 的目标态分层 |
+| K8 | 包结构沿用现网 | 新模块用 `controller / dto / entity / mapper / service / service.impl / vo`（实测 lot / hold / complaint 一致）；`AGENTS.md` §3 已于 2026-09-23 同步为现网分层，二者一致 |
 | K9 | 权限 id 先复核 | 见 M1；禁止直接照抄本 plan 的数字落库 |
 | K10 | 错误口径 | 业务码在 `msg` 前缀（现网 `GlobalExceptionHandler` 恒 `code=500`）；前端取 `msg` 展示 |
 

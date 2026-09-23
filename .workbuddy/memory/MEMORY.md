@@ -17,7 +17,7 @@
 ## 技术栈
 - 后端：Java 21 + Spring Boot（单体模块化）+ MyBatis-Plus + MySQL + Redis + Sa-Token + Spring Events（RocketMQ 后置）
 - 前端：React（web/）；管理端 Admin Light + 现场台 Field Dark（大触控）
-- 部署：阶段一单体，包结构 `com.mes.{module}`，每模块 api/application/domain/infrastructure
+- 部署：阶段一单体，包结构 `com.mes.{module}`。**模块内分层 = 现网实际**（2026-09-23 实测 lot / hold / complaint）：`controller / dto / entity / mapper / service(+service/impl) / vo`，另有 `facade` / `support` / `event` / `job` / `listener` / `aspect` / `annotation` / `ws`。原写的 `api/application/domain/infrastructure` 系**目标态、从未采用**；**用户决策（2026-09-23）：按现网分层、已同步 `AGENTS.md` §3、代码零改动** → 新建模块一律按现网分层
 
 ## 模块边界（架构铁律）
 - Route=定义 / Track=执行 / Dispatch=选机 / WIP=只读投影 / Hold=拦截 / History=只追加 / EDC=点真相+Spec门禁 / SPC=只读趋势+OOC Alarm 不挡 TrackOut
@@ -28,7 +28,8 @@
 - 已完成：权限用户、Route、Lot、Track（一期+二期部分）、WIP、Hold（+Future Hold P0）、Equipment、Dispatch、Recipe、EDC 一期 P0、History、SPC 1~5、Alarm 1~4、Dashboard、Report 一期
 - Carrier：C0+C1（Car-1~5）✅，C2 扫码比对（Car-6/7/8）✅
 - **客诉追溯包（History 模块，`com.mes.complaint`）：CP-1～CP-6 全部落地**——preview / build / get / list / export(JSON+ZIP) / contain；CP-6 ZIP = `{packageNo}.zip`（`{packageNo}.json` + `README.txt` 封面），装配在 `ComplaintPackageExporter`（2026-09-22，commit 6595d83）；plan 保持 `approved`、完成态落「已完成功能」（CP-3/4/5/6 同惯例）
-- 规划未实施：Agent 数据暴露架构（Tool Facade + 可选 MCP，2026-09-18 立项）、APS、数采、AI/RAG
+- **封测主线 INT-0001（2026-09-23 采纳，`status: approved`）**：切片 TD-1（Strip 条级 + 测试记录与 Bin 汇总回流 + Bin 独立字典 + 客户 Lot 映射数据模型 + 客诉包增 `testSummaryByLot` 块）→ TD-2（不良 Bin → Hold / Rework **建议**，复用 `mes_route_edge` 的 `rework` 边 + `reason_codes` 与 `mes_hold_reason` 字典，不新造返工路径）→ TD-3（颗级 Die / 条级 Bin 细分 / STDF 解析）；规格 `docs/方案/MES-封测测试数据与Bin回流方案.md`；切片 plan `docs/模块/测试数据（Test）模块/TD-1-plan.md`（**draft，未批不动码**）。**封测特化现状 = 零**（无 strip / bin / wafer 表；`mes_lot_wafer` 仍 P1 后置）。关键层级判断：**Lot 是执行/状态单位，Strip 是身份/位置单位**（Strip 不建 Lot、不写 tx_log）；**写入即对账** `Σ bin_qty(HARD)==total_qty` 是「追溯不靠人工补录」的落地手段；客户 Lot 映射**不进 genealogy**（图只认 split/merge）
+- 规划未实施：Agent 数据暴露架构（Tool Facade + 可选 MCP，2026-09-18 立项；**Doc-3 的试运行对象已改为 INT-0001 全链**）、APS、数采、AI/RAG
 - 后置：Adapter(SECS/GEM)、片级 Wafer、MCS/E87、XXL-JOB
 
 ## 本机环境事实（影响验证与联调）
@@ -58,6 +59,7 @@
 - 业务知识库：`docs/业务知识/`（`BK-{N}-{主题}.md`，四位递增，`type: 业务知识`，status active/draft）——行业概念/术语/判据，回答「是什么·为什么」，正文**不引用本系统表名/类名**；导航页 `README.md` 不带 frontmatter（与 intent/eval 的 README 同例）；已收录 BK-0001 测试与 Bin 分档，待补清单见 README
 - 模块文档按 `docs/模块/{模块名}/` 组织，命名固定：功能文档 / 数据库设计 / 接口设计 / 已完成功能 / 功能清单
 - 意图规格：`docs/intent/INT-{N}-*.md`（新需求唯一入口，四位编号）
+- 封测规格与切片：`docs/方案/MES-封测测试数据与Bin回流方案.md`（跨模块 · A/P/D 编号体例）· `docs/模块/测试数据（Test）模块/TD-1-plan.md`（切片 TD-1，含 M1~M4 实施前置核对项）
 - 模板：`docs/_templates/`（INT / plan / EVAL / AGENTS 骨架）
 - 文档体系重构方案（AI 原生 SDLC 对齐）：`docs/架构/MES-AI原生SDLC文档体系重构方案.md`（2026-09-20 批准，Doc-1/Doc-2 已实施、Doc-3 待试运行；核心：INT 意图目录 + 切片 plan.md + 根级 AGENTS.md + frontmatter 六字段，存量 92 篇只加头不动正文）
 
