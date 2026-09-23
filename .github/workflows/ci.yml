@@ -49,3 +49,6 @@ jobs:
       - name: tsc -b
         working-directory: web
         run: npx tsc -b
+      - name: npm test（前端交互行为用例）
+        working-directory: web
+        run: npm test
