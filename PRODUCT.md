@@ -8,7 +8,7 @@ web
 
 ## Users
 
-晶圆厂 / 封测厂三类角色：
+**后道封测厂为主**（封装 / 测试车间，含功率器件、SiC 车规场景）；前道晶圆厂为远期。三类角色：
 
 - **现场操作员**：车间工位，手套/强光，触控为主，做 Track In/Out、Hold、扫码、分批等过账
 - **工艺 / 设备工程师**：办公室，键盘鼠标，配 Route、Recipe、设备、排查 Alarm
@@ -25,6 +25,8 @@ web
 ## Positioning
 
 以 **Track 事务为唯一执行真相** 的半导 MES：Lot 主数据 + Route 版本快照 + Hold/Dispatch 叠加校验，状态不可被多模块改写。对标大厂 Lot Tracking（SiView / Camstar / AMAT）的「实体与事务分离」，而非通用离散制造 MES 的工单驱动模型。
+
+**目标厂型（2026-09-23 定）**：聚焦 **后道封测（OSAT）**，优先功率器件 / SiC 车规场景；主线 = 封测能力完善（颗级追溯 + 测试数据回流 + 质量拦截），**AI 赋能并行**（先建只读数据暴露地基）。前道 Fab 列为远期方向，待产线侧成熟后再评估。依据：`docs/方案/MES-厂型选型分析.md`。
 
 ## Operating Context
 
@@ -46,8 +48,10 @@ web
 
 - 状态唯一真相在 Track；禁止 `PUT` 冒充分批改 qty
 - Recipe / Reticle 不进 Route body（运行时解析）
-- SECS/GEM 设备协议外置 Adapter（后置）
-- 片级 Wafer / Carrier / Sorter 联动：未做（P1）
+- SECS/GEM 设备协议外置 Adapter（后置）；测试数据接入先用文件 / API，不阻塞主线
+- 片级 Wafer / SlotMap / Carrier / Sorter 联动：**远期**（厂型定于后道，不做）
+- 颗级 / Strip 层级、测试分档（Bin）、不良 Bin → Hold/Rework：**当前主线**（`docs/业务清单/MES-半导体业务清单.md` §16；意图 `docs/intent/INT-0001-*.md`）
+- AI 不得直改 Lot / Hold / Recipe 状态；只读数据暴露先行（意图 `docs/intent/INT-0002-*.md`）
 
 **未决（不阻塞当前）**
 
