@@ -4,12 +4,12 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 # MES 实施进度与下一步
 
-> 更新：2026-09-22  
+> 更新：2026-09-23  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 ---
 
@@ -67,6 +67,17 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 | **主线：封测能力完善** | 颗级 / Strip 层级 → 测试数据（分 Bin）回流 → 不良 Bin → Hold/Rework 联动 → 客诉证据链延伸到颗级 | `docs/intent/INT-0001-*.md` |
 | **并行：AI 赋能** | L0 只读数据暴露（Tool Facade）起步 → L1 报告/客诉摘要、自然语言查数；不得跳过 L0 | `docs/intent/INT-0002-*.md` |
 | 远期 | 前道 Fab（现实入口 = 8 寸 / 特色工艺 + 设备接入 Adapter 能力）；12 寸量产线不列入路线图 | — |
+
+**INT-0001 切片（2026-09-23 采纳；跨模块规格已出）**
+
+| 切片 | 交付 | 状态 |
+|------|------|------|
+| TD-1 | Strip 条级 + 测试记录与 Bin 汇总回流 + Bin 独立字典 + 客户 Lot 映射数据模型 + 客诉包带分档摘要 | ⏳ plan draft（`docs/模块/测试数据（Test）模块/TD-1-plan.md`） |
+| TD-2 | 不良 Bin → Hold / Rework **建议**联动（阈值 + 人工确认 + 既有事务留痕） | ⏳ 待规格 |
+| TD-3 | 颗级 Die / 条级 Bin 细分 / STDF 解析 | ⏳ 待规格 |
+
+规格：`docs/方案/MES-封测测试数据与Bin回流方案.md`（跨模块，含 A1–A10 / P1–P9 / D1–D10）。
+
 ## 3. 与业界预期（对照摘要）
 
 | 能力 | 大厂常见 | 本项目预期 | 结论 |
@@ -106,6 +117,7 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 | Report | `docs/模块/Report（报表）模块/`（架构 · 一期清单） |
 | Carrier | `docs/模块/Carrier（载具）模块/`（架构 · 一期清单；**Car-1～5 ✅**） |
 | History | `docs/模块/History（履历）模块/` |
+| 测试数据（Test） | `docs/模块/测试数据（Test）模块/`（TD-1 plan · 待批） |
 | WIP | `docs/模块/WIP（在制）模块/` |
 | 架构总册 | `docs/架构/半导MES架构设计.md` |
 | 定时任务 | `docs/架构/MES-SpringScheduled使用.md` |
@@ -126,7 +138,7 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 |------|------|------|
 | Doc-1 | 根级 `AGENTS.md` + `docs/_templates/` 四件模板 + `intent/`、`eval/` 目录占位 | ✅ 2026-09-20 |
 | Doc-2 | 存量文档批量补 frontmatter（只加头不动正文）+ `docs/INDEX.md` 总账 | ✅ 2026-09-20 |
-| Doc-3 | 全链试运行：Agent 数据暴露（Tool Facade）走 INT → 规格 → plan → 交付 | 待启动 |
+| Doc-3 | 全链试运行：走 INT → 规格 → plan → 交付 | 🔄 进行中（试运行对象 = **INT-0001**：意图已采纳 ✅ → 跨模块规格已出 ✅ → TD-1 plan 待批；实施完即闭环。原定对象 INT-0002 的 L0 可另作第二次试运行） |
 | Doc-4 | `src/test` 最小回归网 + `mvn test` + CI 三闸门（后端 test / 文档 INDEX 一致 / 前端 `tsc` + 行为用例） | ✅ 2026-09-23（`docs/架构/Doc-4-plan.md`；后端 12 用例 + 前端 2 用例，零外部依赖） |
 | Doc-5 | eval 启用 ✅ 2026-09-22（首条 `EVAL-0001`）；**CI 挂 frontmatter 状态校验 ✅ 2026-09-23**（`ci.yml` docs job：reindex 后 `git diff --exit-code` 即门禁） | ✅ 已落地 |
 
