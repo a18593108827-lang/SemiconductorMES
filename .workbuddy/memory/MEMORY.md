@@ -49,6 +49,7 @@
 - 架构总册：`docs/架构/半导MES架构设计.md`
 - 进度：`docs/架构/MES-实施进度与下一步.md`
 - 业务总单：`docs/业务清单/MES-半导体业务清单.md`
+- 业务知识库：`docs/业务知识/`（`BK-{N}-{主题}.md`，四位递增，`type: 业务知识`，status active/draft）——行业概念/术语/判据，回答「是什么·为什么」，正文**不引用本系统表名/类名**；导航页 `README.md` 不带 frontmatter（与 intent/eval 的 README 同例）；已收录 BK-0001 测试与 Bin 分档，待补清单见 README
 - 模块文档按 `docs/模块/{模块名}/` 组织，命名固定：功能文档 / 数据库设计 / 接口设计 / 已完成功能 / 功能清单
 - 意图规格：`docs/intent/INT-{N}-*.md`（新需求唯一入口，四位编号）
 - 模板：`docs/_templates/`（INT / plan / EVAL / AGENTS 骨架）
