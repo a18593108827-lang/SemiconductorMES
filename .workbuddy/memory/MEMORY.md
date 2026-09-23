@@ -9,6 +9,7 @@
 - 待处理：`server/src/main/resources/application-dev.yml` 含本机弱口令与内网 IP，已随公开仓库提交，建议改环境变量占位或转 private
 
 ## 项目定位
+- **厂型已定（2026-09-23）：后道封测（OSAT）**，优先功率器件 / SiC 车规场景；主线 = 封测能力完善（颗级/Strip 层级 + 测试分档 Bin 回流 + 不良 Bin → Hold/Rework + 客诉证据链延伸到颗级，意图 `INT-0001`），**AI 赋能并行**（先 L0 只读数据暴露，意图 `INT-0002`）；前道 Fab 留远期（现实入口 = 8 寸 / 特色工艺 + Adapter 能力），12 寸量产线不进路线图。依据 `docs/方案/MES-厂型选型分析.md`（定稿，含 §0 决策记录）
 - 半导体制造执行系统（MES），对标 SiView / Camstar / AMAT 的 Lot Tracking 模型
 - 核心：**Track 事务为唯一执行真相**；Lot 主数据 + Route 版本快照 + Hold/Dispatch 叠加校验
 - 禁止：WIP/Track 双写状态、PUT 冒充分批改 qty、Recipe/Reticle 进 Route body
@@ -40,6 +41,7 @@
 - 踩点：ZIP 的 DOS 时间秒字段是 `seconds/2`（解析本地头要 ×2）；`setTimeLocal` 必须早于 `putNextEntry`，否则本地头与中央目录时间不一致
 - 踩点：**Git Bash 的 heredoc 会吃掉 Python 代码里的反斜杠**（`re` 的 `\s` 变成 `/s`，导致正则静默不匹配）→ 需要写脚本时用 Write 工具落盘到 `.workbuddy/tmp/` 再 `python <file>`，别用 `python - <<'PY'` 内联（简单无正则的可以）
 - 文档体检基线（2026-09-22）：`docs/` 105 篇 md，INDEX 收录 98 篇；`updated` 已全量补齐（模板留空是设计如此）；**3 篇刻意不带 frontmatter**——`docs/eval/README.md`、`docs/intent/README.md`（目录导航）、`docs/_templates/AGENTS-骨架.md`（模板骨架）
+- 踩点：**新写的 md 可能被 IDE/格式化器改造**（实测：`docs/方案/MES-厂型选型分析.md` 首行 `---` 被转义成 `\---`、行尾被追加两空格 → frontmatter 解析失败 → INDEX 状态列回落）；改这类文件前先 Read 最新内容，改完用字节级检查（首行是否 `---`、行尾是否多空格）并重建 INDEX 复核状态列
 
 ## 关键文档入口
 - 根级上下文：`AGENTS.md`（AI 会话第一入口，含模块铁律与文档流程）
