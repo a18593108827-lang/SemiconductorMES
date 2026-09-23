@@ -9,7 +9,7 @@ SKIP_FILES = {"README.md", "INDEX.md"}
 BOM = b"\xef\xbb\xbf"
 
 TYPE_ORDER = ["intent", "方案", "架构", "功能文档", "数据库设计", "接口设计",
-              "功能清单", "已完成功能", "plan", "eval", "进度",
+              "功能清单", "已完成功能", "plan", "eval", "业务知识", "进度",
               "业务清单", "UI", "WI"]
 
 

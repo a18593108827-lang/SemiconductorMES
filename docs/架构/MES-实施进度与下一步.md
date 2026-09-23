@@ -110,6 +110,7 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 | 架构总册 | `docs/架构/半导MES架构设计.md` |
 | 定时任务 | `docs/架构/MES-SpringScheduled使用.md` |
 | 业务总单 | `docs/业务清单/MES-半导体业务清单.md` |
+| 业务知识库 | `docs/业务知识/`（`BK-{N}-*.md`：行业概念 / 术语 / 判据，供复习巩固） |
 | 文档总账 | `docs/INDEX.md`（按 type / module / status 检索，自动生成） |
 | 根级上下文 | `AGENTS.md`（AI 会话第一入口） |
 | 意图目录 | `docs/intent/`（新需求唯一入口，INT 编号） |
