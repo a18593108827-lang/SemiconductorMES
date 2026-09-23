@@ -13,7 +13,7 @@ updated: 2026-09-23
 > 归属：新增 **Test（测试数据）模块** + Lot 模块扩展（Strip / 客户 Lot 映射）；状态拦截仍归 Hold / Track  
 > 对齐：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳）· `MES-厂型选型分析.md` §5 / §6（后道需补清单·第一批）· `BK-0001-测试与Bin分档.md`  
 > 前提（均已落地）：Track 唯一真相 · Lot + Genealogy · Hold 最小集 · Rework（`mes_route_edge`，含 `rework` 边与 `reason_codes`）· 客诉包 CP-1～CP-6 · CI 三闸门  
-> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录）  
+> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`）  
 > 状态：**草案**（待批准；TD-1 的 plan 另行出，plan 未批不动码）  
 > **易混：** 本方案 ≠ YMS 良率分析 · ≠ Wafer Map 图形分析 · ≠ SEMI T23 / eDHR · ≠ EAP 设备直连 · ≠ 前道片级 SlotMap
 
@@ -102,7 +102,7 @@ Wafer Lot ──┐                                                       ┌─
 | failure_mode                        | VARCHAR(128) | Y | 失效模式（开路 / 短路 / 参数超限…）——失效分析入口                     |
 | is_shippable                        | TINYINT      | N | 按规格可出货 0/1；默认 0                                   |
 | status                              | TINYINT      | N | 1 启用 / 0 停用                                       |
-| version                             | INT          | N | 乐观锁版本号：PUT 条件更新，冲突即拒（§5）                  |
+| version                             | INT          | N | 乐观锁版本号：**走 MP `@Version`**（`updateById` 自动带条件，影响行数为 0 即冲突）——见 §5                  |
 | remark                              | VARCHAR(256) | Y |                                                   |
 | create_time / update_time / deleted |              |   | 审计与软删（`deleted` TINYINT 0/1，与全库一致；见 §3.7）  |
 
@@ -250,7 +250,7 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 | PUT  | `/test/records/{id}/void`  | `test:record:create` | 作废测试记录（原因必填，留审计；头与 Bin 汇总一并软删，A11）                    |
 | GET  | `/test/bins`               | `test:bin:view`      | Bin 字典查询（可选 `productCode` / `programName` / `binType`） |
 | POST | `/test/bins`               | `test:bin:edit`      | Bin 字典新增                                               |
-| PUT  | `/test/bins/{id}`          | `test:bin:edit`      | Bin 字典修改 / 停用（**乐观锁**：请求携带 `version` 条件更新，冲突拒 `TEST_BIN_DEF_CONFLICT`，禁止静默覆盖） |
+| PUT  | `/test/bins/{id}`          | `test:bin:edit`      | Bin 字典修改 / 停用（**乐观锁**：请求携带 `version`，**用 MP `@Version` 由 `updateById` 自动加条件**，影响行数为 0 即冲突 → 拒 `TEST_BIN_DEF_CONFLICT`，禁止静默覆盖。**禁止手写 version 条件更新**；现网已注册 `OptimisticLockerInnerInterceptor`，判冲突先例 `MesEdcPlanServiceImpl:141-142`） |
 | POST | `/lots/{id}/strips`        | `lot:edit`           | Strip 批量登记（一次一条批的多条 Strip；**同事务整体成败**，请求内 `strip_no` 重复前置拒绝 `LOT_STRIP_DUPLICATE`，不靠 UK 报错兜底） |
 | GET  | `/lots/{id}/strips`        | `lot:list`           | Strip 列表                                               |
 | POST | `/lots/{id}/customer-maps` | `lot:edit`           | 客户 Lot 映射登记（INBOUND / OUTBOUND）                        |
@@ -379,7 +379,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | 并发登记同一 Lot 的不同测试记录 | 均成功（无 Lot 级写锁需求，同 CP §8.1 只读口径） |
 | 客诉包导出与测试记录登记并发 | 现网 MySQL 默认 **REPEATABLE READ**（未显式配置隔离级别）：导出走 MVCC 快照读，导出期间的新登记在导出事务内**不可见**（一致快照，即为期望行为）；导出不加锁、不得阻塞登记 |
 | 登记测试记录与同 Lot scrap / merge 并发 | V4 为「写入时点校验、不加 Lot 级锁」；**接受 TOCTOU 窗口**——校验通过后状态才变更的，记录仍为历史事实，不追溯处理 |
-| 两管理员并发 PUT 同一 Bin 字典 | 乐观锁 `version` 条件更新，后到者拒（`TEST_BIN_DEF_CONFLICT`），不得静默覆盖 |
+| 两管理员并发 PUT 同一 Bin 字典 | 乐观锁走 MP `@Version`（`updateById` 判影响行数），后到者拒（`TEST_BIN_DEF_CONFLICT`），不得静默覆盖 |
 | 字典停用后查历史记录 | 历史 `bin_name` / `is_shippable` 快照不变（D7） |
 
 ---
@@ -456,6 +456,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | 项 | 裁决 | 落点 |
 |----|------|------|
 | **C1** | **采纳方案 ①**：软删与现网一致（`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`），**放弃**「置主键 id」手法 | §3.7 重写 · §9 D13 改写 · §3.1 / §3.4 / §3.5 的字段说明与 UK 行同步 · §12 新增「软删后同键重建」遗留项 |
+| **F2** | **采纳**：乐观锁走 MP `@Version`，不手写条件更新 | §3.1 `version` 字段说明 · §5 `PUT /test/bins/{id}` · §10 并发表 —— 三处措辞精确化 |
 | C2 | **待定**（权限码三级是否收敛） | — |
 | C3 | **待定**（V6 判重键是否加 `eqp_id`） | — |
 | C4 | **待定**（Bin 字典是否加 `program_version` 维度） | — |

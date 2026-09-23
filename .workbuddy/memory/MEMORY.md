@@ -40,7 +40,7 @@
 - **索引脚本判据（易踩，比 INDEX 回落更隐蔽）**：`add_frontmatter.py:100` 用 `body.startswith(b"---")`、`:138` 用 `text.startswith("---")` → 首行被写成 `\---` 时会被判为「无 frontmatter」，**status 流转静默失效**；而启发式常能推出同值，使 reindex 显示「无差异」→ **禁止以 reindex 无差异当作 frontmatter 完好**，要直接断言 `text.startswith('---')`
 
 ## 本机环境事实（影响验证与联调）
-- **沙箱（2026-09-23 实测）**：长链 git 命令（`&&` 串联 + 多条 `-m` + 内嵌 python 调用）**可能被拦**——实测一次 SIGTERM，报 `wmic/reg/sc` 程序黑名单（与命令本身无关），但 **commit 其实已成功、仅输出流被中断** → **判断命令是否成功必须复核 `git log` / `git status`，不要只看 exit code**；提交优先用短命令或 `git commit -F <消息文件>`
+- **沙箱（2026-09-23 实测）**：长链 git 命令（`&&` 串联 + 多条 `-m` + 内嵌 python 调用）**可能被拦**——实测一次 SIGTERM，报 `wmic/reg/sc` 程序黑名单（与命令本身无关），但 **commit 其实已成功、仅输出流被中断**；后续实测**即使 exit 0 也照样附加这段拦截文字** → 该报错与命令实际结果**无必然关系**，判断成功与否必须复核 `git log` / `git status`，**不要只看出口文案或 exit code**；提交优先用短命令或 `git commit -F <消息文件>`
 - MySQL 在 `localhost:3306`（库 `mes`）；dev Redis 在 `192.168.187.128:6379`（2026-09-22 上午不可达、15:24 起可达）；后端 `127.0.0.1:8080`（用户常自己起，**不要随意重启**）
 - dev 登录账号见文档登记：`admin / 123456`（`DataInitializer` 空库创建）；`POST /auth/login {userCode,password}` → `data.token`；接口无 `/api` 前缀（`/api` 只是 vite 代理重写）
 - **错误响应口径**（全项目通用）：业务异常经 `GlobalExceptionHandler` → `R.fail(e.getCode(), msg)`，**`code` 恒为 500，业务码在 `msg` 前缀**（如 `"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"`）；前端 `lib/http` 用 `msg` 展示 → 断言业务错要取 `msg`，不取 `code`
