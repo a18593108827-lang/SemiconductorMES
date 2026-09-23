@@ -32,6 +32,13 @@
 - 规划未实施：Agent 数据暴露架构（Tool Facade + 可选 MCP，2026-09-18 立项；**Doc-3 的试运行对象已改为 INT-0001 全链**）、APS、数采、AI/RAG
 - 后置：Adapter(SECS/GEM)、片级 Wafer、MCS/E87、XXL-JOB
 
+## 现网 DB / ORM 机制事实（2026-09-23 实测，设计新表前必读）
+- **全局逻辑删除**：`application.yml` mybatis-plus 段 —— `id-type: assign_id`（雪花，19 位）、`logic-delete-field: deleted`、`logic-delete-value: 1`、`logic-not-delete-value: 0`；`common/BaseEntity.java:25-27` 为 `@TableLogic private Integer deleted`，**25 个实体继承它**（另 2 处自声明 `Integer deleted`：`MesEdcCollectionItem:39` / `MesFutureHold:58`）。**推论（硬约束）**：deleted 列全库 27 处**一律 tinyint**、UK **一律不含 deleted**（实测 0 例外）；MP 的 `logic-delete-value` **只能固定值 → 无法「deleted 置主键 id」**；`Integer` 装不下雪花 id（21.4 亿上限）→ 任何「置 id」式软删必须自声明 `Long deleted` + 手写 UPDATE + 登记全仓例外
+- **乐观锁有现成机制**：`config/MybatisPlusConfig.java:23` 已注册 `OptimisticLockerInnerInterceptor`；新增乐观锁直接用 `@Version` + `updateById` 判影响行数（先例：MesCarrier / MesDispatchReserve / MesEdcParam / MesEdcPlan / MesEdcSpec / MesEqp / MesLot；判冲突写法见 `MesEdcPlanServiceImpl:141-142`），**不要手写 version 条件更新**
+- DB 实测（MySQL **8.4.8**，库 `mes`）：隔离级别 `REPEATABLE-READ`（配置无 isolation 覆盖）；`sys_permission` MAX(id)=**332**；`mes_route_edge.edge_type` 实有 `normal / rework / skip_allow / time_link / off_flow`
+- **只读 DB 探针（新增可复用能力）**：managed venv 已装 `pymysql` 2.2.8 → `C:/Users/Admin/.workbuddy/binaries/python/envs/default/Scripts/python.exe`；dev 凭据 `root/123456 @127.0.0.1:3306/mes`；探针脚本落 `.workbuddy/tmp/`（不入库）。**审查时优先用它核实文档里的库内断言**（information_schema / @@变量），比读 SQL 脚本更硬
+- **索引脚本判据（易踩，比 INDEX 回落更隐蔽）**：`add_frontmatter.py:100` 用 `body.startswith(b"---")`、`:138` 用 `text.startswith("---")` → 首行被写成 `\---` 时会被判为「无 frontmatter」，**status 流转静默失效**；而启发式常能推出同值，使 reindex 显示「无差异」→ **禁止以 reindex 无差异当作 frontmatter 完好**，要直接断言 `text.startswith('---')`
+
 ## 本机环境事实（影响验证与联调）
 - MySQL 在 `localhost:3306`（库 `mes`）；dev Redis 在 `192.168.187.128:6379`（2026-09-22 上午不可达、15:24 起可达）；后端 `127.0.0.1:8080`（用户常自己起，**不要随意重启**）
 - dev 登录账号见文档登记：`admin / 123456`（`DataInitializer` 空库创建）；`POST /auth/login {userCode,password}` → `data.token`；接口无 `/api` 前缀（`/api` 只是 vite 代理重写）
