@@ -127,8 +127,8 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 | Doc-1 | 根级 `AGENTS.md` + `docs/_templates/` 四件模板 + `intent/`、`eval/` 目录占位 | ✅ 2026-09-20 |
 | Doc-2 | 存量文档批量补 frontmatter（只加头不动正文）+ `docs/INDEX.md` 总账 | ✅ 2026-09-20 |
 | Doc-3 | 全链试运行：Agent 数据暴露（Tool Facade）走 INT → 规格 → plan → 交付 | 待启动 |
-| Doc-4 | （后置）`src/test` + `mvn test` 反馈回路 | 工程排期 |
-| Doc-5 | eval 启用 ✅ 2026-09-22（首条 `EVAL-0001`，见 `docs/eval/`）；CI 挂 frontmatter 状态校验**待 Doc-4** | 部分完成 |
+| Doc-4 | `src/test` 最小回归网 + `mvn test` + CI 三闸门（后端 test / 文档 INDEX 一致 / 前端 tsc） | ✅ 2026-09-23（`docs/架构/Doc-4-plan.md`；12 用例，零外部依赖） |
+| Doc-5 | eval 启用 ✅ 2026-09-22（首条 `EVAL-0001`）；**CI 挂 frontmatter 状态校验 ✅ 2026-09-23**（`ci.yml` docs job：reindex 后 `git diff --exit-code` 即门禁） | ✅ 已落地 |
 
 ---
 

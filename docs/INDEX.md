@@ -10,13 +10,14 @@ updated: 2026-09-23
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-23 · 共 101 篇
+> 生成：2026-09-23 · 共 102 篇
 
 ## 状态汇总
 
 | 状态 | 篇数 |
 |------|------|
 | active | 2 |
+| approved | 1 |
 | done | 89 |
 | draft | 8 |
 | in-progress | 2 |
@@ -151,10 +152,11 @@ updated: 2026-09-23
 | MES 在制（WIP）— 功能查验清单 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP已完成功能.md` |
 | MES 用户权限 — 已完成功能查验 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户权限已完成功能.md` |
 
-### plan（4 篇）
+### plan（5 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
+| Doc-4 计划 — 最小回归网（src/test + mvn test + CI 门禁） | — | approved | 2026-09-23 | `架构/Doc-4-plan.md` |
 | CP-3 计划 — build 落库 + 包头审计 + 装配 VO + list 分页 | History | done ✅ | 2026-09-20 | `模块/History（履历）模块/CP-3-plan.md` |
 | CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
