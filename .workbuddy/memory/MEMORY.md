@@ -35,7 +35,11 @@
 - MySQL 在 `localhost:3306`（库 `mes`）；dev Redis 在 `192.168.187.128:6379`（2026-09-22 上午不可达、15:24 起可达）；后端 `127.0.0.1:8080`（用户常自己起，**不要随意重启**）
 - dev 登录账号见文档登记：`admin / 123456`（`DataInitializer` 空库创建）；`POST /auth/login {userCode,password}` → `data.token`；接口无 `/api` 前缀（`/api` 只是 vite 代理重写）
 - **错误响应口径**（全项目通用）：业务异常经 `GlobalExceptionHandler` → `R.fail(e.getCode(), msg)`，**`code` 恒为 500，业务码在 `msg` 前缀**（如 `"COMPLAINT_PACKAGE_FORMAT_UNSUPPORTED: 不支持的导出格式"`）；前端 `lib/http` 用 `msg` 展示 → 断言业务错要取 `msg`，不取 `code`
-- 项目**无 `src/test`**（Doc-4 后置）：验证一律 curl + SQL + 页面 + 静态核对；环境不可用时用**一次性探针**（真类 + 真容器 Bean，如 `SpringApplication` 取真 `ObjectMapper`）跑 PASS/FAIL 断言，探针放 `.workbuddy/tmp/` 不入库（CP-6 留了 `cp6-probe/`：`Cp6Probe.java` 进程内探针 + `http_acceptance.py` 真机 HTTP 验收 + `disabled_branch.py` 开关关分支，均可重跑）
+- **测试与 CI（Doc-4/Doc-5，2026-09-23 落地）**：`server/src/test` 已建（首批 12 用例，3 类：客诉包导出装配 / 上限生效值 / format 白名单）；跑法 `cd server && mvn -o test`；`.github/workflows/ci.yml` 三闸门——后端 `mvn -B test`、文档「reindex 后 `git diff --exit-code docs/INDEX.md`」（= frontmatter + 状态列门禁）、前端 `npm ci && npx tsc -b`。测试**不依赖 DB/Redis/网络**（需外部依赖的场景仍走一次性探针 + 副实例）
+- 踩点：**`@JsonTest` 不能加载 `MesApplication`**（`@SpringBootApplication` → 全量扫描把 MyBatis mapper 带进来 → `Property 'sqlSessionFactory' or 'sqlSessionTemplate' are required`）；改法 = 测试内嵌最小 `@SpringBootConfiguration` + `@EnableAutoConfiguration` + `@Import(JacksonConfig.class)`，保持容器同源 ObjectMapper 但不带 DB bean
+- 踩点：AssertJ 比较 `List<int[]>` **恒不等**（数组无值语义 equals，且报错信息看起来一模一样）→ 用 `List<Integer>`
+- 项目**无 `src/test`** 的旧事实已作废（见上「测试与 CI」）；验证仍优先 curl + SQL + 页面 + 静态核对，能用用例兜住的就落成用例
+- 验证套路补一条：**反向验证**——新写的断言要临时把被测逻辑改坏一次，确认用例真的变红（否则是假保护）。Doc-4 里用「把 `setTimeLocal` 移到 `putNextEntry` 之后」验证过
 - 需要「改配置才能验」的分支：**不**改 `application.yml`、**不**重启用户实例，改用命令行参数覆盖起第二实例（如 `java -cp target/classes com.mes.MesApplication --server.port=18080 --mes.complaint-package.enabled=false`，共享 MySQL/Redis）；前提先确认启动不执行 DDL 且初始化器幂等。注意 Git Bash 里 `nohup ... &` 起的服务会随 tool 调用结束被回收，长驻进程需用后台任务启动
 - 踩点：`LocalDateTime` 的 JSON 形状取决于**容器** ObjectMapper——Spring Boot 自动配置出 ISO 文本，手搓 `Jackson2ObjectMapperBuilder.json()` 出数组（`WRITE_DATES_AS_TIMESTAMPS` 未关）→ 判断序列化形状必须用真容器 Bean
 - 踩点：ZIP 的 DOS 时间秒字段是 `seconds/2`（解析本地头要 ×2）；`setTimeLocal` 必须早于 `putNextEntry`，否则本地头与中央目录时间不一致
