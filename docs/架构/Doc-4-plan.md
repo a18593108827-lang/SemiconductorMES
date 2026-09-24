@@ -98,6 +98,7 @@ f. 文档同步：`MES-实施进度与下一步.md` §5 Doc-4 行、`docs/eval/R
 | 3 | ✅ `ci.yml` 结构校验通过（3 job + 关键步骤齐；本机无 pyyaml，用结构化粗检） |
 | 4 | ✅ 改动仅 `pom.xml` + `src/test/**` + `.github/**` + 文档，**零生产代码改动**（K1 达成） |
 | 5 | ✅ `mvn -o dependency:list -DincludeScope=runtime` 中 junit / mockito / assertj 命中 **0** 条 |
+| **6** | ⚠️ **补做（2026-09-24）**：验收 3 只校验了 `ci.yml` 的 **YAML 结构**，**未在真实 runner 上执行过** —— 该缺口导致 docs 闸门自落地起**一直失败**（脚本硬编码 Windows 路径 + 生成物含 `date.today()`，两个根因见 `docs/eval/EVAL-0002-CI文档闸门失效（硬编码路径+生成物非幂等）.md`）；修复提交 `e6220bf`，**转绿待推送后确认** |
 
 **实施期事实（F#）**
 
@@ -106,4 +107,4 @@ f. 文档同步：`MES-实施进度与下一步.md` §5 Doc-4 行、`docs/eval/R
 | F1 | `@JsonTest` 若加载 `MesApplication`（`@SpringBootApplication`）会触发全量组件扫描，把 MyBatis mapper 注册进来 → `Property 'sqlSessionFactory' or 'sqlSessionTemplate' are required`，上下文启动失败 | 改为测试内嵌最小 `@SpringBootConfiguration`（`@EnableAutoConfiguration` + `@Import(JacksonConfig.class)`）：仍是容器同源 ObjectMapper（Boot JacksonAutoConfiguration + 项目定制），但不带 DB bean |
 | F2 | `List<int[]>` 用 AssertJ `isEqualTo` 比较会**恒不等**（数组无值语义 equals，报错信息还长得一模一样） | 时间三元组改用 `List<Integer>` |
 | F3 | 手搓 ObjectMapper 的坑（K3）在测试里同样会咬人 | 用内嵌配置注入，不 `new ObjectMapper()` |
-| F4 | docs job 的「reindex + `git diff --exit-code`」门禁**顺带覆盖**了「frontmatter 被格式化器破坏」这一类问题（首行被转义 → 解析失败 → 状态列回落 → diff 非空 → CI 红），无需另写校验脚本 | 该破坏 2026-09-23 内生两次（`MES-厂型选型分析.md`），根因是外部格式化器/preview 重存；已用 `git checkout` 还原，CI 门禁可在下次推送时兜住 |
+| F4 | docs job 的「reindex + `git diff --exit-code`」门禁**顺带覆盖**了「frontmatter 被格式化器破坏」这一类问题（首行被转义 → 解析失败 → 状态列回落 → diff 非空 → CI 红），无需另写校验脚本。**2026-09-24 更正**：该门禁当时**并未真正生效**（自落地起每次都是路径报错而红），F4 的「兜住」承诺在修复前**不成立** —— 见上表验收 6 与 EVAL-0002 | 该破坏 2026-09-23 内生两次（`MES-厂型选型分析.md`），根因是外部格式化器/preview 重存；已用 `git checkout` 还原，CI 门禁可在下次推送时兜住 |

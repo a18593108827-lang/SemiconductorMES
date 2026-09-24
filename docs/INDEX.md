@@ -10,13 +10,13 @@ updated: 2026-09-24
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-24 · 共 105 篇
+> 生成：2026-09-24 · 共 106 篇
 
 ## 状态汇总
 
 | 状态 | 篇数 |
 |------|------|
-| active | 2 |
+| active | 3 |
 | approved | 3 |
 | done | 89 |
 | draft | 9 |
@@ -165,10 +165,11 @@ updated: 2026-09-24
 | CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
 | TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | draft | 2026-09-24 | `模块/测试数据（Test）模块/TD-1-plan.md` |
 
-### eval（1 篇）
+### eval（2 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
+| EVAL-0002 CI 文档闸门失效（硬编码路径 + 生成物非幂等） | — | active | 2026-09-24 | `eval/EVAL-0002-CI文档闸门失效（硬编码路径+生成物非幂等）.md` |
 | EVAL-0001 追溯包抽屉并发下载：双按钮无重入闸，loading 错乱且旧请求清空新会话状态 | History | active | 2026-09-22 | `eval/EVAL-0001-追溯包抽屉并发下载重入.md` |
 
 ### 业务知识（1 篇）
