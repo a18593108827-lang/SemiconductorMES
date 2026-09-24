@@ -79,9 +79,11 @@ CI 跑在 `ubuntu-latest`，没有 `D:` 盘。更隐蔽的一点：`os.walk(DOCS
 | 2 | **模拟 runner 目录结构** | 脚本 + 2 篇文档复制到陌生路径（`.workbuddy/tmp/ci-sim/fake-repo/`）执行 → 正确产出 `docs/INDEX.md`（2 篇）→ 证明不再依赖硬编码路径 |
 | 3 | **跨天幂等对照实验** | 把副本文档 `updated` 改为 `2026-08-15` → INDEX 的 `updated:` 与 `> 生成：` **均变为 `2026-08-15`**（当时系统日期为 `2026-09-24`）→ 证明日期跟随内容而非时钟 |
 
-**未执行（本机无法执行，待推送后确认）**
+**已确认（2026-09-24 推送后闭环）**
 
-- `docs` job 转绿：GitHub Actions 只能在推送后由平台执行，**不得据「本地通过」宣称已修好**。补做条件：推送 → 看 Actions 的 `docs` job → 步骤 `reindex 后 INDEX 必须无差异` 通过。
+- `docs` job **已转绿**：修复推送后，GitHub Actions 最新一次 run（`head_sha = 2ebfbae`，`created_at = 2026-09-24T02:57:33Z`）**`conclusion = success`** —— 整个 run 成功即三个 job（backend / docs / web）全过，含 `reindex 后 INDEX 必须无差异`。
+- 排查方式（可复现，无需凭据）：`GET https://api.github.com/repos/a18593108827-lang/SemiconductorMES/actions/runs`。对照结果：修复前 `0fffa61` / `9fdf6c8` / `74fc5da` 三次 run 均 `failure`；修复后的 run 为 `success`。
+- **易误判点（本次真实踩到）**：GitHub 上**每个 commit 的 check 结果是它自己那次运行的冻结记录** —— 后续修好变绿，**不会**让旧 commit 的红点消失。判「是否已修好」必须看**最新 run / 最新 commit**；盯着历史 commit 的红点会得出「还是有问题」的错误结论（本次即因此被误判一次）。
 
 **代码断言（可 grep）**
 
