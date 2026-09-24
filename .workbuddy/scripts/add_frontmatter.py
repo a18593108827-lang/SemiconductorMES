@@ -3,7 +3,12 @@ import re
 import sys
 import datetime
 
-DOCS = r"D:\java\xm\2026_07\MES\docs"
+# 仓库根 = 本脚本上两级（<repo>/.workbuddy/scripts/），docs 相对它定位。
+# 禁止硬编码绝对路径：CI 跑在 ubuntu-latest 上，Windows 盘符路径（D:\...）不存在，
+# 而 os.walk 对不存在的目录**不报错**（静默返回空），直到最后写文件才抛 FileNotFoundError。
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(os.path.dirname(_HERE))
+DOCS = os.path.join(_REPO, "docs")
 SKIP_DIRS = {"_templates"}
 SKIP_FILES = {"README.md", "INDEX.md"}
 BOM = b"\xef\xbb\xbf"
@@ -149,7 +154,6 @@ def parse_fm(text):
 
 
 def build_index(items):
-    today = datetime.date.today().isoformat()
     entries = []
     for it in items:
         text = open(it["full"], "rb").read().decode("utf-8", errors="replace")
@@ -162,6 +166,10 @@ def build_index(items):
             "status": fm.get("status", it["status"]),
             "updated": fm.get("updated", "") or it["updated"],
         })
+    # 日期取「内容中的最大 updated」，**不用** datetime.date.today()：
+    # 用今天会让 CI 在生成日的次日跑 reindex 产出不同 INDEX，令 `git diff --exit-code` 门禁**假失败**。
+    stamps = [e["updated"] for e in entries if e["updated"]]
+    today = max(stamps) if stamps else datetime.date.today().isoformat()
     entries.sort(key=lambda e: (TYPE_ORDER.index(e["type"]) if e["type"] in TYPE_ORDER else 99, e["module"], e["rel"]))
     stat = {}
     for e in entries:
