@@ -13,7 +13,7 @@ updated: 2026-09-23
 > 归属：新增 **Test（测试数据）模块** + Lot 模块扩展（Strip / 客户 Lot 映射）；状态拦截仍归 Hold / Track  
 > 对齐：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳）· `MES-厂型选型分析.md` §5 / §6（后道需补清单·第一批）· `BK-0001-测试与Bin分档.md`  
 > 前提（均已落地）：Track 唯一真相 · Lot + Genealogy · Hold 最小集 · Rework（`mes_route_edge`，含 `rework` 边与 `reason_codes`）· 客诉包 CP-1～CP-6 · CI 三闸门  
-> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`；**C2 落地**：权限码收敛为两级；**C3 落地**：V6 判重键加 `eqp_id` + null 分支）  
+> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`；**C2 落地**：权限码收敛为两级；**C3 落地**：V6 判重键加 `eqp_id` + null 分支；**C4 落地**：Bin 字典加 `program_version` 维度 + 四级回退）  
 > 状态：**草案**（待批准；TD-1 的 plan 另行出，plan 未批不动码）  
 > **易混：** 本方案 ≠ YMS 良率分析 · ≠ Wafer Map 图形分析 · ≠ SEMI T23 / eDHR · ≠ EAP 设备直连 · ≠ 前道片级 SlotMap
 
@@ -93,9 +93,10 @@ Wafer Lot ──┐                                                       ┌─
 | 字段                                  | 类型           | 空 | 说明                                                |
 | ----------------------------------- | ------------ | - | ------------------------------------------------- |
 | id                                  | BIGINT PK    | N |                                                   |
-| bin_scope                           | VARCHAR(16)  | N | `GLOBAL` / `PRODUCT` / `PROGRAM`（适用范围的声明，便于人读与校验） |
+| bin_scope                           | VARCHAR(16)  | N | `GLOBAL` / `PRODUCT` / `PROGRAM` / `PROGRAM_VERSION`（适用范围的声明，便于人读与校验） |
 | product_code                        | VARCHAR(64)  | N | 适用产品；**全局档填 `''`**（非 NULL，避免 MySQL 唯一索引不收 NULL）   |
 | program_name                        | VARCHAR(64)  | N | 适用测试程序；全局档填 `''`                                  |
+| program_version                     | VARCHAR(32)  | N | 适用程序版本（C4 裁决）；**GLOBAL / PRODUCT / PROGRAM 档填 `''`**（非 NULL，同 `product_code` 处理）；PROGRAM_VERSION 档填具体版本（如 `2.0`） |
 | bin_type                            | VARCHAR(8)   | N | `HARD` / `SOFT`                                   |
 | bin_code                            | VARCHAR(32)  | N | Bin 号（如 `1` / `3`）                                |
 | bin_name                            | VARCHAR(64)  | N | 名称（如「良品（最高档）」）                                    |
@@ -106,11 +107,11 @@ Wafer Lot ──┐                                                       ┌─
 | remark                              | VARCHAR(256) | Y |                                                   |
 | create_time / update_time / deleted |              |   | 审计与软删（`deleted` TINYINT 0/1，与全库一致；见 §3.7）  |
 
-UK：`(product_code, program_name, bin_type, bin_code)`（**UK 不含 `deleted`**，见 §3.7）。
+UK：`(product_code, program_name, program_version, bin_type, bin_code)`（**UK 不含 `deleted`**，见 §3.7）。**注意**：`program_version` 在 GLOBAL / PRODUCT / PROGRAM 档为 `''`（**非 NULL**）——MySQL 唯一索引不收 NULL，用 `''` UK 才生效（与 `product_code` / `program_name` 同款处理，M2/§12）。
 
-**写入校验（服务层）**：`bin_scope` 必须与 `product_code` / `program_name` 取值一致——GLOBAL ⇒ 两字段均 `''`；PRODUCT ⇒ product_code 非空且 program_name `''`；PROGRAM ⇒ 两字段均非空；不一致拒（`TEST_BIN_SCOPE_INCONSISTENT`）。`bin_scope` 仅作人读与校验声明，**不参与解析回退**（V2 回退只看两 code 字段）。
+**写入校验（服务层）**：`bin_scope` 必须与三个维度字段取值一致——GLOBAL ⇒ 三字段均 `''`；PRODUCT ⇒ `product_code` 非空、其余两字段 `''`；PROGRAM ⇒ `product_code` + `program_name` 非空、`program_version` = `''`；PROGRAM_VERSION ⇒ 三字段均非空；不一致拒（`TEST_BIN_SCOPE_INCONSISTENT`）。`bin_scope` 仅作人读与校验声明，**不参与解析回退**（V2 按三维逐级降级，见 §5）。
 
-**为何独立于 `mes_hold_reason`**（D3）：Bin 是「产品 / 程序」维度且**随程序版本可变**，Hold 原因是「处置」维度；混表会让两侧历史语义互相污染，且 Hold 原因码的 `category` 语义装不下 Bin 的失效模式。禁止双向复用（P3）。
+**为何独立于 `mes_hold_reason`**（D3）：Bin 是「产品 / 程序 / 程序版本」维度（版本间语义可不同 —— C4 裁决已让字典能表达，而非只记版本号不用），Hold 原因是「处置」维度；混表会让两侧历史语义互相污染，且 Hold 原因码的 `category` 语义装不下 Bin 的失效模式。禁止双向复用（P3）。
 
 ### 3.2 `mes_test_record` — 测试记录头（Test 模块）
 
@@ -248,7 +249,7 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 | GET  | `/test/records/{id}`       | `test:view` | 详情（含 Bin 明细）                                           |
 | GET  | `/test/summary/by-lot/{lotId}` | `test:view` | 按批的测试摘要（Lot 详情页消费）；**Test 模块自有 controller**，Lot 侧不代理此端点（A7，避免 Lot 直连 `mes_test_*`） |
 | PUT  | `/test/records/{id}/void`  | `test:void` | 作废测试记录（原因必填，留审计；头与 Bin 汇总一并软删，A11）                    |
-| GET  | `/test/bins`               | `test:view` | Bin 字典查询（可选 `productCode` / `programName` / `binType`） |
+| GET  | `/test/bins`               | `test:view` | Bin 字典查询（可选 `productCode` / `programName` / `programVersion` / `binType`） |
 | POST | `/test/bins`               | `test:edit-bin` | Bin 字典新增                                               |
 | PUT  | `/test/bins/{id}`          | `test:edit-bin` | Bin 字典修改 / 停用（**乐观锁**：请求携带 `version`，**用 MP `@Version` 由 `updateById` 自动加条件**，影响行数为 0 即冲突 → 拒 `TEST_BIN_DEF_CONFLICT`，禁止静默覆盖。**禁止手写 version 条件更新**；现网已注册 `OptimisticLockerInnerInterceptor`，判冲突先例 `MesEdcPlanServiceImpl:141-142`） |
 | POST | `/lots/{id}/strips`        | `lot:edit`           | Strip 批量登记（一次一条批的多条 Strip；**同事务整体成败**，请求内 `strip_no` 重复前置拒绝 `LOT_STRIP_DUPLICATE`，不靠 UK 报错兜底） |
@@ -266,7 +267,7 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 | #  | 校验                                                           | 失败                                                |
 | -- | ------------------------------------------------------------ | ------------------------------------------------- |
 | V1 | `Σ bin_qty(HARD) == total_qty`                               | 拒（`TEST_BIN_SUM_MISMATCH`）—— A3「不依赖人工补录」的落地手段（D6） |
-| V2 | 每个 `bin_code` 在字典中可解析（按 `PROGRAM` → `PRODUCT` → `GLOBAL` 回退） | 拒；提示先维护字典                                         |
+| V2 | 每个 `bin_code` 在字典中可解析（**四级回退**：`PROGRAM_VERSION`（程序 + 版本精确）→ `PROGRAM`（版本不限）→ `PRODUCT` → `GLOBAL`） | 拒；提示先维护字典                                         |
 | V3 | `program_name` / `program_version` / `test_time` 非空          | 拒（A9：无版本则 Bin 语义不可追溯）                             |
 | V4 | `lot_id` 存在且非 `merged` / `scrapped`                          | 拒                                                 |
 | V5 | 同一请求内 `(bin_type, bin_code)` 不重复                             | 拒（否则汇总不可信）                                        |
@@ -360,6 +361,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | D11 | `record_no` 用**号段表**发号（`mes_test_record_no_seq`），与 Lot 单号同机制 | 并发防撞号；复用现网 `MesLotNoSeqMapper` 先例，不新造第二套发号路径 |
 | D12 | 防重复提交靠**业务判重窗口**（V6），不靠 UK 或前端重入闸 | 重新提交生成新 record_id，`(record_id, ...)` UK 完全不设防；前端重入闸不是架构保证。**判重键含 `eqp_id`**（C3 裁决），空值走 `.isNull(...)` 分支，禁止 `eq(col, null)` |
 | D13 | **软删一律与现网一致**：`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`；**放弃**「置主键 id」手法 | **2026-09-23 用户拍板（采纳方案①）**。原「置 id」方案与现网机制三处硬冲突：① MP 的 `logicDeleteValue` 是 String 常量（`GlobalConfig.java:184`），`AbstractMethod.java:106` 直接拼 SQL 字面量、无列引用解析 → 无法置 id；② `BaseEntity.deleted` 是 `Integer`，装不下 19 位雪花 id（实测溢出 9.8 亿倍）；③ 全库 `deleted` 27 处全 tinyint、UK 含 deleted 的表 0 个。代价：「撤销后重建同键」不可行，用 UPDATE 表达（§3.7 / §12） |
+| D14 | Bin 字典维度**含 `program_version`**（可空），解析走**四级回退** | **C4 裁决（2026-09-24，选项 1）**：A9 既要求 `program_version` 不可空（理由 = Bin 语义随版本变），字典就该能表达版本差异 —— 否则 A9 是空约束，且错误 `bin_name` 会被 D7 快照**固化进历史与客诉证据包**。维护量由回退链兜住：程序升版但 Bin 语义未变时仍命中 `PROGRAM` / `PRODUCT` / `GLOBAL` 档，无需重复维护 |
 
 ---
 
@@ -464,4 +466,4 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | **F2** | **采纳**：乐观锁走 MP `@Version`，不手写条件更新 | §3.1 `version` 字段说明 · §5 `PUT /test/bins/{id}` · §10 并发表 —— 三处措辞精确化 |
 | **C2** | **采纳**：收敛为两级 —— `test:view` / `test:create` / `test:void` / `test:edit-bin`；并把「作废」从 create 中单列出来 | §5 接口表 8 行权限码 + 「权限码新增」列表（含分权设计说明）；字典查看并入 `test:view`、字典维护保留 `test:edit-bin` |
 | **C3** | **采纳**：V6 判重键加 `eqp_id`（6 元键），并写明 **null 分支写法** | §5 V6 行 + 新增「V6 实现约束」说明 · §9 D12 · §10 并发表（新增「双机并行测同批」场景行） |
-| C4 | **待定**（Bin 字典是否加 `program_version` 维度） | — |
+| **C4** | **采纳选项 1**：字典加 `program_version` 维度（UK 扩为 5 元）、`bin_scope` 增至 4 档、V2 回退链扩为**四级** | §3.1 字段表 + UK + 写入校验 + 「为何独立」措辞 · §5 `GET /test/bins` 参数与 V2 行 · §9 新增 **D14** |
