@@ -4,13 +4,13 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-23 · 共 105 篇
+> 生成：2026-09-24 · 共 105 篇
 
 ## 状态汇总
 

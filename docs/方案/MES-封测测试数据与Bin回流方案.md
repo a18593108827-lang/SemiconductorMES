@@ -13,7 +13,7 @@ updated: 2026-09-23
 > 归属：新增 **Test（测试数据）模块** + Lot 模块扩展（Strip / 客户 Lot 映射）；状态拦截仍归 Hold / Track  
 > 对齐：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳）· `MES-厂型选型分析.md` §5 / §6（后道需补清单·第一批）· `BK-0001-测试与Bin分档.md`  
 > 前提（均已落地）：Track 唯一真相 · Lot + Genealogy · Hold 最小集 · Rework（`mes_route_edge`，含 `rework` 边与 `reason_codes`）· 客诉包 CP-1～CP-6 · CI 三闸门  
-> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`；**C2 落地**：权限码收敛为两级）  
+> 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`；**C2 落地**：权限码收敛为两级；**C3 落地**：V6 判重键加 `eqp_id` + null 分支）  
 > 状态：**草案**（待批准；TD-1 的 plan 另行出，plan 未批不动码）  
 > **易混：** 本方案 ≠ YMS 良率分析 · ≠ Wafer Map 图形分析 · ≠ SEMI T23 / eDHR · ≠ EAP 设备直连 · ≠ 前道片级 SlotMap
 
@@ -270,7 +270,9 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 | V3 | `program_name` / `program_version` / `test_time` 非空          | 拒（A9：无版本则 Bin 语义不可追溯）                             |
 | V4 | `lot_id` 存在且非 `merged` / `scrapped`                          | 拒                                                 |
 | V5 | 同一请求内 `(bin_type, bin_code)` 不重复                             | 拒（否则汇总不可信）                                        |
-| V6 | 业务判重窗口：**10 分钟**内已存在同 `(lot_id, program_name, program_version, test_time, total_qty)` 的记录 | 拒（`TEST_RECORD_DUPLICATE`）——防重复点击 / 重复提交（D12）；合法重测须改 `test_time` 或窗外提交 |
+| V6 | 业务判重窗口：**10 分钟**内已存在同 `(lot_id, **eqp_id**, program_name, program_version, test_time, total_qty)` 的记录 | 拒（`TEST_RECORD_DUPLICATE`）——防重复点击 / 重复提交（D12）；**键含 `eqp_id`（C3 裁决）**：两台测试机并行测同批各记一条、互不误判；合法重测须改 `test_time` 或窗外提交 |
+
+> **V6 实现约束（C3 裁决，必读）**：判重键含**可空字段** `eqp_id`（外协 / 手工录入无设备）。**禁止**直接写 `.eq(MesTestRecord::getEqpId, eqpId)` —— MP 的 `eq(col, null)` **不会跳过条件**（源码 `AbstractWrapper:467-470` 的 `addCondition` 只判 condition 布尔、**不判 val 是否为 null**），会生成 `eqp_id = NULL`，SQL 语义恒为 UNKNOWN → **判重静默失效且不报错**（手工录入场景等于零防护，测试也难发现）。必须写 `.eq(eqpId != null, MesTestRecord::getEqpId, eqpId)`；`eqpId` 为空时改走 `.isNull(MesTestRecord::getEqpId)`。
 
 ---
 
@@ -356,7 +358,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | D9 | TD-2 的建议**复用手持事务**（`HoldService.create` / 既有 rework 事务） | `mes_route_edge` 的 `rework` 边与 `reason_codes` 已就绪，不新造第二套返工路径 |
 | D10 | 切片自 TD-1 起编号；plan 落 `docs/模块/测试数据（Test）模块/TD-1-plan.md` | 与「切片 plan 归所属模块目录」约定一致 |
 | D11 | `record_no` 用**号段表**发号（`mes_test_record_no_seq`），与 Lot 单号同机制 | 并发防撞号；复用现网 `MesLotNoSeqMapper` 先例，不新造第二套发号路径 |
-| D12 | 防重复提交靠**业务判重窗口**（V6），不靠 UK 或前端重入闸 | 重新提交生成新 record_id，`(record_id, ...)` UK 完全不设防；前端重入闸不是架构保证 |
+| D12 | 防重复提交靠**业务判重窗口**（V6），不靠 UK 或前端重入闸 | 重新提交生成新 record_id，`(record_id, ...)` UK 完全不设防；前端重入闸不是架构保证。**判重键含 `eqp_id`**（C3 裁决），空值走 `.isNull(...)` 分支，禁止 `eq(col, null)` |
 | D13 | **软删一律与现网一致**：`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`；**放弃**「置主键 id」手法 | **2026-09-23 用户拍板（采纳方案①）**。原「置 id」方案与现网机制三处硬冲突：① MP 的 `logicDeleteValue` 是 String 常量（`GlobalConfig.java:184`），`AbstractMethod.java:106` 直接拼 SQL 字面量、无列引用解析 → 无法置 id；② `BaseEntity.deleted` 是 `Integer`，装不下 19 位雪花 id（实测溢出 9.8 亿倍）；③ 全库 `deleted` 27 处全 tinyint、UK 含 deleted 的表 0 个。代价：「撤销后重建同键」不可行，用 UPDATE 表达（§3.7 / §12） |
 
 ---
@@ -377,6 +379,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 |------|------|
 | 同一 Lot 重复提交相同测试记录 | 允许（重测语义，A10）；两条记录并存，互不覆盖 |
 | 重复点击「保存」 | 前端重入闸 + **V6 业务判重窗口兜底**：第二次提交拒（`TEST_RECORD_DUPLICATE`）；UK 挡不住重复记录（D12） |
+| **两台测试机并行测同一批**（同程序 / 同时间 / 同总量） | **各记一条**（判重键含 `eqp_id`，C3）——**不得**被误判为重复提交 |
 | Bin 汇总与 `total_qty` 不等 | 拒绝且**零落库**（不留半截记录，A8） |
 | 并发登记同一 Lot 的不同测试记录 | 均成功（无 Lot 级写锁需求，同 CP §8.1 只读口径） |
 | 客诉包导出与测试记录登记并发 | 现网 MySQL 默认 **REPEATABLE READ**（未显式配置隔离级别）：导出走 MVCC 快照读，导出期间的新登记在导出事务内**不可见**（一致快照，即为期望行为）；导出不加锁、不得阻塞登记 |
@@ -460,5 +463,5 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | **C1** | **采纳方案 ①**：软删与现网一致（`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`），**放弃**「置主键 id」手法 | §3.7 重写 · §9 D13 改写 · §3.1 / §3.4 / §3.5 的字段说明与 UK 行同步 · §12 新增「软删后同键重建」遗留项 |
 | **F2** | **采纳**：乐观锁走 MP `@Version`，不手写条件更新 | §3.1 `version` 字段说明 · §5 `PUT /test/bins/{id}` · §10 并发表 —— 三处措辞精确化 |
 | **C2** | **采纳**：收敛为两级 —— `test:view` / `test:create` / `test:void` / `test:edit-bin`；并把「作废」从 create 中单列出来 | §5 接口表 8 行权限码 + 「权限码新增」列表（含分权设计说明）；字典查看并入 `test:view`、字典维护保留 `test:edit-bin` |
-| C3 | **待定**（V6 判重键是否加 `eqp_id`） | — |
+| **C3** | **采纳**：V6 判重键加 `eqp_id`（6 元键），并写明 **null 分支写法** | §5 V6 行 + 新增「V6 实现约束」说明 · §9 D12 · §10 并发表（新增「双机并行测同批」场景行） |
 | C4 | **待定**（Bin 字典是否加 `program_version` 维度） | — |
