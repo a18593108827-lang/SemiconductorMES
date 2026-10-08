@@ -4,13 +4,13 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-09-24
+updated: 2026-10-08
 ---
 
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-09-24 · 共 106 篇
+> 生成：2026-10-08 · 共 106 篇
 
 ## 状态汇总
 
@@ -28,7 +28,7 @@ updated: 2026-09-24
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
-| INT-0001 封测颗级追溯与测试数据回流（后道主线） | — | approved | 2026-09-23 | `intent/INT-0001-封测颗级追溯与测试数据回流.md` |
+| INT-0001 封测颗级追溯与测试数据回流（后道主线） | — | approved | 2026-10-08 | `intent/INT-0001-封测颗级追溯与测试数据回流.md` |
 | INT-0002 AI 赋能：只读数据暴露与摘要 / 查数 | — | draft | 2026-09-23 | `intent/INT-0002-AI赋能只读数据暴露与摘要查数.md` |
 
 ### 方案（7 篇）
@@ -39,7 +39,7 @@ updated: 2026-09-24
 | 半导 MES AI 集成 — 产品分析（调研稿） | — | draft | 2026-09-18 | `方案/MES-AI集成产品分析.md` |
 | APS（高级计划与排程）方案 | — | draft | 2026-09-20 | `方案/MES-APS高级计划与排程方案.md` |
 | MES 厂型选型分析 — 前道 Fab / 后道封测（定稿） | — | done ✅ | 2026-09-23 | `方案/MES-厂型选型分析.md` |
-| MES 封测测试数据与 Bin 回流 — 方案设计（跨模块） | — | draft | 2026-09-23 | `方案/MES-封测测试数据与Bin回流方案.md` |
+| MES 封测测试数据与 Bin 回流 — 方案设计（跨模块） | — | draft | 2026-10-08 | `方案/MES-封测测试数据与Bin回流方案.md` |
 | 半导 MES 知识助理（RAG）方案 | — | draft | 2026-09-20 | `方案/MES-知识助理RAG方案.md` |
 | 半导 MES 设备数据采集与分析方案 | — | draft | 2026-09-20 | `方案/MES-设备数采与分析方案.md` |
 
@@ -99,7 +99,7 @@ updated: 2026-09-24
 |------|------|------|------|------|
 | EdcFacade — 接口设计（架构） | EDC | done ✅ | 2026-09-02 | `模块/EDC（量测）模块/MES-EdcFacade接口设计.md` |
 | HistoryFacade — 接口设计（架构） | History | done ✅ | 2026-08-19 | `模块/History（履历）模块/MES-History接口设计.md` |
-| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
+| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-10-08 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
 | Future Hold — 接口设计（架构） | Hold | done ✅ | 2026-08-06 | `模块/Hold（锁批）模块/MES-FutureHold接口设计.md` |
 | Lot Bonus 数量调整 — 接口设计（架构） | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotBonus接口设计.md` |
 | Lot Genealogy 谱系查询 — 架构设计 | Lot | done ✅ | 2026-09-20 | `模块/Lot（批次）模块/MES-LotGenealogy接口设计.md` |
@@ -163,7 +163,7 @@ updated: 2026-09-24
 | CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
 | CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
-| TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | draft | 2026-09-24 | `模块/测试数据（Test）模块/TD-1-plan.md` |
+| TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | draft | 2026-10-08 | `模块/测试数据（Test）模块/TD-1-plan.md` |
 
 ### eval（2 篇）
 
@@ -182,7 +182,7 @@ updated: 2026-09-24
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
-| MES 实施进度与下一步 | — | done ✅ | 2026-09-23 | `架构/MES-实施进度与下一步.md` |
+| MES 实施进度与下一步 | — | done ✅ | 2026-10-08 | `架构/MES-实施进度与下一步.md` |
 
 ### 业务清单（2 篇）
 

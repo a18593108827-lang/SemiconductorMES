@@ -4,7 +4,7 @@ module:
 status: draft  
 slices: [TD-1, TD-2, TD-3]  
 aligns: [INT-0001-封测颗级追溯与测试数据回流.md, MES-厂型选型分析.md, BK-0001-测试与Bin分档.md]  
-updated: 2026-09-23  
+updated: 2026-10-08  
 ---
 
 # MES 封测测试数据与 Bin 回流 — 方案设计（跨模块）
@@ -14,6 +14,8 @@ updated: 2026-09-23
 > 对齐：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳）· `MES-厂型选型分析.md` §5 / §6（后道需补清单·第一批）· `BK-0001-测试与Bin分档.md`  
 > 前提（均已落地）：Track 唯一真相 · Lot + Genealogy · Hold 最小集 · Rework（`mes_route_edge`，含 `rework` 边与 `reason_codes`）· 客诉包 CP-1～CP-6 · CI 三闸门  
 > 更新：2026-09-23（架构审查修订：登记幂等 / 发号方式 / 隔离级别口径 / 软删与 UK / 字典乐观锁；**随后第 1 轮审查 + C1 裁决**：软删口径回归现网，见 §3.7 与文末审查记录；**F2 落地**：乐观锁措辞精确到 MP `@Version`；**C2 落地**：权限码收敛为两级；**C3 落地**：V6 判重键加 `eqp_id` + null 分支；**C4 落地**：Bin 字典加 `program_version` 维度 + 四级回退）  
+> 更新：2026-10-08（产品补口径 D15–D18：手录算 TD-1 达成；客户映射界面同期；客诉包三块；拆批不复制。对齐 INT-0001 §7）  
+> 更新：2026-10-08（架构补口径 D19–D22：判重改守卫表时间桶；条/映射撞 UK 转业务码；发号同一事务；门面只读、作废只删头）  
 > 状态：**草案**（待批准；TD-1 的 plan 另行出，plan 未批不动码）  
 > **易混：** 本方案 ≠ YMS 良率分析 · ≠ Wafer Map 图形分析 · ≠ SEMI T23 / eDHR · ≠ EAP 设备直连 · ≠ 前道片级 SlotMap
 
@@ -25,7 +27,7 @@ updated: 2026-09-23
 
 | 切片       | 交付                                                                 | 阻塞关系         |
 | -------- | ------------------------------------------------------------------ | ------------ |
-| **TD-1** | Strip 条级 + 测试记录与 Bin 汇总落库 + Bin 独立字典 + 客户 Lot 映射数据模型 + 客诉包带 Bin 摘要 | —            |
+| **TD-1** | Strip 条级 + 测试记录与 Bin 汇总落库 + Bin 独立字典 + 客户 Lot 映射（含管理端界面）+ 客诉包带分档 / 条清单 / 客户映射 | —            |
 | TD-2     | 不良 Bin → Hold / Rework **建议**联动（阈值规则 + 人工确认 + 既有事务留痕）              | 依赖 TD-1 有数据  |
 | TD-3     | 颗级 Die 序列号 / 条级 Bin 细分 / 测试文件（STDF、CSV）解析                          | 依赖 TD-1 层级就位 |
 
@@ -35,7 +37,7 @@ updated: 2026-09-23
 
 ## 1. 目标与边界
 
-**一句话：** 测试结果进系统、与批绑定、可查可证；追溯从「批」下探到「条」；客诉包能回答「这批分了几档、各多少颗」。
+**一句话：** 测试结果进系统、与批绑定、可查可证；管理端能从内部批查到条清单和来料/出货批号；客诉包同时回答「分了几档、各多少颗」和「来料/出货是哪批、条号有哪些」。
 
 | 做（TD-1）                              | 不做（明确后置 / 禁宣称）                         |
 | ------------------------------------ | -------------------------------------- |
@@ -43,8 +45,8 @@ updated: 2026-09-23
 | 测试记录（批次 / 阶段 / 程序版本 / 设备 / 时间 / 总颗数） | STDF / CSV 自动解析（TD-3；本切片为手工或 API 结构提交） |
 | Bin 汇总落库（hard bin 计数 + 占比）           | soft bin 明细分档入库（只留引用，见 D2）             |
 | Bin 独立字典（产品 / 程序维度、失效模式、可出货性）        | YMS 良率分析与 Wafer Map 图形（属 YMS 范畴）       |
-| 客户 Lot 映射数据模型（来料 ↔ 出货），界面后置          | 出货 / 编带作业、委外工序管理                       |
-| 客诉包装配块新增测试分档摘要                       | 由 Bin 自动 Hold / 自动 Rework（TD-2 也只出建议）  |
+| 客户 Lot 映射（来料 ↔ 出货）：表 + 管理端登记 / 正查 / 反查 | 出货 / 编带作业、委外工序管理                       |
+| 客诉包三块：测试分档、Strip 清单、客户批号映射       | 由 Bin 自动 Hold / 自动 Rework（TD-2 也只出建议）  |
 | 管理端登记与查询页                            | **现场台任何改动**（A5）                        |
 
 ---
@@ -133,7 +135,7 @@ UK：`(product_code, program_name, program_version, bin_type, bin_code)`（**UK 
 | remark                                          | VARCHAR(512) | Y |                                      |
 | create_by / create_time / update_time / deleted |              |   | 审计与软删                                |
 
-索引：`lot_id`、`(lot_id, test_time DESC)`、`uk_record_no`。**不加「同批同程序唯一」约束**——重测合法（A10）。防重复提交**不靠 UK**（重新提交生成新 record_id，汇总 UK 不设防），靠 V6 业务判重窗口（D12）。**不提供 DELETE 接口**：录入错误走「作废」（§5，须填原因、留审计），作废后 `record_no` 不复用、Bin 汇总随头一并排除（A11）。
+索引：`lot_id`、`(lot_id, test_time DESC)`、`uk_record_no`。**记录表不加「同批同程序唯一」**——跨时间桶的重测合法（A10）。同一 10 分钟桶内的重复提交靠守卫表 UK（§3.2.1 / D19），禁止先查后插。**不提供 DELETE 接口**：录入错误走「作废」（§5，须填原因、留审计），作废后 `record_no` 不复用；**只软删头表**，Bin 汇总无 `deleted`，查询 join 头表排除（A11）。作废不删守卫行。
 
 ### 3.3 `mes_test_bin_summary` — Bin 汇总（Test 模块）
 
@@ -147,7 +149,24 @@ UK：`(product_code, program_name, program_version, bin_type, bin_code)`（**UK 
 | bin_qty      | INT         | N | 颗数                             |
 | is_shippable | TINYINT     | N | **可出货性快照**（登记时字典值，D7）          |
 
-UK：`(record_id, bin_type, bin_code)`。无独立审计 / 软删字段：生命周期完全随头记录；**查询一律 join 头表过滤头记录的 `deleted`**（A11）。
+UK：`(record_id, bin_type, bin_code)`。无独立审计 / 软删字段：生命周期完全随头记录；**查询一律 join 头表过滤头记录的 `deleted`**（A11）。作废不对本表发 UPDATE。
+
+### 3.2.1 `mes_test_submit_guard` — 提交守卫（Test 模块，D19）
+
+同一事务内、写记录头之前插入一行。唯一键冲突即整笔回滚，对外 `TEST_RECORD_DUPLICATE`，记录头与汇总零落库。
+
+| 字段 | 类型 | 空 | 说明 |
+|------|------|----|------|
+| id | BIGINT PK | N | |
+| lot_id | BIGINT | N | |
+| eqp_key | BIGINT | N | 有设备写 `eqp_id`；无设备写 **`0`**（禁止 NULL，否则 UK 不挡重复） |
+| program_name | VARCHAR(64) | N | |
+| program_version | VARCHAR(32) | N | |
+| test_time | DATETIME | N | 与记录头相同的业务时间 |
+| total_qty | INT | N | |
+| window_bucket | BIGINT | N | `FLOOR(UNIX_TIMESTAMP(NOW()) / 600)`，按**插入当时**切 10 分钟桶，不按 `test_time` 切 |
+
+UK：`(lot_id, eqp_key, program_name, program_version, test_time, total_qty, window_bucket)`。无软删。桶与桶的交界上，相同载荷各成功一次。作废记录不删守卫，同一桶内原样再登仍拒。换设备（另一个 `eqp_key`）各记一条。
 
 ### 3.4 `mes_lot_strip` — Strip 条级（Lot 模块）
 
@@ -223,16 +242,16 @@ Lot（扩展）                       = Strip 与客户 Lot 映射的主数据�
 Hold / Track                      = 【TD-1 零改动】仍只认 active Hold；Rework 仍走既有事务
 EDC                               = 不参与；EDC 是工艺参数点，测试分档是另一域
 Alarm                             = 【TD-1 零改动】TD-2 可由建议联动 raise
-History（客诉包，com.mes.complaint）= 装配块新增测试分档摘要，**经 TestFacade 只读**
+History（客诉包，com.mes.complaint）= 装配块新增测试分档、Strip 清单、客户映射，**测试走 TestFacade，条与映射走 Lot 既有 Service**
 WIP / Route / Report              = TD-1 不改读模型；报表用 Bin 出良率口径属后续
-UI 管理端（Admin Light）          = 测试记录登记与查询、Bin 字典维护、Lot 详情「测试结果」区
+UI 管理端（Admin Light）          = 测试记录登记与查询、Bin 字典维护、Lot 详情「测试结果」「Mapping / 条级」
 UI 现场台（Field Dark）           = **零改动**（A5）
 ```
 
 | Facade                | 方法（TD-1）                                                                                                                     | 调用方                         |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `TestFacade`（新增，只读为主） | `listRecordsByLots(lotIds, cap)` / `listBinSummaryByRecord(recordId)` / `latestBinSummaryByLot(lotId)` / `assertBinDef(...)` | 客诉包 Assembler、Lot 详情、报表（后续） |
-| Lot 侧（既有 Service 扩展）  | `listStrips(lotId)` / `listCustomerMaps(lotId)`                                                                              | 客诉包、Lot 详情                  |
+| `TestFacade`（新增，**只读**） | `listRecordsByLots(lotIds, capPerLot)`：每批上限由参数给出，返回这些记录**及其 Bin 汇总**（记录一次查询，汇总 `record_id IN (...)` 一次查询）。校验 `assertBinDef` 留在 `MesTestRecordService`，不上门面 | 客诉包 Assembler、报表（后续）。Lot 详情走 Test 自己的 controller，不经 Lot 代理 |
+| Lot 侧（既有 Service 扩展）  | `listStrips(lotId)` / `listCustomerMaps(lotId)`；客诉包用 `listStripsByLots(lotIds)` / `listCustomerMapsByLots(lotIds)`（一次 IN，禁止按 Lot 循环） | 客诉包、Lot 详情                  |
 
 **约束**：客诉包与报表**禁止**直连 `mes_test_*` 表或其 mapper（A7 / P4）；Test 模块**禁止**引用 Hold / Track 的写路径（A1）。
 
@@ -248,13 +267,13 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 | GET  | `/test/records`            | `test:view` | 分页查询（`lotId` / `lotNo` / `stage` / 程序 / 时间范围）          |
 | GET  | `/test/records/{id}`       | `test:view` | 详情（含 Bin 明细）                                           |
 | GET  | `/test/summary/by-lot/{lotId}` | `test:view` | 按批的测试摘要（Lot 详情页消费）；**Test 模块自有 controller**，Lot 侧不代理此端点（A7，避免 Lot 直连 `mes_test_*`） |
-| PUT  | `/test/records/{id}/void`  | `test:void` | 作废测试记录（原因必填，留审计；头与 Bin 汇总一并软删，A11）                    |
+| PUT  | `/test/records/{id}/void`  | `test:void` | 作废测试记录（原因必填；**只软删头表**；汇总靠 join 头表消失；不删守卫；`record_no` 不复用，A11） |
 | GET  | `/test/bins`               | `test:view` | Bin 字典查询（可选 `productCode` / `programName` / `programVersion` / `binType`） |
 | POST | `/test/bins`               | `test:edit-bin` | Bin 字典新增                                               |
 | PUT  | `/test/bins/{id}`          | `test:edit-bin` | Bin 字典修改 / 停用（**乐观锁**：请求携带 `version`，**用 MP `@Version` 由 `updateById` 自动加条件**，影响行数为 0 即冲突 → 拒 `TEST_BIN_DEF_CONFLICT`，禁止静默覆盖。**禁止手写 version 条件更新**；现网已注册 `OptimisticLockerInnerInterceptor`，判冲突先例 `MesEdcPlanServiceImpl:141-142`） |
-| POST | `/lots/{id}/strips`        | `lot:edit`           | Strip 批量登记（一次一条批的多条 Strip；**同事务整体成败**，请求内 `strip_no` 重复前置拒绝 `LOT_STRIP_DUPLICATE`，不靠 UK 报错兜底） |
+| POST | `/lots/{id}/strips`        | `lot:edit`           | Strip 批量登记（同事务整体成败）。请求内重复前置拒绝；跨请求撞 UK 也转 `LOT_STRIP_DUPLICATE`（D20） |
 | GET  | `/lots/{id}/strips`        | `lot:list`           | Strip 列表                                               |
-| POST | `/lots/{id}/customer-maps` | `lot:edit`           | 客户 Lot 映射登记（INBOUND / OUTBOUND）                        |
+| POST | `/lots/{id}/customer-maps` | `lot:edit`           | 客户 Lot 映射登记（INBOUND / OUTBOUND）。跨请求撞 UK 转 `LOT_MAP_DUPLICATE`（D20）。不写 `mes_lot.customer_lot` |
 | GET  | `/lots/{id}/customer-maps` | `lot:list`           | 映射查询（正查）                                               |
 | GET  | `/lots/by-external-lot`    | `lot:list`           | 按外部批号反查内部批（召回主路径）                                      |
 
@@ -266,14 +285,14 @@ UI 现场台（Field Dark）           = **零改动**（A5）
 
 | #  | 校验                                                           | 失败                                                |
 | -- | ------------------------------------------------------------ | ------------------------------------------------- |
-| V1 | `Σ bin_qty(HARD) == total_qty`                               | 拒（`TEST_BIN_SUM_MISMATCH`）—— A3「不依赖人工补录」的落地手段（D6） |
+| V1 | `Σ bin_qty(HARD) == total_qty`                               | 拒（`TEST_BIN_SUM_MISMATCH`）—— 数据质量（D6）。手录本身允许（A3 / D17），对账不代替「数据自动进系统」 |
 | V2 | 每个 `bin_code` 在字典中可解析（**四级回退**：`PROGRAM_VERSION`（程序 + 版本精确）→ `PROGRAM`（版本不限）→ `PRODUCT` → `GLOBAL`） | 拒；提示先维护字典                                         |
 | V3 | `program_name` / `program_version` / `test_time` 非空          | 拒（A9：无版本则 Bin 语义不可追溯）                             |
 | V4 | `lot_id` 存在且非 `merged` / `scrapped`                          | 拒                                                 |
 | V5 | 同一请求内 `(bin_type, bin_code)` 不重复                             | 拒（否则汇总不可信）                                        |
-| V6 | 业务判重窗口：**10 分钟**内已存在同 `(lot_id, **eqp_id**, program_name, program_version, test_time, total_qty)` 的记录 | 拒（`TEST_RECORD_DUPLICATE`）——防重复点击 / 重复提交（D12）；**键含 `eqp_id`（C3 裁决）**：两台测试机并行测同批各记一条、互不误判；合法重测须改 `test_time` 或窗外提交 |
+| V6 | 同一事务插入 `mes_test_submit_guard`。UK = `(lot_id, eqp_key, program_name, program_version, test_time, total_qty, window_bucket)` | 键冲突 → 整笔回滚 + `TEST_RECORD_DUPLICATE`（D19）。`eqp_key`：无设备写 `0`。`window_bucket = FLOOR(UNIX_TIMESTAMP(NOW())/600)`。换 `eqp_key` 各成功。下一桶相同载荷可以再登（A10） |
 
-> **V6 实现约束（C3 裁决，必读）**：判重键含**可空字段** `eqp_id`（外协 / 手工录入无设备）。**禁止**直接写 `.eq(MesTestRecord::getEqpId, eqpId)` —— MP 的 `eq(col, null)` **不会跳过条件**（源码 `AbstractWrapper:467-470` 的 `addCondition` 只判 condition 布尔、**不判 val 是否为 null**），会生成 `eqp_id = NULL`，SQL 语义恒为 UNKNOWN → **判重静默失效且不报错**（手工录入场景等于零防护，测试也难发现）。必须写 `.eq(eqpId != null, MesTestRecord::getEqpId, eqpId)`；`eqpId` 为空时改走 `.isNull(MesTestRecord::getEqpId)`。
+> **V6 实现约束（D19，取代「先查后插」）**：禁止 `SELECT` 判重再 `INSERT` 记录。两个事务都能通过查询。空设备禁止写成 NULL（MySQL 唯一索引不把两个 NULL 当成重复）。C3 要求的「键里带设备」落在 `eqp_key`，不再用 `.eq(eqp_id, null)` / `.isNull` 做判重查询。
 
 ---
 
@@ -295,18 +314,22 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 
 ## 7. 客诉证据链延伸（TD-1 做）
 
-沿用 CP-1～CP-6 的装配口径（`MES-客诉追溯包接口设计.md` §6.2），**只增一个块**，不新造导出格式（D8）：
+沿用 CP-1～CP-6 的装配口径（`MES-客诉追溯包接口设计.md` §6.2），**增三块**，不新造导出格式（D8 / D16）：
 
 | 块 | 来源 | 上限 | 备注 |
 |----|------|------|------|
-| `testSummaryByLot` | `TestFacade`（只读，一次 IN） | 每 Lot 最近 **20** 条测试记录 + 各记录 Bin 汇总（每记录 ≤ 50 档） | 现查，**不落库**（§4.3 口径延续）；失败按块隔离并记 WARN |
+| `testSummaryByLot` | `TestFacade.listRecordsByLots`（只读，一次 IN） | 每 Lot 最近 **20** 条测试记录（`test_time` 倒序）+ 各记录 Bin 汇总（每记录 ≤ **50** 档） | 现查，不落库；失败按块隔离并记 WARN |
+| `stripsByLot` | `MesLotService.listStripsByLots`（一次 IN） | 每 Lot **200** 条（`seq_no`、`id` 升序） | 上限在 **SQL** 里按批截断（窗口函数 `ROW_NUMBER` 或等价写法）。禁止先全量装入内存再截。完整清单在 `GET /lots/{id}/strips` |
+| `customerMapsByLot` | `MesLotService.listCustomerMapsByLots`（一次 IN） | 每 Lot **50** 条（`id` 升序） | 上限同样在 SQL 按批截断。含 `INBOUND` / `OUTBOUND` |
 
-- **JSON**：根对象增 `testSummaryByLot`，其余键不变。
-- **ZIP `README.txt` 封面**：增一行「每 Lot 测试记录上限: 20」，口径句补「含测试分档构成；不含 Wafer Map 图形与良率分析」。
+- **范围 = 包内全部成员 Lot**，不是只查锚点。成员仍只由 genealogy 圈定（客诉包既有 A6）。
+- **挂在登记当时的批，拆批不复制**（D18）。子批没有自己的测试记录时，子批键是空列表；父批的记录在父批键下。锚点选子批且 `direction` 为 `up` 或 `both`（现网抽屉默认 `both`）时，父批在成员里，分档就在包里。`direction=down` 只有子孙，父批记录不出现。
+- **JSON**：根对象增上述三键，其余键不变。形状与现网 `historiesByLot` 相同：`Map<lotId, List>`。
+- **ZIP `README.txt` 封面**：在现有 20 行上新增 4 行上限（测试记录、每记录 Bin 档、Strip、客户映射），行项数 = **24**。空数据句补上这三块；口径句改为「含测试分档、Strip 条清单、客户批号映射；三者挂在登记当时的 Lot，拆批后不复制到子批；不含 Wafer Map 图形与良率分析」。这三处是改已有句子，不另计行。
 - 权限沿用 `complaint:view`，不新增权限码。
-- **越界红线**：客诉包**禁止**直连 `mes_test_*`（P4）；`TestFacade` 是唯一读入口。
+- **越界红线**：客诉包禁止直连 `mes_test_*`（P4），测试只经 `TestFacade`；条与映射只经 Lot 既有 Service，禁止新 mapper 依赖。
 
-> 这一块是厂型决策的直接兑现：客户审厂问「这批分了几档、各多少颗、失效什么模式」，证据包里当场可答。
+> 审厂要同时答「分了几档、各多少颗」和「来料 / 出货是哪一批」。只加分档摘要，ZIP 里仍然没有召回用的客户批号。
 
 ---
 
@@ -316,15 +339,15 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 |---|------|------|
 | A1 | 状态唯一真相仍在 Track | 测试数据与后续建议**不得**直改 Lot 状态；Hold / Rework 必须走既有事务 |
 | A2 | 接入先用文件 / API | SECS/GEM 属远期；本期不得因设备协议阻塞主线（TD-1 为手工或 API 结构提交） |
-| A3 | 追溯链不得依赖人工补录 | 落地手段 = 写入时 `Σ bin_qty == total_qty` 强校验（V1 / D6） |
+| A3 | TD-1 接受管理端结构化手录 | 测试记录、Strip、客户映射可以手填或 API 结构提交，二者同一套校验。V1 对账是数据质量（D6 / D17），不是「数据会自动进来」。文件自动解析是 TD-3 |
 | A4 | 导出沿用既有口径 | 不落盘、不缓存；权限沿用 `complaint:view` |
 | A5 | 不破坏现场 3 步过站 | 现场台零改动；测试数据登记只在管理端 |
 | A6 | Strip 不是 Lot | 不建 WIP、不绑 Route、不过站、不写 `mes_tx_log`（§2.1） |
-| A7 | 跨模块只走 Facade | Test / Lot / History 之间只经 `TestFacade` 与 Lot 既有门面 |
+| A7 | 跨模块只走既有读入口 | 测试数据出模块只经只读 `TestFacade`。条与映射出模块只经 `MesLotService` 的只读方法（现网客诉装配已经依赖它，Lot 无 Facade）。Test 校验批次只调 `MesLotService.get`，禁止注入 `MesLotMapper` |
 | A8 | 记录与汇总同事务 | 测试记录 + Bin 汇总整体成功或整体失败，禁止半截记录 |
 | A9 | 程序版本不可空 | Bin 语义随程序版本变化（`BK-0001` 待核实 4），无版本则拒绝登记 |
 | A10 | 允许重测、不改写历史 | 同批可有多条测试记录，后者不覆盖前者；「当前有效」由查询侧表达 |
-| A11 | 测试记录只可作废，不可删改 | 作废 = 软删 + 必填原因（留审计）；Bin 汇总随头记录；A10「不改写历史」的延续 |
+| A11 | 测试记录只可作废，不可删改 | 作废 = 头表软删 + 必填原因。汇总表无 `deleted`，不发 UPDATE，查询 join 头表。不删守卫行。`record_no` 不复用 |
 
 ---
 
@@ -351,7 +374,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | D1 | 颗粒度自 **Strip + Bin 汇总**起步，颗级后置 | `BK-0001` 误区 6：批级 + 汇总 + 条级已能支撑良率 / 审厂 / 拦截 |
 | D2 | 入库 = **测试记录头 + Bin 汇总**；soft bin 与逐颗明细不入库（留引用） | 量级可控；审厂口径要「分了几档、各多少颗」；与 A2 一致 |
 | D3 | Bin **独立字典**，带产品 / 程序维度与失效模式 | 见 §3.1 |
-| D4 | 客户 Lot 映射 **独立表**，界面后置；不复用 `customer_lot`、不进 genealogy | 见 §3.5 |
+| D4 | 客户 Lot 映射 **独立表**；不复用 `customer_lot`、不进 genealogy。**界面与 TD-1 同期**（D15 取代「界面后置」） | 见 §3.5 |
 | D5 | Strip 作 Lot 下级单元，**不建 Lot** | 见 §2.1 |
 | D6 | Bin 汇总与 `total_qty` **写入即对账** | A3 的唯一可靠落地方式；事后核对等于允许脏数据先入库 |
 | D7 | 可出货性 **双轨**：汇总行存登记时快照，字典存当前值 | 客诉问的是「当时按规格能否出货」，报表看的是「现在按规格」 |
@@ -359,9 +382,17 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | D9 | TD-2 的建议**复用手持事务**（`HoldService.create` / 既有 rework 事务） | `mes_route_edge` 的 `rework` 边与 `reason_codes` 已就绪，不新造第二套返工路径 |
 | D10 | 切片自 TD-1 起编号；plan 落 `docs/模块/测试数据（Test）模块/TD-1-plan.md` | 与「切片 plan 归所属模块目录」约定一致 |
 | D11 | `record_no` 用**号段表**发号（`mes_test_record_no_seq`），与 Lot 单号同机制 | 并发防撞号；复用现网 `MesLotNoSeqMapper` 先例，不新造第二套发号路径 |
-| D12 | 防重复提交靠**业务判重窗口**（V6），不靠 UK 或前端重入闸 | 重新提交生成新 record_id，`(record_id, ...)` UK 完全不设防；前端重入闸不是架构保证。**判重键含 `eqp_id`**（C3 裁决），空值走 `.isNull(...)` 分支，禁止 `eq(col, null)` |
+| D12 | 记录表不加业务唯一键；前端重入闸不是架构保证 | **「先查后插」作废**，见 D19。C3「键里带设备」改由守卫表 `eqp_key` 承担 |
 | D13 | **软删一律与现网一致**：`deleted` 为 TINYINT、UK 不含 `deleted`、走 MP `@TableLogic`；**放弃**「置主键 id」手法 | **2026-09-23 用户拍板（采纳方案①）**。原「置 id」方案与现网机制三处硬冲突：① MP 的 `logicDeleteValue` 是 String 常量（`GlobalConfig.java:184`），`AbstractMethod.java:106` 直接拼 SQL 字面量、无列引用解析 → 无法置 id；② `BaseEntity.deleted` 是 `Integer`，装不下 19 位雪花 id（实测溢出 9.8 亿倍）；③ 全库 `deleted` 27 处全 tinyint、UK 含 deleted 的表 0 个。代价：「撤销后重建同键」不可行，用 UPDATE 表达（§3.7 / §12） |
 | D14 | Bin 字典维度**含 `program_version`**（可空），解析走**四级回退** | **C4 裁决（2026-09-24，选项 1）**：A9 既要求 `program_version` 不可空（理由 = Bin 语义随版本变），字典就该能表达版本差异 —— 否则 A9 是空约束，且错误 `bin_name` 会被 D7 快照**固化进历史与客诉证据包**。维护量由回退链兜住：程序升版但 Bin 语义未变时仍命中 `PROGRAM` / `PRODUCT` / `GLOBAL` 档，无需重复维护 |
+| D15 | 客户 Lot 映射的管理端界面（批次详情「Mapping / 条级」：登记、正查、反查）**与 TD-1 同期** | **2026-10-08**。质量工程师不调接口。取代 D4 旧句「界面后置」。对齐 INT D6 |
+| D16 | 客诉包增三块，不增导出格式：`testSummaryByLot` / `stripsByLot` / `customerMapsByLot` | **2026-10-08**。分档摘要答不了来料批号。范围 = 包内全部成员。对齐 INT D7，详见 §7 |
+| D17 | A3 = TD-1 接受结构化手录；V1 只约束「记进去的数必须平」 | **2026-10-08**。原「不得依赖人工补录 / V1 即 A3」作废。文件解析仍属 TD-3。对齐 INT D8 |
+| D18 | 拆批后记录留在登记当时的批，**不复制**到子批或父批 | **2026-10-08**。子批键允许为空。要在子批客诉里看到父批分档，`direction` 用 `up` 或 `both`。`down` 不含父批。对齐 INT D9。关闭 §12 同名遗留 |
+| D19 | 判重用 `mes_test_submit_guard` 的时间桶唯一键，与记录头、汇总同一事务插入 | **2026-10-08 架构**。先查后插挡不住两个同时提交的事务。空设备写 `0`。桶边界两侧各成功一次。作废不删守卫 |
+| D20 | Strip / 客户映射的跨请求重复靠表 UK，捕获后转业务码 | 请求内前置检查挡不住并发。`LOT_STRIP_DUPLICATE` / `LOT_MAP_DUPLICATE`。禁止把数据库唯一冲突原样变成 500 |
+| D21 | `bump()` 与 `lastInsertId()` 写在同一个 `@Transactional` 的 `create` 里，中间不换连接、不开 `REQUIRES_NEW` | 现网 `MesLotServiceImpl.create`（124 行事务，166–167 行连着取号）。`LAST_INSERT_ID()` 是连接级的。事务回滚后退号，允许 |
+| D22 | `TestFacade` 只读；作废只软删头；客诉条清单在 SQL 按批截断；本切片不写 `mes_lot.customer_lot` | 校验留在 `MesTestRecordService`。汇总查询 join 头表。Test 不注入 `MesLotMapper`。客诉装配仍在 `ComplaintPackageWriter.insert` 提交之后，`build()` 不带事务 |
 
 ---
 
@@ -369,10 +400,10 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 
 | INT 验收 | 由谁达成 | TD-1 可判真假的陈述 |
 |----------|----------|---------------------|
-| 1 分钟级链路 | TD-1 + TD-3 | TD-1：任取一个 Lot，能查到其 Strip 清单与客户 Lot 映射（正查 + 反查），无需翻 Excel |
-| 2 测试结果进系统并与批次绑定 | **TD-1 完整覆盖** | 任取一条测试记录，可查到所属批、程序名与版本、各 Bin 数量与占比；`Σ(HARD) == total_qty` 恒成立 |
+| 1 分钟级链路 | TD-1 到批；颗级 TD-3 | TD-1：任取一个内部批，管理端查到 Strip 清单与客户 Lot 映射（正查 + 反查）及本批分档。工序 / 设备 / 时间用既有履历。任取一颗定位到 wafer 位置不在本刀 |
+| 2 测试结果进系统并与批次绑定 | **TD-1 完整覆盖** | 任取一条测试记录，可查到所属批、程序名与版本、各 Bin 数量与占比；`Σ(HARD) == total_qty` 恒成立。手录与 API 同一套校验 |
 | 3 不良 Bin → 建议 + 留痕 | TD-2 | — |
-| 4 客诉包带分档信息 | TD-1（分档）/ TD-3（颗级） | 导出的 JSON / ZIP 里含 `testSummaryByLot`；README 封面出现「每 Lot 测试记录上限」与分档口径句 |
+| 4 客诉包带追溯与分档 | TD-1 三块；颗级 TD-3 | JSON / ZIP 含 `testSummaryByLot`、`stripsByLot`、`customerMapsByLot`（包内全部成员）。README 行项 = 24。子批锚点 + `direction=both` 时，父批分档在父批键下 |
 | 5 现场不退化 | TD-1 | 现场台代码零改动；TrackIn/Out 步数不变 |
 
 **副作用与并发（必测）**：
@@ -380,8 +411,11 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | 场景 | 期望 |
 |------|------|
 | 同一 Lot 重复提交相同测试记录 | 允许（重测语义，A10）；两条记录并存，互不覆盖 |
-| 重复点击「保存」 | 前端重入闸 + **V6 业务判重窗口兜底**：第二次提交拒（`TEST_RECORD_DUPLICATE`）；UK 挡不住重复记录（D12） |
-| **两台测试机并行测同一批**（同程序 / 同时间 / 同总量） | **各记一条**（判重键含 `eqp_id`，C3）——**不得**被误判为重复提交 |
+| 重复点击「保存」 / 两个事务同时提交相同载荷 | 守卫 UK 冲突，后到者 `TEST_RECORD_DUPLICATE`，记录头与汇总零落库（D19）。前端重入闸只减少请求，不算并发保证 |
+| **两台测试机并行测同一批**（同程序 / 同时间 / 同总量） | **各记一条**（`eqp_key` 不同，D19） |
+| 相同载荷跨过 10 分钟桶边界再登 | 两条都成功（A10） |
+| 两个请求同时登记同一 `(lot_id, strip_no)` | 一行成功，另一行 `LOT_STRIP_DUPLICATE`（D20） |
+| 两个请求同时登记同一客户映射键 | 一行成功，另一行 `LOT_MAP_DUPLICATE`（D20） |
 | Bin 汇总与 `total_qty` 不等 | 拒绝且**零落库**（不留半截记录，A8） |
 | 并发登记同一 Lot 的不同测试记录 | 均成功（无 Lot 级写锁需求，同 CP §8.1 只读口径） |
 | 客诉包导出与测试记录登记并发 | 现网 MySQL 默认 **REPEATABLE READ**（未显式配置隔离级别）：导出走 MVCC 快照读，导出期间的新登记在导出事务内**不可见**（一致快照，即为期望行为）；导出不加锁、不得阻塞登记 |
@@ -402,7 +436,7 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | 良率 / Wafer Map 图形 | 无 | 需要图形化失效分布分析 | YMS 范畴，另评估 |
 | 「当前有效」测试记录 | 由查询侧取最新 | 需要人工指定重测结论 | 增设 `is_current` 标志（须带审计，勿静默改历史） |
 | **软删后同键重建** | **不支持**（UK 不含 `deleted`，为与全库 27 处一致，见 §3.7） | 真出现「撤销后确需重建同键」 | 三选一：① 改 UK 含 `deleted`（须先把 `BaseEntity.deleted` 改 `Long` + 手写软删，成为全仓例外）；② 加「复活」接口（`deleted` 改回 0）；③ 该场景改物理删。**TD-1 不做** |
-| 拆批后测试记录查询语义 | 未定义（子批是否经 genealogy 回溯父批测试记录） | 客诉包 / Lot 详情需在拆批场景出分档证据 | 明确查询侧口径（建议沿 genealogy 遍历、限深度）；写入侧不改 |
+| ~~拆批后测试记录查询语义~~ **已关闭（D18，2026-10-08）** | 记录留在登记当时的批，不复制。客诉包按成员批装配；`up`/`both` 才能在子批锚点的包里看到父批键 | — | 见 §7 / D18 |
 | 出货 / 编带 / 委外工序 | 无 | 后道第三批 | `MES-厂型选型分析.md` §6 第三批 |
 | EAP 试点（测试机 / 分选机直连） | 无 | 设备侧具备 SECS/GEM | 远期；A2 允许先用文件过渡 |
 
@@ -467,3 +501,29 @@ INT-0001 验收 3（不良 Bin → Hold / Rework 建议 + 留痕）由 TD-2 承�
 | **C2** | **采纳**：收敛为两级 —— `test:view` / `test:create` / `test:void` / `test:edit-bin`；并把「作废」从 create 中单列出来 | §5 接口表 8 行权限码 + 「权限码新增」列表（含分权设计说明）；字典查看并入 `test:view`、字典维护保留 `test:edit-bin` |
 | **C3** | **采纳**：V6 判重键加 `eqp_id`（6 元键），并写明 **null 分支写法** | §5 V6 行 + 新增「V6 实现约束」说明 · §9 D12 · §10 并发表（新增「双机并行测同批」场景行） |
 | **C4** | **采纳选项 1**：字典加 `program_version` 维度（UK 扩为 5 元）、`bin_scope` 增至 4 档、V2 回退链扩为**四级** | §3.1 字段表 + UK + 写入校验 + 「为何独立」措辞 · §5 `GET /test/bins` 参数与 V2 行 · §9 新增 **D14** |
+
+---
+
+## 产品补口径（2026-10-08）
+
+> 上一轮审查把「拆批后测试记录查询语义」留在 §12。本轮按 INT-0001 §7 收口，未改代码。
+
+| # | 决定 | 落点 |
+|---|------|------|
+| D15 | 客户映射管理端界面与 TD-1 同期，废除「界面后置」 | §1 范围表 · §4 UI 行 · §10 D4 / D15 |
+| D16 | 客诉包三块：分档、Strip、客户映射；范围 = 全部成员 | §7 · §11 验收 4 |
+| D17 | A3 改为接受结构化手录；V1 只做对账 | §5 V1 · §8 A3 · §10 D17 |
+| D18 | 拆批不复制；`up`/`both` 的包里父批键带父批记录；`down` 不含父批 | §7 · §12 该行关闭 |
+
+---
+
+## 架构补口径（2026-10-08）
+
+> 对照现网：`MesLotServiceImpl.create` 在同一事务里 `bump` + `lastInsertId`；`ComplaintPackageFacadeImpl.build` 自身无事务，`assemble` 在 `Writer.insert` 提交之后；`ComplaintPackageAssembler` 已注入 `MesLotService`。本轮未改代码。
+
+| # | 决定 | 落点 |
+|---|------|------|
+| D19 | 废除先查后插。守卫表时间桶 UK 与记录同一事务 | §3.2 / §3.2.1 · §5 V6 · §10 D12 / D19 · §11 并发 |
+| D20 | 条号、客户映射的并发重复靠 UK 转业务码 | §11 并发 |
+| D21 | 取号两步同一事务、同一连接 | §10 D21。照 `MesLotServiceImpl` 124、166–167 行 |
+| D22 | 门面只读；作废只删头；条清单 SQL 按批截断；不写 `mes_lot.customer_lot` | §4 Facade · §5 作废 · §7 Strip 上限 · §8 A7 / A11 |
