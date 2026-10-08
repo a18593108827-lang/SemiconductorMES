@@ -1,16 +1,16 @@
-\---  
+---
 type: plan
 
 module: Test
 
-status: draft
+status: approved
 
 slices: [TD-1]
 
 aligns: [MES-封测测试数据与Bin回流方案.md, INT-0001-封测颗级追溯与测试数据回流.md]
 
-updated: 2026-10-08  
-\---
+updated: 2026-10-08
+---
 
 # TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流
 
@@ -18,14 +18,14 @@ updated: 2026-10-08
 >
 > 上游意图：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳；本切片对应验收 2、4 的分档部分，与验收 5）
 >
-> 状态：**draft（未批不动码）** —— 治理铁律 A2
+> 状态：**approved（2026-10-08 用户批准）** —— 治理铁律 A2
 >
 > **实施前置核对项（动手前必须实测，禁止凭记忆分配）**
 >
 > - **M1 权限 id 段**：只读探针实测现网 `sys_permission` MAX(id) = **332**（2026-09-23）；本切片拟用 **340–343**（4 条），实施第一步再跑一次 `SELECT MAX(id) FROM sys_permission` 复核，冲突则整体后移（禁止与既有冲突）。
 > - **M2 字典空档取值口径（已定稿）**：规格 §3.1 已定 —— GLOBAL / PRODUCT / PROGRAM 档的**不适用维度一律填 `''`**（非 NULL；MySQL 唯一索引不收 NULL，用 `''` 五元 UK 才生效）。实施**照规格执行**，不再论证；若发现现网有更优先例，先回来改规格再动码。
-> - **M3 `schema.sql` 同步方式**：现网 `schema.sql` 为新库全量路径。实施前确认它是**人工拼接**还是**由 migrate 脚本汇总生成**，按其既有方式追加新表，禁止自创第三种做法。
-> - **M4 客诉包 README 行项数**：CP-6 现验收为「20 项行项齐」。本切片新增一行，相关验收断言须同步改为 21 项（见 §6）。
+> - **M3 `schema.sql` 同步方式（已定稿 2026-10-08）**：复审定案 = **每切片人工拼接**（`schema.sql` 已含 CP 切片 `mes_complaint_package*` 两表佐证，证据见 §8 通过项 5）。实施按既有 `CREATE TABLE IF NOT EXISTS` 风格人工追加新表，禁止自创第三种做法。
+> - **M4 客诉包 README 行项数（已定稿 2026-10-08，R2-F2 裁定）**：README 实际输出 23 行，既有「20 项」口径无法唯一推出 → **验收断言弃行数计数**，改为 contains「每 Lot 测试记录上限: N」行 + 既有 contains 断言不回归（见 §6 验收 10）；「20→21」仅作文档叙述。
 
 ## 1. 目标与边界
 
@@ -158,7 +158,7 @@ g. **文档收尾（同会话）**：新建 `docs/模块/测试数据（Test）�
 7. 字典改 `bin_name` / `is_shippable` 后 → 历史记录详情仍显示**登记时**的值（K7 / D7）
 8. Strip 批量登记后 `GET /lots/{id}/strips` 返回全部；**同请求内重复 `strip_no` → 前置拒 `LOT_STRIP_DUPLICATE`**，且不产生半截数据
 9. 客户 Lot 映射：正查返回全部映射；`GET /lots/by-external-lot?no=X` 能反查到内部批（含同一条外部批号映射到多批的情形）
-10. 客诉包 `GET /complaint-packages/{id}` 响应含 `testSummaryByLot`；`export?format=zip` 内 README 出现「每 Lot 测试记录上限」，且 README 行项数 = **21 项**（M4，同步更新 CP-6 相关断言）
+10. 客诉包 `GET /complaint-packages/{id}` 响应含 `testSummaryByLot`；`export?format=zip` 内 README 出现「每 Lot 测试记录上限: N」行（**contains 断言，R2-F2 裁定弃行数计数**；同步更新 `ComplaintPackageExporterTest` 与 Exporter javadoc 行序，R2-C1）
 11. **回归**：`format=json` 除新增 `testSummaryByLot` 键外，其余键与 CP-6 口径一致；ZIP 仍恰 2 个 entry
 12. 权限（**两级码**，C2）：无 `test:view` → `GET /test/records` 403；无 `test:create` → `POST /test/records` 403；无 `test:void` → 作废 403；无 `test:edit-bin` → 改字典 403
 13. `mes_tx_log` 与 `mes_lot.status` 在本切片所有操作前后**无变化**（K1）；Hold / Track 相关代码 diff 为空
@@ -230,8 +230,8 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 | 11 | 三上限同路径 + 开关 key                                                                        | `ComplaintPackageFacadeImpl:250`（historyPerLot/holdCap/alarmCap）· `:95-96` `mes.complaint-package.enabled` |
 | 12 | 前端挂载点存在                                                                                | `web/src/api/lot.ts`、`web/src/pages/LotsPage.tsx`                                                          |
 
-**结论：无阻断性问题，plan 可提交批准。** 批准前需用户确认 R2-F2 的验收断言改法（contains 替代计数）。
+**结论：无阻断性问题，plan 可提交批准。** ~~批准前需用户确认 R2-F2 的验收断言改法（contains 替代计数）。~~ → **2026-10-08 用户确认「按 F2 改」**：M4 与验收 10 已按 contains 断言改写（见前置核对项 M4 / §6 验收 10），R2-F2 关闭。
 
 ---
 
-**批准记录**：`status` 改为 `approved` 时，在此行写明批准人与日期（该提交即审计轨迹）。
+**批准记录**：2026-10-08，批准人：用户（guocong）口头批准于会话；R2-F2 断言改法已确认。本提交即审计轨迹，批准后按 §5 步骤 a–g 实施。
