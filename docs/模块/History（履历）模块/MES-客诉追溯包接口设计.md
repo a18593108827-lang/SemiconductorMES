@@ -4,7 +4,7 @@ module: History
 status: done
 slices: [CP-1, CP-2, CP-3, CP-4, CP-5, CP-6]
 aligns: []
-updated: 2026-09-22
+updated: 2026-10-08
 ---
 
 # MES 客诉追溯包（Complaint Trace Package）— 接口设计
@@ -15,7 +15,8 @@ updated: 2026-09-22
 > 业界：Critical Manufacturing Genealogic（正反向 + 多 Lot 履历）；GE Vernova as-built + recall 缩面；8D D3 Containment  
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
 > 更新：2026-09-21（CP-5 对齐：contain token 占位、心跳续命、结束 CAS 认 token、双权限 AND、ContainWriter 拆分；Hold.create 无行锁）  
-> 更新：2026-09-22（CP-6 落地：`format=zip` 出 `{packageNo}.zip`＝`{packageNo}.json` + `README.txt`；装配抽 `ComplaintPackageExporter`；`Cache-Control: no-store`；上限值由 Assembler 访问器传入封面）
+> 更新：2026-09-22（CP-6 落地：`format=zip` 出 `{packageNo}.zip`＝`{packageNo}.json` + `README.txt`；装配抽 `ComplaintPackageExporter`；`Cache-Control: no-store`；上限值由 Assembler 访问器传入封面）  
+> 更新：2026-10-08（§6.8 记下 TD-1 预定三块。**现网仍是 CP-6：没有这三块，README 仍是 20 行**）
 > 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅ · CP-5 ✅ · CP-6 ✅**  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
@@ -319,6 +320,18 @@ build 与 Get 响应**同形**（单一 `ComplaintPackageVO`）；装配块（ge
 写入事务必须落在独立 Writer Bean 的 public `@Transactional` 或 `TransactionTemplate` 上；禁止 Facade 同类自调用 / 私有方法事务 / **`build()` 带 `@Transactional`**（外层事务会使 catch UK 后仍 rollback-only）。UK 冲突必须在 Writer 代理外捕获，只改 `package_no` 再调 Writer public 方法；禁止在 Writer 事务内 catch 后继续插。
 
 **HTTP 成功边界：** 包头+成员提交成功即 build 成功。装配按块、按 Lot 失败隔离（该块/该 Lot 空列表，其它继续）；失败必记 WARN（packageNo + lotId + 块名）。不得因某成员 `listByLot` 404 把已落库的包打成 500（否则客户端按 A9 再 build 会留下孤儿包）。
+
+### 6.8 TD-1 预定增块（未落地）
+
+TD-1 落地前，Get / Export **没有**下列字段，README **仍是 20 行**。契约以 `MES-封测测试数据与Bin回流方案.md` §7 为准，这里只防止把「预定」读成「已经返回」：
+
+| 块 | 来源 | 上限 |
+|----|------|------|
+| `testSummaryByLot` | `TestFacade` | 每 Lot 最近 20 条记录，每记录 ≤ 50 档 |
+| `stripsByLot` | Lot Service，一次 IN | 每 Lot 200 条 |
+| `customerMapsByLot` | Lot Service，一次 IN | 每 Lot 50 条 |
+
+范围 = 包内全部成员批。记录挂在登记当时的批，拆批不复制。`direction=both`（抽屉默认）时，子批锚点的包里父批键带父批记录。落地后 README 行项数为 24，并把本节并入 §6.2 / §6.4。
 
 ---
 
