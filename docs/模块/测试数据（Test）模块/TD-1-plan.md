@@ -14,7 +14,7 @@ updated: 2026-10-08
 
 # TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流
 
-> 对齐：`MES-封测测试数据与Bin回流方案.md` §2（层级模型）· §3（数据，含 §3.7 软删口径）· §4（Facade）· §5（接口与 V1–V6 校验）· §7（客诉包延伸）· §8（A1–A11）· §9（P1–P9 / D1–D14）
+> 对齐：`MES-封测测试数据与Bin回流方案.md` §2（层级模型）· §3（数据，含 §3.2.1 守卫表 / §3.7 软删口径）· §4（Facade）· §5（接口与 V1–V6 校验）· §7（客诉包延伸，三块）· §8（A1–A11）· §9（P1–P9）· §10（D1–D22）· 尾部补口径（2026-10-08 产品 D15–D18 / 架构 D19–D22）
 >
 > 上游意图：`INT-0001-封测颗级追溯与测试数据回流.md`（已采纳；本切片对应验收 2、4 的分档部分，与验收 5）
 >
@@ -25,7 +25,7 @@ updated: 2026-10-08
 > - **M1 权限 id 段**：只读探针实测现网 `sys_permission` MAX(id) = **332**（2026-09-23）；本切片拟用 **340–343**（4 条），实施第一步再跑一次 `SELECT MAX(id) FROM sys_permission` 复核，冲突则整体后移（禁止与既有冲突）。
 > - **M2 字典空档取值口径（已定稿）**：规格 §3.1 已定 —— GLOBAL / PRODUCT / PROGRAM 档的**不适用维度一律填 `''`**（非 NULL；MySQL 唯一索引不收 NULL，用 `''` 五元 UK 才生效）。实施**照规格执行**，不再论证；若发现现网有更优先例，先回来改规格再动码。
 > - **M3 `schema.sql` 同步方式（已定稿 2026-10-08）**：复审定案 = **每切片人工拼接**（`schema.sql` 已含 CP 切片 `mes_complaint_package*` 两表佐证，证据见 §8 通过项 5）。实施按既有 `CREATE TABLE IF NOT EXISTS` 风格人工追加新表，禁止自创第三种做法。
-> - **M4 客诉包 README 行项数（已定稿 2026-10-08，R2-F2 裁定）**：README 实际输出 23 行，既有「20 项」口径无法唯一推出 → **验收断言弃行数计数**，改为 contains「每 Lot 测试记录上限: N」行 + 既有 contains 断言不回归（见 §6 验收 10）；「20→21」仅作文档叙述。
+> - **M4 客诉包 README 行项数（已定稿 2026-10-08，R2-F2 裁定 + R3 对齐方案 §7）**：README 物理行数与「行项」口径不一致（R2-F2），**验收断言一律 contains**，不数行数。方案 §7 要求：现有封面**新增 4 行上限**（测试记录 / 每记录 Bin 档 / Strip / 客户映射），行项 20→24（文档叙述口径）；另有 2 处**改既有句子**（空数据句补三块、口径句改为「含测试分档、Strip 条清单、客户批号映射；三者挂在登记当时的 Lot，拆批后不复制到子批；不含 Wafer Map 图形与良率分析」）。
 
 ## 1. 目标与边界
 
@@ -33,12 +33,12 @@ updated: 2026-10-08
 
 **做：**
 
-- **Test 模块（新增 `com.mes.test`）**：`mes_bin_def` 字典（含 `program_version` 维度）+ `mes_test_record` + `mes_test_bin_summary` + 号段表 `mes_test_record_no_seq`；登记接口一次提交记录与汇总（同事务）；**作废接口**（A11）；查询接口；`TestFacade`（只读）。
+- **Test 模块（新增 `com.mes.test`）**：`mes_bin_def` 字典（含 `program_version` 维度）+ `mes_test_record` + `mes_test_bin_summary` + **守卫表 `mes_test_submit_guard`**（D19）+ 号段表 `mes_test_record_no_seq`；登记接口一次提交守卫 + 记录 + 汇总（同事务）；**作废接口**（A11，只软删头表）；查询接口；`TestFacade`（只读）。
 - **Lot 模块扩展**：`mes_lot_strip`（条级身份登记与查询）、`mes_lot_customer_map`（来料 ↔ 出货映射登记与正 / 反查）。
-- **客诉包延伸**：装配块新增 `testSummaryByLot`（经 `TestFacade` 只读）；ZIP `README.txt` 封面增一行。
-- **管理端**：新增「测试数据」页（记录登记 / 查询 + Bin 字典维护）；Lot 详情增「测试结果」区与「Mapping / 条级」区。
+- **客诉包延伸（三块，D16）**：`testSummaryByLot`（经 `TestFacade` 只读）+ `stripsByLot` / `customerMapsByLot`（经 Lot 既有 Service，一次 IN）；范围 = 包内**全部成员**；ZIP `README.txt` 封面增 4 行上限 + 改 2 句。
+- **管理端**：新增「测试数据」页（记录登记 / 查询 + Bin 字典维护）；Lot 详情增「测试结果」区与「Mapping / 条级」区（D15：客户映射界面与 TD-1 同期）。
 - **权限与菜单**：`test:view` / `test:create` / `test:void` / `test:edit-bin`（**全两级**，C2 裁决；挂管理端，现场台不挂 —— 见方案 §5）。
-- **测试**：后端零依赖用例（对账 V1、字典**四级**回退 V2、汇总去重 V5、**判重窗口 V6 含 null 分支**）+ 前端重入用例；重建 `docs/INDEX.md`。
+- **测试**：后端零依赖用例（对账 V1、字典**四级**回退 V2、汇总去重 V5、**守卫冲突转换 V6**、K7 快照）+ 前端重入用例；重建 `docs/INDEX.md`。
 
 **不做（负面清单）：**
 
@@ -70,8 +70,11 @@ updated: 2026-10-08
 | K9  | 权限 id 先复核    | 见 M1；禁止直接照抄本 plan 的数字落库                                                                                                                                                                                     |
 | K10 | 错误口径         | 业务码在 `msg` 前缀（现网 `GlobalExceptionHandler` 恒 `code=500`）；前端取 `msg` 展示                                                                                                                                        |
 | K11 | 软删口径与全库一致    | `deleted` 一律 **TINYINT**、**UK 不含 `deleted`**、软删走 MP `@TableLogic`；**禁止手写软删 SQL**；「撤销后重建同键」用 `PUT` 改行表达（C1 / §3.7）                                                                                           |
-| K12 | 判重 null 分支   | V6 判重键含**可空** `eqp_id`：必须 `.eq(eqpId != null, MesTestRecord::getEqpId, eqpId)`，为空走 `.isNull(...)`；**禁止** `.eq(col, null)` —— MP 不跳过条件（源码 `AbstractWrapper:467-470`），会生成 `= NULL` 恒不成立 → **判重静默失效**（C3 / §5） |
+| K12 | 判重走守卫表（D19 取代先查后插） | **禁止 `SELECT` 判重再 `INSERT`**（两个并发事务都能通过查询）。`create` 同一事务内**先插守卫行** `mes_test_submit_guard`，UK `(lot_id, eqp_key, program_name, program_version, test_time, total_qty, window_bucket)` 冲突 → 整笔回滚 + `TEST_RECORD_DUPLICATE`。`eqp_key`：有设备写 `eqp_id`，无设备写 **`0`**（禁止 NULL —— MySQL 唯一索引不把两个 NULL 当重复）。`window_bucket = FLOOR(UNIX_TIMESTAMP(NOW())/600)`，按插入当时切桶。MP `eq(col, null)` 不跳过条件的教训（`AbstractWrapper:466-469`）仍适用于本模块**其他**可空条件查询，但 V6 不再走查询判重 |
 | K13 | 乐观锁不手写       | Bin 字典 PUT 用 MP `@Version` + `updateById` 判影响行数，冲突即拒；**禁止手写 version 条件更新**（F2）                                                                                                                              |
+| K14 | 并发重复靠 UK 转业务码（D20） | Strip / 客户映射的**跨请求**重复靠表 UK：捕获 `DuplicateKeyException` 转 `LOT_STRIP_DUPLICATE` / `LOT_MAP_DUPLICATE`；**禁止**把数据库唯一冲突原样变成 500。同请求内重复仍走前置校验（UX 友好），但前置检查不构成并发保证 |
+| K15 | 取号同事务同连接（D21） | `bump()` 与 `lastInsertId()` 写在同一个 `@Transactional` 的 `create` 里，中间**不换连接、不开 `REQUIRES_NEW`**（`LAST_INSERT_ID()` 是连接级的；照现网 `MesLotServiceImpl` 124 行事务、166–167 行连着取号）。事务回滚后退号，允许 |
+| K16 | 门面只读 / 作废只删头 / 不写 customer_lot（D22） | `TestFacade` 只读；校验（含 `assertBinDef`）留在 `MesTestRecordService`，**不上门面**；Test 模块**禁止注入 `MesLotMapper`**；作废只软删头表（汇总靠 join 头表消失、守卫行不删）；本切片**不写** `mes_lot.customer_lot`（新表为映射真相，旧列保留为便查冗余） |
 
 ## 2. 接口清单
 
@@ -80,38 +83,38 @@ updated: 2026-10-08
 | POST | `/test/records`                | `test:create`   | 登记记录 + Bin 汇总（同事务，K3）                                                          |
 | GET  | `/test/records`                | `test:view`     | 分页（`lotId` / `lotNo` / `stage` / `programName` / 时间范围）                         |
 | GET  | `/test/records/{id}`           | `test:view`     | 详情（含汇总明细）                                                                      |
-| PUT  | `/test/records/{id}/void`      | `test:void`     | 作废记录（原因必填；头 + 汇总一并软删，`record_no` 不复用；A11）                                      |
+| PUT  | `/test/records/{id}/void`      | `test:void`     | 作废记录（原因必填；**只软删头表**，汇总靠 join 头表消失，**不删守卫**，`record_no` 不复用；A11 / K16）          |
 | GET  | `/test/summary/by-lot/{lotId}` | `test:view`     | 按批摘要（Lot 详情页消费）；**Test 侧自有 controller，Lot 侧不代理此端点**（A7，避免 Lot 直连 `mes_test_*`） |
 | GET  | `/test/bins`                   | `test:view`     | 字典查询（可筛 `productCode` / `programName` / `programVersion` / `binType`）          |
 | POST | `/test/bins`                   | `test:edit-bin` | 字典新增                                                                           |
 | PUT  | `/test/bins/{id}`              | `test:edit-bin` | 字典修改 / 停用（**乐观锁走 MP `@Version`**，影响行数为 0 即冲突 → `TEST_BIN_DEF_CONFLICT`；K13）    |
-| POST | `/lots/{id}/strips`            | `lot:edit`      | Strip 批量登记（同事务整体成败；请求内 `strip_no` 重复**前置拒绝** `LOT_STRIP_DUPLICATE`，不靠 UK 报错兜底） |
+| POST | `/lots/{id}/strips`            | `lot:edit`      | Strip 批量登记（同事务整体成败；请求内 `strip_no` 重复**前置拒绝** `LOT_STRIP_DUPLICATE`；**跨请求撞 UK 也转 `LOT_STRIP_DUPLICATE`**，D20 / K14） |
 | GET  | `/lots/{id}/strips`            | `lot:list`      | Strip 列表                                                                       |
-| POST | `/lots/{id}/customer-maps`     | `lot:edit`      | 客户 Lot 映射登记（INBOUND / OUTBOUND）                                                |
+| POST | `/lots/{id}/customer-maps`     | `lot:edit`      | 客户 Lot 映射登记（INBOUND / OUTBOUND；跨请求撞 UK 转 `LOT_MAP_DUPLICATE`，D20；**不写 `mes_lot.customer_lot`**，D22） |
 | GET  | `/lots/{id}/customer-maps`     | `lot:list`      | 正查（本批 → 外部批号）                                                                  |
 | GET  | `/lots/by-external-lot`        | `lot:list`      | 反查（外部批号 → 内部批，召回主路径）                                                           |
 
-新增错误码（命名沿用现网 `模块_语义`）：`TEST_BIN_SUM_MISMATCH`（V1）、`TEST_BIN_DEF_NOT_FOUND`（V2）、`TEST_RECORD_FIELD_REQUIRED`（V3）、`TEST_BIN_CODE_DUPLICATED`（V5）、**`TEST_RECORD_DUPLICATE`**（V6 判重窗口）、**`TEST_BIN_SCOPE_INCONSISTENT`**（`bin_scope` 与三维字段不一致）、**`TEST_BIN_DEF_CONFLICT`**（字典乐观锁冲突）、**`LOT_STRIP_DUPLICATE`**（同请求内 `strip_no` 重复）。复用现网 Lot 404 / 状态错码。
+新增错误码（命名沿用现网 `模块_语义`）：`TEST_BIN_SUM_MISMATCH`（V1）、`TEST_BIN_DEF_NOT_FOUND`（V2）、`TEST_RECORD_FIELD_REQUIRED`（V3）、`TEST_BIN_CODE_DUPLICATED`（V5）、**`TEST_RECORD_DUPLICATE`**（V6 守卫 UK 冲突）、**`TEST_BIN_SCOPE_INCONSISTENT`**（`bin_scope` 与三维字段不一致）、**`TEST_BIN_DEF_CONFLICT`**（字典乐观锁冲突）、**`LOT_STRIP_DUPLICATE`**（同请求内前置拒绝 + 跨请求撞 UK 转换，D20）、**`LOT_MAP_DUPLICATE`**（映射跨请求撞 UK 转换，D20）。复用现网 Lot 404 / 状态错码。
 
 ## 3. 表变更
 
 | 脚本                                                     | 内容                                                                                                                                                                                                                                         |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `server/src/main/resources/db/migrate_test.sql`（新增）    | 建 `mes_bin_def`（含 `program_version`，**UK 5 元**、`bin_scope` **4 档**）/ `mes_test_record` / `mes_test_bin_summary`（方案 §3.1–§3.3）+ **号段表 `mes_test_record_no_seq`**（D11）；`mes_bin_def` 演示种子（GLOBAL 的 HARD Bin1–Bin4）；权限 4 条（M1 复核后定 id）+ 管理端菜单 |
+| `server/src/main/resources/db/migrate_test.sql`（新增）    | 建 `mes_bin_def`（含 `program_version`，**UK 5 元**、`bin_scope` **4 档**）/ `mes_test_record` / `mes_test_bin_summary` / **`mes_test_submit_guard`**（方案 §3.2.1 / D19：`eqp_key BIGINT NOT NULL` 无设备写 0、`window_bucket BIGINT`，UK 7 元，**无软删无审计**）/ 号段表 `mes_test_record_no_seq`（D11）；`mes_bin_def` 演示种子（GLOBAL 的 HARD Bin1–Bin4）；权限 4 条（M1 复核后定 id）+ 管理端菜单 |
 | `server/src/main/resources/db/migrate_lot_pkg.sql`（新增） | 建 `mes_lot_strip` / `mes_lot_customer_map`（方案 §3.4–§3.5）；两表 `deleted` 一律 **TINYINT**、**UK 不含 `deleted`**（C1 / §3.7）                                                                                                                        |
-| `server/src/main/resources/db/schema.sql`（改）           | 按现网既有方式同步上述 **6 张表**（5 业务表 + 1 号段表）（M3）                                                                                                                                                                                                    |
+| `server/src/main/resources/db/schema.sql`（改）           | 按现网既有方式同步上述 **7 张表**（6 业务表 + 守卫表 + 1 号段表；其中守卫表与号段表无 `deleted`，R2-C2 / 方案 §3.2.1）（M3）                                                                                                                                                        |
 
-**零改动**：`mes_lot`（含既有 `customer_lot` 保留为便查冗余）、`mes_lot_genealogy`、`mes_tx_log`、`mes_hold*`、`mes_route*`、`mes_complaint_package*` 的**结构**均不变。
+**零改动**：`mes_lot`（**结构不变；本切片也不写其 `customer_lot` 列值**，D22 / K16 —— 既有值保留为便查冗余，真相在新表）、`mes_lot_genealogy`、`mes_tx_log`、`mes_hold*`、`mes_route*`、`mes_complaint_package*` 的**结构**均不变。
 
 ## 4. 影响的 Facade 与模块
 
 | 项                                                           | 变更                                                                                                                                                     |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TestFacade`（新增，`com.mes.test.facade`）                      | `listRecordsByLots(Collection<Long>, int cap)` / `listBinSummaryByRecord(Long)` / `latestBinSummaryByLot(Long)` / `assertBinDef(...)`。只读为主；**唯一**对外读入口 |
-| `MesLotService`（扩展）                                         | `listStrips(lotId)` / `listCustomerMaps(lotId)` / `findLotsByExternalLot(no)`                                                                          |
-| `ComplaintPackageAssembler`（改）                              | 增装配块 `testSummaryByLot`（走 `TestFacade`，一次 IN，失败按块隔离 + WARN）                                                                                            |
-| `ComplaintPackageExporter`（改）                               | README 封面增一行「每 Lot 测试记录上限: N」；口径句补分档说明。**其余 20 项行项与 JSON 结构不动**                                                                                        |
-| `ComplaintPackageFacadeImpl`（改）                             | 把测试记录上限（新配置 key 或类内常量，实施时二选一并写明）传入 Exporter，与既有三上限同路径                                                                                                  |
+| `TestFacade`（新增，`com.mes.test.facade`，**只读**）            | `listRecordsByLots(Collection<Long> lotIds, int capPerLot)`：返回这些记录**及其 Bin 汇总**（记录一次查询，汇总 `record_id IN (...)` 一次查询）。**`assertBinDef` 留在 `MesTestRecordService`，不上门面**（D22）；**唯一**对外读入口，Lot 详情摘要走 Test 自己的 controller，不经 Lot 代理 |
+| `MesLotService`（扩展）                                         | `listStrips(lotId)` / `listCustomerMaps(lotId)` / `findLotsByExternalLot(no)`；客诉包另用 **`listStripsByLots(lotIds)` / `listCustomerMapsByLots(lotIds)`**（一次 IN，**禁止按 Lot 循环**；上限在 **SQL** 按批截断，禁止全量装内存再截）          |
+| `ComplaintPackageAssembler`（改）                              | 增三块 `testSummaryByLot`（走 `TestFacade`）/ `stripsByLot` / `customerMapsByLot`（走 Lot 既有 Service，**禁止新 mapper 依赖**），一次 IN，失败按块隔离 + WARN；JSON 形状与现网 `historiesByLot` 相同（`Map<lotId, List>`）                                                       |
+| `ComplaintPackageExporter`（改）                               | README 封面**增 4 行上限**（每 Lot 测试记录 / 每记录 Bin 档 / 每 Lot Strip / 每 Lot 客户映射）+ 空数据句补三块 + 口径句改写（M4 / 方案 §7）。**其余行项与 JSON 既有键不动**                                                                                     |
+| `ComplaintPackageFacadeImpl`（改）                             | 把**四个**上限（新配置 key 或类内常量，实施时二选一并写明）传入 Exporter，与既有三上限同路径（`FacadeImpl:250`）                                                                                                  |
 | 前端 `api/test.ts`（新增）/ `TestPage.tsx`（新增）/ `LotsPage.tsx`（改） | 测试数据页 + Lot 详情两区；权限码门禁                                                                                                                                 |
 | 前端路由与侧栏                                                     | 注册「测试数据」菜单（管理端）                                                                                                                                        |
 | **Hold / Track / WIP / Route / EDC / Alarm / SPC / Report** | **零改动**                                                                                                                                                |
@@ -125,23 +128,23 @@ a. **建表与种子**：先执行 M1 复核 → 写 `migrate_test.sql` / `migra
 
 b. **Test 模块**（`com.mes.test`，按 K8 分层）：
 
-1. entity / mapper（3 张表）；`MesBinDef`、`MesTestRecord`、`MesTestBinSummary`
-2. `MesTestRecordService`：`create(dto)` 内**同一事务**落头 + 汇总（K3）；落库前依次跑 V1–V6 校验（对账 → 字典解析 → 必填 → Lot 校验 → 档内去重 → **判重窗口**），任一失败整体回滚且**零落库**（K4）；判重查询的 `eqp_id` 必须走 null 分支（K12）
-3. 字典解析按**四级回退** `PROGRAM_VERSION → PROGRAM → PRODUCT → GLOBAL`（V2 / C4）；解析结果写入汇总行快照（K7）
-4. `TestFacade` + controller（§2 的 **Test 侧全部端点**，含作废 `PUT /test/records/{id}/void`：头 + 汇总一并软删、原因必填，A11）
-5. 记录号 `TR-yyyyMMdd-序号`：用**号段表** `mes_test_record_no_seq` 发号（D11）—— `INSERT INTO mes_test_record_no_seq (seq_day, next_no) VALUES (#{seqDay}, LAST_INSERT_ID(1)) ON DUPLICATE KEY UPDATE next_no = LAST_INSERT_ID(next_no + 1)`，再取 `SELECT LAST_INSERT_ID()`（**取号是两步**：`bump()` 拿影响行数、`lastInsertId()` 拿值）；机制照抄现网 `MesLotNoSeqMapper:15-23`。**禁止** `COUNT(*)+1`、**禁止** `ORDER BY record_no DESC LIMIT 1`（无零填充时 `-9 > -10`）；`uk_record_no` 仍保留作最后兜底
+1. entity / mapper（**4 张表**）；`MesBinDef`、`MesTestRecord`、`MesTestBinSummary`、`MesTestSubmitGuard`（守卫表实体**不继承 BaseEntity**：无 `deleted` / 无逻辑删除；`eqp_key`、`window_bucket` 非空）
+2. `MesTestRecordService`：`create(dto)` **同一个 `@Transactional`** 内按序执行 —— ① V1–V5 校验（对账 → 字典解析 → 必填 → Lot 校验 → 档内去重），任一失败整体回滚且**零落库**（K4）；② **插守卫行**（K12 / D19：UK 冲突捕获 `DuplicateKeyException` 转 `TEST_RECORD_DUPLICATE`，整笔回滚）；③ 发号（K15）；④ 落头 + 汇总（K3）
+3. 字典解析按**四级回退** `PROGRAM_VERSION → PROGRAM → PRODUCT → GLOBAL`（V2 / C4）；解析结果写入汇总行快照（K7）；`assertBinDef` 留在本 service（D22）
+4. `TestFacade` + controller（§2 的 **Test 侧全部端点**，含作废 `PUT /test/records/{id}/void`：**只软删头表**、原因必填、**不删守卫**，A11 / K16）
+5. 记录号 `TR-yyyyMMdd-序号`：用**号段表** `mes_test_record_no_seq` 发号（D11）—— `INSERT INTO mes_test_record_no_seq (seq_day, next_no) VALUES (#{seqDay}, LAST_INSERT_ID(1)) ON DUPLICATE KEY UPDATE next_no = LAST_INSERT_ID(next_no + 1)`，再取 `SELECT LAST_INSERT_ID()`（**取号是两步**：`bump()` 拿影响行数、`lastInsertId()` 拿值；**两步同一事务同一连接，中间不换连接、不开 `REQUIRES_NEW`**，K15 / D21，照现网 `MesLotServiceImpl` 124 行事务、166–167 行）。机制照抄现网 `MesLotNoSeqMapper:15-23`。**禁止** `COUNT(*)+1`、**禁止** `ORDER BY record_no DESC LIMIT 1`（无零填充时 `-9 > -10`）；`uk_record_no` 仍保留作最后兜底
 
-c. **Lot 模块扩展**：Strip 批量登记（一次一批多条，**同事务整体成败**；请求内 `strip_no` 重复**前置拒绝** `LOT_STRIP_DUPLICATE`，不依赖 UK 报错兜底）、查询；客户 Lot 映射登记、正查、反查。均为主数据操作，**不写 tx_log**（K1）；软删口径按 §3.7（TINYINT + UK 不含 `deleted`，**禁止**手写软删 SQL）。
+c. **Lot 模块扩展**：Strip 批量登记（一次一批多条，**同事务整体成败**；请求内 `strip_no` 重复**前置拒绝** `LOT_STRIP_DUPLICATE`；**跨请求撞 UK 捕获 `DuplicateKeyException` 转 `LOT_STRIP_DUPLICATE`**，D20 / K14）、查询；客户 Lot 映射登记（跨请求撞 UK 转 `LOT_MAP_DUPLICATE`，D20）、正查、反查。均为主数据操作，**不写 tx_log**（K1）；**不写 `mes_lot.customer_lot`**（K16 / D22）；软删口径按 §3.7（TINYINT + UK 不含 `deleted`，**禁止**手写软删 SQL）。
 
-d. **客诉包延伸**：Assembler 增块（上限：每 Lot 最近 20 条记录、每记录 ≤50 档；失败隔离 + WARN）→ Exporter README 增行与口径句 → FacadeImpl 传入上限值。**禁止**在此路径直连 `mes_test_*`（K2）。
+d. **客诉包延伸（三块，D16 / D18）**：范围 = 包内**全部成员 Lot**；挂在**登记当时的批，拆批不复制**（子批无记录时其键为空列表；父批记录在父批键下，`up`/`both` 方向天然可见）。① `testSummaryByLot`：走 `TestFacade.listRecordsByLots`，每 Lot 最近 **20** 条（`test_time` 倒序）+ 每记录 ≤**50** 档；② `stripsByLot`：走 `MesLotService.listStripsByLots`，每 Lot **200** 条（`seq_no`/`id` 升序，**上限在 SQL 按批截断**）；③ `customerMapsByLot`：走 `listCustomerMapsByLots`，每 Lot **50** 条（`id` 升序，SQL 截断）。失败按块隔离 + WARN；JSON 三键形状 = `Map<lotId, List>`（与 `historiesByLot` 一致）→ Exporter README 增 4 行上限 + 改 2 句（M4）→ FacadeImpl 传入四上限。**禁止**在此路径直连 `mes_test_*` 或新增 mapper 依赖（K2 / P4）。
 
-e. **前端**：`api/test.ts`；`TestPage.tsx`（记录登记表单 + 列表 + 详情；Bin 字典维护区）；`LotsPage` 详情增「测试结果」「Mapping / 条级」两区（按权限码显隐）；路由与侧栏菜单。登记表单提交**必须有重入闸**（同步 ref + 序号，对齐 `EVAL-0001` 的教训）—— 但**前端闸不是架构保证**，服务端 V6 判重窗口才是兜底（D12 / C3）。
+e. **前端**：`api/test.ts`；`TestPage.tsx`（记录登记表单 + 列表 + 详情；Bin 字典维护区）；`LotsPage` 详情增「测试结果」「Mapping / 条级」两区（按权限码显隐）；路由与侧栏菜单。登记表单提交**必须有重入闸**（同步 ref + 序号，对齐 `EVAL-0001` 的教训）—— 但**前端闸不是架构保证**，服务端守卫表 UK 才是兜底（D19 / K12）。
 
 f. **测试用例**：
 
-- 后端（零外部依赖）：V1 对账（相等通过 / 差一颗即拒）、V2 字典**四级**回退解析（`PROGRAM_VERSION` 优先 + 逐级降级）、V5 档内重复拒绝、**V6 判重窗口（含 `eqp_id` 为空的 null 分支，K12）**、K7 快照不随字典漂。放在 `server/src/test`，与现网 12 用例同风格（**注意**：`@JsonTest` 不能加载 `MesApplication`；需要容器时用内嵌最小 `@SpringBootConfiguration`）
+- 后端（零外部依赖）：V1 对账（相等通过 / 差一颗即拒）、V2 字典**四级**回退解析（`PROGRAM_VERSION` 优先 + 逐级降级）、V5 档内重复拒绝、**V6 守卫冲突转换**（mock mapper 抛 `DuplicateKeyException` → 断言转 `TEST_RECORD_DUPLICATE` 且整体回滚语义；**禁止先查后插**的反向断言：service 里不得出现判重 SELECT）、K7 快照不随字典漂。放在 `server/src/test`，与现网 12 用例同风格（**注意**：`@JsonTest` 不能加载 `MesApplication`；需要容器时用内嵌最小 `@SpringBootConfiguration`）
 - 前端：登记表单重复点击只提交一次（`act()` 内连发 `dispatchEvent`，对齐 `EVAL-0001` 用例手法）
-- **反向验证**：把对账校验临时改坏一次，确认用例真的变红（否则是假保护）
+- **反向验证**：把对账校验临时改坏一次，确认用例真的变红（否则是假保护）；再**临时删掉守卫插入调用**，V6 用例必须变红
 
 g. **文档收尾（同会话）**：新建 `docs/模块/测试数据（Test）模块/` 五件套中本切片需要的部分（功能文档 / 接口设计 / 数据库设计 / 已完成功能）；Lot 模块文档登记 Strip 与客户映射；`MES-客诉追溯包接口设计.md` §6.2 增块 + §6.4 封面行项；`MES-实施进度与下一步.md` 增 TD-1 行；`INT-0001` 切片表状态；重建 `docs/INDEX.md`（`python .workbuddy/scripts/add_frontmatter.py --reindex`）。
 
@@ -158,16 +161,17 @@ g. **文档收尾（同会话）**：新建 `docs/模块/测试数据（Test）�
 7. 字典改 `bin_name` / `is_shippable` 后 → 历史记录详情仍显示**登记时**的值（K7 / D7）
 8. Strip 批量登记后 `GET /lots/{id}/strips` 返回全部；**同请求内重复 `strip_no` → 前置拒 `LOT_STRIP_DUPLICATE`**，且不产生半截数据
 9. 客户 Lot 映射：正查返回全部映射；`GET /lots/by-external-lot?no=X` 能反查到内部批（含同一条外部批号映射到多批的情形）
-10. 客诉包 `GET /complaint-packages/{id}` 响应含 `testSummaryByLot`；`export?format=zip` 内 README 出现「每 Lot 测试记录上限: N」行（**contains 断言，R2-F2 裁定弃行数计数**；同步更新 `ComplaintPackageExporterTest` 与 Exporter javadoc 行序，R2-C1）
-11. **回归**：`format=json` 除新增 `testSummaryByLot` 键外，其余键与 CP-6 口径一致；ZIP 仍恰 2 个 entry
+10. 客诉包 `GET /complaint-packages/{id}` 响应含**三键** `testSummaryByLot` / `stripsByLot` / `customerMapsByLot`（形状 `Map<lotId, List>`，范围 = 全部成员）；`export?format=zip` 内 README 出现「每 Lot 测试记录上限: N」等 **4 行上限**（contains 断言，R2-F2 裁定弃行数计数；同步更新 `ComplaintPackageExporterTest` 与 Exporter javadoc 行序，R2-C1）
+11. **回归**：`format=json` 除新增三键外，其余键与 CP-6 口径一致；ZIP 仍恰 2 个 entry
 12. 权限（**两级码**，C2）：无 `test:view` → `GET /test/records` 403；无 `test:create` → `POST /test/records` 403；无 `test:void` → 作废 403；无 `test:edit-bin` → 改字典 403
 13. `mes_tx_log` 与 `mes_lot.status` 在本切片所有操作前后**无变化**（K1）；Hold / Track 相关代码 diff 为空
-14. 静态核对：`com.mes.test` 零 `com.mes.hold` / `com.mes.track` / `com.mes.complaint` 引用（K2）；complaint 包零 `mes_test` mapper 引用（P4）
+14. 静态核对：`com.mes.test` 零 `com.mes.hold` / `com.mes.track` / `com.mes.complaint` 引用（K2）；complaint 包零 `mes_test` mapper 引用（P4）；Test 模块**零 `MesLotMapper` 注入**（K16 / D22）；客诉包条/映射零新增 mapper 依赖
 15. CI 三闸门全绿：后端 `mvn -B test`、前端 `npx tsc -b && npm test`、文档 reindex 后 `git diff --exit-code docs/INDEX.md`
-16. **判重窗口（V6 / C3）**：同 `(lot_id, eqp_id, program_name, program_version, test_time, total_qty)` 10 分钟内二次提交 → 拒 `TEST_RECORD_DUPLICATE`；**换一台 `eqp_id` 提交 → 200**（双机并测不得误判）；`eqp_id` 为空时两次提交同样被拒（**null 分支生效** —— 反向验证：把 `eq(eqpId != null, …)` 改回无条件 `eq(…)`，此条必须变红）
-17. **作废（A11）**：`PUT /test/records/{id}/void` 原因必填；作废后详情 / 列表不再返回该记录，`mes_test_bin_summary` 随头一并排除；`record_no` **不复用**
+16. **判重守卫（V6 / D19）**：同 `(lot_id, eqp_key, program_name, program_version, test_time, total_qty)` 同一 10 分钟桶内二次提交 → 拒 `TEST_RECORD_DUPLICATE`，头表与汇总 **SQL 复核零落库**；**换一台设备（`eqp_key` 不同）提交 → 200**（双机并测不得误判）；**无设备（`eqp_key=0`）同桶两次提交同样被拒**；下一桶（10 分钟后）相同载荷可再登（A10）
+17. **作废（A11 / K16）**：`PUT /test/records/{id}/void` 原因必填；作废后详情 / 列表不再返回该记录，`mes_test_bin_summary` 随 join 头表一并排除；`record_no` **不复用**；**守卫行不删** —— 作废后同桶原样再登仍拒 `TEST_RECORD_DUPLICATE`
 18. **软删口径（C1）**：`mes_lot_strip` / `mes_lot_customer_map` 的 `deleted` 为 **TINYINT**、UK **不含** `deleted`；软删后**同键不可重建**（再登记被前置校验拒并提示改原行）
 19. **Bin 字典四级回退（C4）**：同一 `bin_code` 在 `PROGRAM_VERSION` / `PROGRAM` / `PRODUCT` / `GLOBAL` 四级都有定义时**取最精确的一级**；只有粗粒度定义时逐级降级命中
+20. **拆批不复制（D18）**：拆批后测试记录留在登记当时的批；子批锚点 + `direction=up/both` 的客诉包内能看到父批 `testSummaryByLot`；`direction=down` 不含父批记录
 
 **验证方式：**
 
@@ -181,8 +185,10 @@ g. **文档收尾（同会话）**：新建 `docs/模块/测试数据（Test）�
 
 | 场景                               | 期望                                                                                                      |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 双击「保存」                           | 前端重入闸只放行一次；服务端**V6 判重窗口兜底** —— 第二次提交拒 `TEST_RECORD_DUPLICATE`（D12 / C3）                                 |
-| **两台测试机并行测同一批**（同程序 / 同时间 / 同总量） | **各记一条**（判重键含 `eqp_id`，C3）—— 不得误判为重复提交                                                                  |
+| 双击「保存」                           | 前端重入闸只放行一次；服务端**守卫 UK 兜底** —— 第二次提交拒 `TEST_RECORD_DUPLICATE`（D19 / K12）                                 |
+| **两台测试机并行测同一批**（同程序 / 同时间 / 同总量） | **各记一条**（守卫键 `eqp_key` 不同，D19）—— 不得误判为重复提交                                                                  |
+| 两个请求同时登记同一 `(lot_id, strip_no)`  | 一行成功，另一行拒 `LOT_STRIP_DUPLICATE`（D20 / K14），不得 500                                                       |
+| 两个请求同时登记同一客户映射键                  | 一行成功，另一行拒 `LOT_MAP_DUPLICATE`（D20 / K14），不得 500                                                       |
 | 汇总与总量不符                          | 零落库（验收 2）；反复提交不产生幽灵行                                                                                    |
 | 并发登记同一 Lot 的两条记录                 | 均成功；无 Lot 级写锁需求                                                                                         |
 | 客诉包导出与登记并发                       | 现网隔离级别 = **REPEATABLE READ**（2026-09-23 实测）：导出走 MVCC 快照读，导出期间的新登记在导出事务内**不可见**（一致快照，即期望行为）；导出不加锁、不得阻塞登记 |
@@ -194,7 +200,7 @@ g. **文档收尾（同会话）**：新建 `docs/模块/测试数据（Test）�
 **三选一并说明**：采用「**数据回退 + 代码回滚**」组合。
 
 - **代码回滚**：本切片为新增（新表 + 新接口 + 新页面），代码回滚后功能消失，存量模块不受影响（Hold / Track / WIP 零改动 → 无回归风险）。
-- **数据回退**：**6 张新表**（5 业务表 + 1 号段表）为纯新增，回滚时 `DROP TABLE`（含其权限与菜单种子行）；客诉包新增的 `testSummaryByLot` 键与 README 行随代码回滚消失，**不需**回退 `mes_complaint_package*` 数据。
+- **数据回退**：**7 张新表**（6 业务表 + 守卫表 + 1 号段表；守卫表、号段表无种子）为纯新增，回滚时 `DROP TABLE`（含其权限与菜单种子行）；客诉包新增的三键与 README 行随代码回滚消失，**不需**回退 `mes_complaint_package*` 数据。
 - **不需要配置开关**：本切片不引入灰度开关（无自动状态变更风险，K1）。**例外说明**：客诉包既有 `mes.complaint-package.enabled` 仍生效，与本切片正交。
 
 ---
@@ -231,6 +237,29 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 | 12 | 前端挂载点存在                                                                                | `web/src/api/lot.ts`、`web/src/pages/LotsPage.tsx`                                                          |
 
 **结论：无阻断性问题，plan 可提交批准。** ~~批准前需用户确认 R2-F2 的验收断言改法（contains 替代计数）。~~ → **2026-10-08 用户确认「按 F2 改」**：M4 与验收 10 已按 contains 断言改写（见前置核对项 M4 / §6 验收 10），R2-F2 关闭。
+
+---
+
+### R3 同步轮（2026-10-08 · 用户指令「plan 按 D19–D22 同步」，实施启动前）
+
+> 背景：方案于 2026-10-08 增补产品口径 D15–D18 与架构口径 D19–D22（§3.2.1 守卫表等），plan 原文停留在旧口径。本轮为**用户授权的正文修订**（先改 plan 再改码，治理铁律），逐条变更如下，均对齐方案现文：
+
+| 变更 | 旧（plan 原文） | 新（对齐方案） | 依据 |
+|------|----------------|----------------|------|
+| 表数量 6→**7** | 无守卫表 | `migrate_test.sql` 增建 `mes_test_submit_guard`（7 元 UK、`eqp_key` 无设备写 0 禁 NULL、`window_bucket` 10 分钟桶、无软删无审计）；`schema.sql` 同步 | §3.2.1 / D19 |
+| V6 判重 | MP 条件查询判重（先查后插，含 null 分支） | **废除先查后插**：同事务先插守卫行，UK 冲突整笔回滚 + `TEST_RECORD_DUPLICATE` | D19 |
+| K12 改写 | 判重 null 分支写法 | 判重走守卫表；MP `eq(col,null)` 教训保留给本模块其他可空查询 | D19 |
+| 新增 K14 / K15 / K16 | — | K14 = D20（跨请求撞 UK 转业务码，禁 500）；K15 = D21（取号两步同事务同连接，禁 `REQUIRES_NEW`）；K16 = D22（门面只读 / `assertBinDef` 留 service / 作废只删头 / 零 `MesLotMapper` 注入 / 不写 `mes_lot.customer_lot`） | D20 / D21 / D22 |
+| `TestFacade` 收敛 | 4 方法（含 `assertBinDef` / `latestBinSummaryByLot`） | `listRecordsByLots(lotIds, capPerLot)` 返回记录+汇总；校验不上门面 | §4 / D22 |
+| Lot 侧批量方法 | 无 | 增 `listStripsByLots` / `listCustomerMapsByLots`（一次 IN，SQL 按批截断，禁循环装内存） | §4 / §7 |
+| 客诉包 1 块→**3 块** | 仅 `testSummaryByLot`，README 增 1 行 | 三键 + 范围全部成员 + 拆批不复制（D18）；README **增 4 行上限 + 改 2 句**（文档叙述 20→24，断言仍 contains）；FacadeImpl 传四上限 | D16 / D18 / §7 |
+| Strip/映射并发 | 仅请求内前置拒绝 | 请求内前置拒绝保留 + **跨请求撞 UK 转 `LOT_STRIP_DUPLICATE` / `LOT_MAP_DUPLICATE`**（新错误码） | D20 |
+| 作废口径 | 头 + 汇总一并软删 | **只软删头表**（汇总 join 头消失）；守卫行不删，同桶原样再登仍拒 | A11 / D19 / D22 |
+| 验收与用例 | V6 null 分支反向验证 | 验收 16/17 重写（守卫 UK / 换设备 / 下一桶 / 作废不删守卫）；新增验收 20（D18 拆批）；用例改 mock `DuplicateKeyException`；反向验证改为「删守卫插入用例变红」 | D19 / D18 |
+
+**未变更项确认**：M1（340–343，K9 已复核）、M2、M3、K1–K11、K13、权限 4 码、§2 端点路径、负面清单、回滚策略（表数更正为 7）均保持原样。
+
+**R3 结论：plan 与方案（含 2026-10-08 补口径）一致，可以开工。** 剩余前置：K9 已复核（MAX=332，340–343 可用，2026-10-08）。
 
 ---
 
