@@ -17,7 +17,7 @@ public class TestFacadeImpl implements TestFacade {
 
     /** 按批取最近记录及其 Bin 汇总，供客诉包只读调用 */
     @Override
-    public List<TestRecordVO> listRecordsByLots(Collection<Long> lotIds, int capPerLot) {
-        return mesTestRecordService.listRecordsByLots(lotIds, capPerLot);
+    public List<TestRecordVO> listRecordsByLots(Collection<Long> lotIds, int capPerLot, int binCap) {
+        return mesTestRecordService.listRecordsByLots(lotIds, capPerLot, binCap);
     }
 }

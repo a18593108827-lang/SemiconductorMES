@@ -92,7 +92,7 @@ class ComplaintPackageExporterTest {
 
     @Test
     void zipHasExactlyTwoFlatEntries() throws Exception {
-        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20);
+        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20, 20, 50, 200, 50);
 
         assertThat(zip).startsWith("PK".getBytes(StandardCharsets.US_ASCII));
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zip), StandardCharsets.UTF_8)) {
@@ -109,7 +109,7 @@ class ComplaintPackageExporterTest {
     /** K8 / F14：本地头与中央目录时间必须一致（setTimeLocal 必须在 putNextEntry 之前） */
     @Test
     void localHeaderTimeMatchesCentralDirectory() throws Exception {
-        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20);
+        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20, 20, 50, 200, 50);
 
         List<List<Integer>> local = new ArrayList<>();
         int i = 0;
@@ -147,7 +147,7 @@ class ComplaintPackageExporterTest {
     void innerJsonIsByteIdenticalToJsonExport() throws Exception {
         ComplaintPackageVO vo = sampleVo();
         byte[] json = exporter().toJsonBytes(vo, EXPORTED_BY, EXPORTED_AT);
-        byte[] zip = exporter().toZipBytes(vo, EXPORTED_BY, EXPORTED_AT, 100, 20, 20);
+        byte[] zip = exporter().toZipBytes(vo, EXPORTED_BY, EXPORTED_AT, 100, 20, 20, 20, 50, 200, 50);
 
         byte[] inner = readEntry(zip, PACKAGE_NO + ".json");
         assertThat(inner).isEqualTo(json);
@@ -163,7 +163,7 @@ class ComplaintPackageExporterTest {
     @Test
     void readmeCarriesRequiredLinesAndFoldsRemark() throws Exception {
         byte[] json = exporter().toJsonBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT);
-        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20);
+        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20, 20, 50, 200, 50);
         String readme = new String(readEntry(zip, "README.txt"), StandardCharsets.UTF_8);
 
         assertThat(readme.lines()).contains(
@@ -177,6 +177,10 @@ class ComplaintPackageExporterTest {
                 "每 Lot 履历上限: 100",
                 "每 Lot Hold 各状态上限: 20",
                 "每 Lot 未关闭告警上限: 20",
+                "每 Lot 测试记录上限: 20",
+                "每记录 Bin 档上限: 50",
+                "每 Lot Strip 上限: 200",
+                "每 Lot 客户映射上限: 50",
                 "包状态: CONTAINING",
                 "CONTAINING 为遏制进行中，不是结案快照",
                 "原因码: -",
@@ -185,15 +189,15 @@ class ComplaintPackageExporterTest {
                 "文件清单:",
                 "  " + PACKAGE_NO + ".json (" + json.length + " 字节)",
                 "  README.txt",
-                "空履历 / 空 Hold / genealogy 空表示无数据或装配失败（见服务端 WARN）",
-                "本包为客诉调查证据，非 eDHR / Device History，不含良率、OEE 数据");
+                "空履历 / 空 Hold / genealogy 空 / 空测试分档 / 空 Strip / 空客户映射表示无数据或装配失败（见服务端 WARN）",
+                "本包为客诉调查证据，非 eDHR / Device History，含测试分档、Strip 条清单、客户批号映射；三者挂在登记当时的 Lot，拆批后不复制到子批；不含 Wafer Map 图形与良率分析");
     }
 
     /** K5：README 时间与人员文本必须与 JSON 同值同形 */
     @Test
     void readmeTimeEqualsJsonExportedAt() throws Exception {
         byte[] json = exporter().toJsonBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT);
-        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20);
+        byte[] zip = exporter().toZipBytes(sampleVo(), EXPORTED_BY, EXPORTED_AT, 100, 20, 20, 20, 50, 200, 50);
         String readme = new String(readEntry(zip, "README.txt"), StandardCharsets.UTF_8);
         JsonNode node = objectMapper.readTree(json);
 

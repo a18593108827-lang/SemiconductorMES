@@ -247,7 +247,9 @@ public class ComplaintPackageFacadeImpl implements ComplaintPackageFacade {
         try {
             if (FORMAT_ZIP.equals(normalized)) {
                 byte[] zip = exporter.toZipBytes(vo, exportedBy, exportedAt,
-                        assembler.historyPerLot(), assembler.holdCap(), assembler.alarmCap());
+                        assembler.historyPerLot(), assembler.holdCap(), assembler.alarmCap(),
+                        assembler.testRecordCap(), assembler.binCap(),
+                        assembler.stripCap(), assembler.customerMapCap());
                 return new ComplaintPackageExportFile(exporter.zipFileName(vo.getPackageNo()), zip);
             }
             byte[] json = exporter.toJsonBytes(vo, exportedBy, exportedAt);

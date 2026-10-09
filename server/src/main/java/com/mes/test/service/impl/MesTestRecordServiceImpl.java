@@ -206,13 +206,14 @@ public class MesTestRecordServiceImpl implements MesTestRecordService {
 
     /** 多批各取最近若干条，每条最多 50 档 */
     @Override
-    public List<TestRecordVO> listRecordsByLots(Collection<Long> lotIds, int capPerLot) {
+    public List<TestRecordVO> listRecordsByLots(Collection<Long> lotIds, int capPerLot, int binCap) {
         if (lotIds == null || lotIds.isEmpty()) {
             return List.of();
         }
         int cap = capPerLot < 1 ? 20 : capPerLot;
+        int bins = binCap < 1 ? BIN_CAP : binCap;
         List<MesTestRecord> records = mesTestRecordMapper.selectRecentByLots(lotIds, cap);
-        return toVos(records, true, BIN_CAP);
+        return toVos(records, true, bins);
     }
 
     /**

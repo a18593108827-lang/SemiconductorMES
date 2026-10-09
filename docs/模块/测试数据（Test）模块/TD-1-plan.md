@@ -329,6 +329,34 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 
 **R5 结论：步骤 c 实现与 plan/方案一致，无阻断问题，可进入步骤 d。** R5-C2 待用户拍板；R4-C1（loadBins 注释/JOIN）与 R4-F2（BIN_CAP 上限归属）仍在 d/f 步骤处置清单上。
 
+---
+
+### R6 实施审查轮（2026-10-09 · 用户完成步骤 d 后，架构师视角审查）
+
+> 审查对象：工作区改动（Assembler +118 / Exporter +23 / FacadeImpl +4 / VO +9 / TestFacade 签名 + 测试 2 文件）。另：R5-C2 已由用户拍板「对齐 V4」并随 c 提交（`732801d`，已合批/已报废拒登记 Strip/映射）。方法：对码 + `mvn -o test -Dtest='ComplaintPackage*'`（12 用例全绿，BUILD SUCCESS）。
+
+**实测通过项：**
+
+| # | 条款 | 证据 |
+|---|------|------|
+| 1 | D16 三块 | Assembler 增 `loadTests` / `loadStrips` / `loadCustomerMaps`（一次 IN），VO 增三键（形状 `Map<lotId, List>`，成员键先占空桶，与 `historiesByLot` 同形） |
+| 2 | K2/P4 | 测试走 `TestFacade`、Strip/映射走 `MesLotService`，**零** mes_test_* 直连、零新增 mapper 依赖 |
+| 3 | 失败隔离 | 每块独立 try/catch + WARN（`block=testSummaryByLot` 等），失败该块空、其余块不受影响（R11 口径） |
+| 4 | 四上限同源 | `TEST_RECORD_CAP=20 / BIN_CAP=50 / STRIP_CAP=200 / CUSTOMER_MAP_CAP=50` 为 Assembler 类内常量 + accessor；FacadeImpl 传四上限与既有三上限同路径 —— **R4-F2 关闭**（`binCap` 经 `TestFacade.listRecordsByLots(lotIds, capPerLot, binCap)` 提参，不再写死 service） |
+| 5 | M4 / R2-C1 | README **增 4 行上限** + 空块说明句、口径句两处改写，与方案 §7 逐字一致；Exporter javadoc 行序注释同步（「三个上限→七个上限」）；`ComplaintPackageExporterTest#readmeCarriesRequiredLinesAndFoldsRemark` contains 断言同步 4 行 + 2 句 |
+| 6 | D18 | 拆批不复制由「记录挂登记时的批 + 成员桶」自然满足；子批无记录即空列表；`direction=up/both` 时父批在成员里即带出 |
+| 7 | Exporter 零依赖 | 仍只吃 VO + 入参（javadoc 更新），`toZipBytes` / `toReadme` 签名扩为七上限 |
+| 8 | 回归 | `ComplaintPackageFormatWhitelistTest` 3 + `AssemblerCapsTest` 3（新增 4 断言）+ `ExporterTest` 6 全绿；`innerJsonIsByteIdenticalToJsonExport` 保证 ZIP 内 JSON 与 JSON 导出字节一致（验收 11 的结构不变性由此覆盖） |
+
+**发现项：**
+
+| # | 级别 | 内容 | 处置 |
+|---|------|------|------|
+| R6-F1 | 备注 | 「每记录 50 档」默认值存在**两处**：`Assembler.BIN_CAP`（同源主值）与 service 内防御默认（`binCap < 1 ? BIN_CAP`）。当前同值；若将来调整只改一处会漂移 | 后续调上限时两处同步；或收敛为单源 |
+| R6-C1 | 遗留提醒 | R4-C1（`loadBins` 的 deleted 过滤靠应用层、建议补注释/JOIN）**本步骤未处理**——按计划属 f 步骤 | f 步骤处置清单 |
+
+**R6 结论：步骤 d 实现与 plan/方案一致，测试全绿，无阻断问题，可进入步骤 e（前端）。** 待办链：f 步骤处置 R4-C1 + R4-F1（空 productCode 用例）+ R5-C1（注释修正）+ R6 验收项。
+
 ### 勘误（2026-10-08，R3 之后）
 
 | 项 | 改法 |

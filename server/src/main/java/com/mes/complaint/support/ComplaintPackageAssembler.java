@@ -13,7 +13,11 @@ import com.mes.history.vo.HistoryTxVO;
 import com.mes.hold.service.HoldService;
 import com.mes.hold.vo.MesHoldVO;
 import com.mes.lot.service.MesLotService;
+import com.mes.lot.vo.LotCustomerMapVO;
+import com.mes.lot.vo.LotStripVO;
 import com.mes.lot.vo.MesLotGenealogyNodeVO;
+import com.mes.test.facade.TestFacade;
+import com.mes.test.vo.TestRecordVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * 提交后只读装配。按块 / 按 Lot 失败隔离；失败记 WARN。
@@ -43,6 +48,14 @@ public class ComplaintPackageAssembler {
     private static final int HOLD_CAP = 20;
     /** 每 Lot 未关闭告警上限 */
     private static final int ALARM_CAP = 20;
+    /** 每 Lot 测试记录上限（类内常量，封面与查询同源） */
+    private static final int TEST_RECORD_CAP = 20;
+    /** 每记录 Bin 档上限 */
+    private static final int BIN_CAP = 50;
+    /** 每 Lot Strip 上限 */
+    private static final int STRIP_CAP = 200;
+    /** 每 Lot 客户映射上限 */
+    private static final int CUSTOMER_MAP_CAP = 50;
 
     @Value("${mes.complaint-package.history-per-lot:100}")
     private int historyPerLot;
@@ -51,9 +64,10 @@ public class ComplaintPackageAssembler {
     private final HoldService holdService;
     private final AlarmFacade alarmFacade;
     private final MesLotService mesLotService;
+    private final TestFacade testFacade;
 
     /**
-     * 只读装配：包头 + 成员（固定排序）+ 四块（genealogy / 履历 / Hold / Alarm）+ 摘要。
+     * 只读装配：包头 + 成员（固定排序）+ 七块（genealogy / 履历 / Hold / Alarm / 测试 / Strip / 客户映射）+ 摘要。
      * 必须在写入事务提交后调用（R1）；按块 / 按 Lot 失败隔离，失败记 WARN（R11）。
      *
      * @param treeForBuild build 复用的展开树；get 传 null（内部现查 genealogy）
@@ -70,6 +84,9 @@ public class ComplaintPackageAssembler {
         vo.setHistoriesByLot(loadHistories(pkg.getPackageNo(), memberVos));
         vo.setHoldsByLot(loadHolds(pkg.getPackageNo(), memberVos));
         vo.setAlarmsByLot(loadAlarms(pkg.getPackageNo(), memberVos));
+        vo.setTestSummaryByLot(loadTests(pkg.getPackageNo(), memberVos));
+        vo.setStripsByLot(loadStrips(pkg.getPackageNo(), memberVos));
+        vo.setCustomerMapsByLot(loadCustomerMaps(pkg.getPackageNo(), memberVos));
         vo.setSummary(buildSummary(memberVos, vo.getHoldsByLot()));
         return vo;
     }
@@ -91,6 +108,26 @@ public class ComplaintPackageAssembler {
     /** 每 Lot 未关闭告警上限（封面用；返回常量防分叉，K15 / D9） */
     public int alarmCap() {
         return ALARM_CAP;
+    }
+
+    /** 每 Lot 测试记录上限 */
+    public int testRecordCap() {
+        return TEST_RECORD_CAP;
+    }
+
+    /** 每记录 Bin 档上限 */
+    public int binCap() {
+        return BIN_CAP;
+    }
+
+    /** 每 Lot Strip 上限 */
+    public int stripCap() {
+        return STRIP_CAP;
+    }
+
+    /** 每 Lot 客户映射上限 */
+    public int customerMapCap() {
+        return CUSTOMER_MAP_CAP;
     }
 
     /** 包头实体 → VO 头部字段 */
@@ -280,6 +317,85 @@ public class ComplaintPackageAssembler {
                     packageNo, ex.toString());
         }
         return map;
+    }
+
+    /** 每成员测试记录：一次 IN，失败整块空列表 */
+    private Map<Long, List<TestRecordVO>> loadTests(String packageNo, List<ComplaintPackageMemberVO> members) {
+        Map<Long, List<TestRecordVO>> map = emptyBuckets(members);
+        if (map.isEmpty()) {
+            return map;
+        }
+        try {
+            List<TestRecordVO> rows = testFacade.listRecordsByLots(map.keySet(), testRecordCap(), binCap());
+            putByLot(map, rows, TestRecordVO::getLotId);
+        } catch (Exception ex) {
+            log.warn("assemble test failed packageNo={} block=testSummaryByLot err={}",
+                    packageNo, ex.toString());
+        }
+        return map;
+    }
+
+    /** 每成员 Strip：一次 IN，SQL 按批截断；失败整块空列表 */
+    private Map<Long, List<LotStripVO>> loadStrips(String packageNo, List<ComplaintPackageMemberVO> members) {
+        Map<Long, List<LotStripVO>> map = emptyBuckets(members);
+        if (map.isEmpty()) {
+            return map;
+        }
+        try {
+            List<LotStripVO> rows = mesLotService.listStripsByLots(map.keySet(), stripCap());
+            putByLot(map, rows, LotStripVO::getLotId);
+        } catch (Exception ex) {
+            log.warn("assemble strip failed packageNo={} block=stripsByLot err={}",
+                    packageNo, ex.toString());
+        }
+        return map;
+    }
+
+    /** 每成员客户映射：一次 IN，SQL 按批截断；失败整块空列表 */
+    private Map<Long, List<LotCustomerMapVO>> loadCustomerMaps(String packageNo, List<ComplaintPackageMemberVO> members) {
+        Map<Long, List<LotCustomerMapVO>> map = emptyBuckets(members);
+        if (map.isEmpty()) {
+            return map;
+        }
+        try {
+            List<LotCustomerMapVO> rows = mesLotService.listCustomerMapsByLots(map.keySet(), customerMapCap());
+            putByLot(map, rows, LotCustomerMapVO::getLotId);
+        } catch (Exception ex) {
+            log.warn("assemble customer-map failed packageNo={} block=customerMapsByLot err={}",
+                    packageNo, ex.toString());
+        }
+        return map;
+    }
+
+    /** 成员键先占空列表，形状与 historiesByLot 相同 */
+    private static <T> Map<Long, List<T>> emptyBuckets(List<ComplaintPackageMemberVO> members) {
+        Map<Long, List<T>> map = new LinkedHashMap<>();
+        for (ComplaintPackageMemberVO m : members) {
+            if (m.getLotId() != null) {
+                map.put(m.getLotId(), List.of());
+            }
+        }
+        return map;
+    }
+
+    /** 按 lotId 归位；非成员忽略 */
+    private static <T> void putByLot(Map<Long, List<T>> map, List<T> rows, Function<T, Long> lotId) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        Map<Long, List<T>> grouped = new LinkedHashMap<>();
+        for (T row : rows) {
+            Long id = lotId.apply(row);
+            if (id == null) {
+                continue;
+            }
+            grouped.computeIfAbsent(id, k -> new ArrayList<>()).add(row);
+        }
+        for (Map.Entry<Long, List<T>> e : grouped.entrySet()) {
+            if (map.containsKey(e.getKey())) {
+                map.put(e.getKey(), e.getValue());
+            }
+        }
     }
 
     /** 详情摘要：复用已装配的 Hold 盒子数 active 批次（免二次 N+1 hasActive）+ 报废 + 告警计数 */

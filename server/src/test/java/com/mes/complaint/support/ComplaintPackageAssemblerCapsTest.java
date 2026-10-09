@@ -4,6 +4,7 @@ import com.mes.alarm.facade.AlarmFacade;
 import com.mes.history.facade.HistoryFacade;
 import com.mes.hold.service.HoldService;
 import com.mes.lot.service.MesLotService;
+import com.mes.test.facade.TestFacade;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -21,7 +22,7 @@ class ComplaintPackageAssemblerCapsTest {
     private ComplaintPackageAssembler assembler(int historyPerLot) {
         ComplaintPackageAssembler a = new ComplaintPackageAssembler(
                 mock(HistoryFacade.class), mock(HoldService.class),
-                mock(AlarmFacade.class), mock(MesLotService.class));
+                mock(AlarmFacade.class), mock(MesLotService.class), mock(TestFacade.class));
         ReflectionTestUtils.setField(a, "historyPerLot", historyPerLot);
         return a;
     }
@@ -43,5 +44,9 @@ class ComplaintPackageAssemblerCapsTest {
         ComplaintPackageAssembler a = assembler(100);
         assertThat(a.holdCap()).isEqualTo(20);
         assertThat(a.alarmCap()).isEqualTo(20);
+        assertThat(a.testRecordCap()).isEqualTo(20);
+        assertThat(a.binCap()).isEqualTo(50);
+        assertThat(a.stripCap()).isEqualTo(200);
+        assertThat(a.customerMapCap()).isEqualTo(50);
     }
 }

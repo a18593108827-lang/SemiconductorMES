@@ -2,7 +2,10 @@ package com.mes.complaint.vo;
 
 import com.mes.alarm.vo.AlarmVO;
 import com.mes.history.vo.HistoryTxVO;
+import com.mes.lot.vo.LotCustomerMapVO;
+import com.mes.lot.vo.LotStripVO;
 import com.mes.lot.vo.MesLotGenealogyNodeVO;
+import com.mes.test.vo.TestRecordVO;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -52,6 +55,12 @@ public class ComplaintPackageVO {
     private Map<Long, ComplaintPackageLotHoldsVO> holdsByLot = new LinkedHashMap<>();
     /** 每成员未关闭告警：lotId → 最多 20 条（OPEN+ACK） */
     private Map<Long, List<AlarmVO>> alarmsByLot = new LinkedHashMap<>();
+    /** 每成员测试记录：lotId → 最近 N 条（含 Bin 汇总） */
+    private Map<Long, List<TestRecordVO>> testSummaryByLot = new LinkedHashMap<>();
+    /** 每成员 Strip：lotId → 最多 N 条 */
+    private Map<Long, List<LotStripVO>> stripsByLot = new LinkedHashMap<>();
+    /** 每成员客户映射：lotId → 最多 N 条 */
+    private Map<Long, List<LotCustomerMapVO>> customerMapsByLot = new LinkedHashMap<>();
     /** 只读聚合摘要 */
     private ComplaintPackageSummaryVO summary;
 }

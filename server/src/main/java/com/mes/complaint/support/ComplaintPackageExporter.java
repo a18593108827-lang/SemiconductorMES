@@ -19,8 +19,8 @@ import java.util.zip.ZipOutputStream;
  * 追溯包导出装配：JSON 组装 / README 封面 / ZIP 打包 / 文件名（CP-4 + CP-6）。
  *
  * <p>只读组件：只吃 {@link ComplaintPackageVO} + 容器 {@code ObjectMapper} + 方法入参，
- * <b>零</b> Mapper / Facade / Assembler 依赖（K9）。上限值（履历 / Hold / 告警）一律由
- * 调用方传入，本类不写死数字、不读配置（K14 / K15 / D9）。
+ * <b>零</b> Mapper / Facade / Assembler 依赖（K9）。上限值（履历 / Hold / 告警 /
+ * 测试记录 / Bin 档 / Strip / 客户映射）一律由调用方传入，本类不写死数字、不读配置（K14 / K15 / D9）。
  *
  * <p>包装顺序约束（K8）：每 entry 必须<b>先</b> {@code setTimeLocal} <b>再</b> {@code putNextEntry}；
  * 反序会让本地头写当前时间、中央目录写设定值，同一 entry 出现两个时间。
@@ -86,10 +86,12 @@ public class ComplaintPackageExporter {
      * 内存一次写出（P0 口径）；内部走同一 {@link #buildJsonNode}（K4）。
      */
     public byte[] toZipBytes(ComplaintPackageVO vo, Long exportedBy, LocalDateTime exportedAt,
-                             int historyPerLot, int holdCap, int alarmCap) throws IOException {
+                             int historyPerLot, int holdCap, int alarmCap,
+                             int testRecordCap, int binCap, int stripCap, int customerMapCap) throws IOException {
         String jsonName = jsonFileName(vo.getPackageNo());
         byte[] json = toJsonBytes(vo, exportedBy, exportedAt);
-        String readme = toReadme(vo, exportedBy, exportedAt, jsonName, json.length, historyPerLot, holdCap, alarmCap);
+        String readme = toReadme(vo, exportedBy, exportedAt, jsonName, json.length,
+                historyPerLot, holdCap, alarmCap, testRecordCap, binCap, stripCap, customerMapCap);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream(json.length + 2048);
         try (ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
@@ -101,11 +103,12 @@ public class ComplaintPackageExporter {
 
     /**
      * 封面文本（README.txt）。行序固定（K14 / 实施步骤 b.4）：
-     * 包号 / 锚点 / 方向 / 深度 / 成员数 / 截断 / 三个上限 / 状态 / 遏制进行中说明 /
+     * 包号 / 锚点 / 方向 / 深度 / 成员数 / 截断 / 七个上限 / 状态 / 遏制进行中说明 /
      * 原因码 / 备注 / 生成人时间 / 导出人时间 / 文件清单 / 空块说明 / 口径句。
      */
     public String toReadme(ComplaintPackageVO vo, Long exportedBy, LocalDateTime exportedAt, String jsonName,
-                           long jsonBytes, int historyPerLot, int holdCap, int alarmCap) {
+                           long jsonBytes, int historyPerLot, int holdCap, int alarmCap,
+                           int testRecordCap, int binCap, int stripCap, int customerMapCap) {
         StringBuilder sb = new StringBuilder(1024);
         sb.append("客诉追溯包\n");
         sb.append("包号: ").append(dashIfBlank(vo.getPackageNo())).append('\n');
@@ -118,6 +121,10 @@ public class ComplaintPackageExporter {
         sb.append("每 Lot 履历上限: ").append(historyPerLot).append('\n');
         sb.append("每 Lot Hold 各状态上限: ").append(holdCap).append('\n');
         sb.append("每 Lot 未关闭告警上限: ").append(alarmCap).append('\n');
+        sb.append("每 Lot 测试记录上限: ").append(testRecordCap).append('\n');
+        sb.append("每记录 Bin 档上限: ").append(binCap).append('\n');
+        sb.append("每 Lot Strip 上限: ").append(stripCap).append('\n');
+        sb.append("每 Lot 客户映射上限: ").append(customerMapCap).append('\n');
         sb.append("包状态: ").append(dashIfBlank(vo.getStatus())).append('\n');
         sb.append("CONTAINING 为遏制进行中，不是结案快照\n");
         sb.append("原因码: ").append(dashIfBlank(vo.getReasonCode())).append('\n');
@@ -129,8 +136,8 @@ public class ComplaintPackageExporter {
         sb.append("文件清单:\n");
         sb.append("  ").append(jsonName).append(" (").append(jsonBytes).append(" 字节)\n");
         sb.append("  ").append(README_ENTRY).append('\n');
-        sb.append("空履历 / 空 Hold / genealogy 空表示无数据或装配失败（见服务端 WARN）\n");
-        sb.append("本包为客诉调查证据，非 eDHR / Device History，不含良率、OEE 数据\n");
+        sb.append("空履历 / 空 Hold / genealogy 空 / 空测试分档 / 空 Strip / 空客户映射表示无数据或装配失败（见服务端 WARN）\n");
+        sb.append("本包为客诉调查证据，非 eDHR / Device History，含测试分档、Strip 条清单、客户批号映射；三者挂在登记当时的 Lot，拆批后不复制到子批；不含 Wafer Map 图形与良率分析\n");
         return sb.toString();
     }
 

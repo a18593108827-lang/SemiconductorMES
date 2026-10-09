@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface TestFacade {
 
-    List<TestRecordVO> listRecordsByLots(Collection<Long> lotIds, int capPerLot);
+    List<TestRecordVO> listRecordsByLots(Collection<Long> lotIds, int capPerLot, int binCap);
 }
