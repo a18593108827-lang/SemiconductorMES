@@ -4,15 +4,15 @@ module: Lot
 status: done
 slices: []
 aligns: []
-updated: 2026-08-10
+updated: 2026-10-09
 ---
 
 # MES 批次（Lot）功能文档
 
 > 定位：批次主数据；放行绑 Route 版本快照（**语义属 Track 事务**，现接口暂挂 Lot）  
 > 对齐：`docs/架构/半导MES架构设计.md` §5.1、`MES-Track功能文档.md`  
-> 一期状态：**前后端已落地**；二期 **Split / Merge / Genealogy / Scrap / Bonus 已闭环**  
-> 更新：2026-08-10  
+> 一期状态：**前后端已落地**；二期 **Split / Merge / Genealogy / Scrap / Bonus 已闭环**；**TD-1 Strip / 客户映射已落地**  
+> 更新：2026-10-09  
 > 查验：`MES-Lot已完成功能.md`
 
 ---
@@ -151,7 +151,18 @@ Track 文档：`docs/模块/Track（执行引擎）模块/`。
 
 ---
 
-## 10. 相关文档
+## 10. TD-1：Strip 与客户映射
+
+- **Strip**：批内条号登记（`mes_lot_strip`）；不把 Strip 建成 Lot；不写 genealogy  
+- **客户映射**：来料 / 出货外部批号（`mes_lot_customer_map`）；真相在新表，**不写** `mes_lot.customer_lot`  
+- **UI**：管理端 Lots 详情「Mapping / 条级」+「测试结果」（测试数据属 Test 模块）  
+- **不做**：条级 Bin 细分、现场台录入  
+
+细则：`docs/模块/测试数据（Test）模块/` · `MES-Lot数据库设计.md` §3.1–3.2
+
+---
+
+## 11. 相关文档
 
 - `MES-Lot数据库设计.md`
 - `MES-Lot二期功能清单.md`
@@ -161,5 +172,6 @@ Track 文档：`docs/模块/Track（执行引擎）模块/`。
 - `MES-LotScrap接口设计.md`
 - `MES-LotBonus接口设计.md`
 - `MES-Lot已完成功能.md`
+- `docs/模块/测试数据（Test）模块/`
 - `docs/模块/Route（工艺路线）模块/MES-Route功能文档.md` §4.3
 - `docs/模块/Track（执行引擎）模块/MES-Track功能文档.md`

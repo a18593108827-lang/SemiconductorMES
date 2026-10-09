@@ -4,7 +4,7 @@ module: History
 status: done
 slices: [CP-1, CP-2, CP-3, CP-4, CP-5, CP-6]
 aligns: []
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 
 # MES 客诉追溯包（Complaint Trace Package）— 接口设计
@@ -16,8 +16,8 @@ updated: 2026-10-08
 > 前提：Genealogy P0 ✅ · History H-1～5 ✅ · Hold 最小集 ✅  
 > 更新：2026-09-21（CP-5 对齐：contain token 占位、心跳续命、结束 CAS 认 token、双权限 AND、ContainWriter 拆分；Hold.create 无行锁）  
 > 更新：2026-09-22（CP-6 落地：`format=zip` 出 `{packageNo}.zip`＝`{packageNo}.json` + `README.txt`；装配抽 `ComplaintPackageExporter`；`Cache-Control: no-store`；上限值由 Assembler 访问器传入封面）  
-> 更新：2026-10-08（§6.8 记下 TD-1 预定三块。**现网仍是 CP-6：没有这三块，README 仍是 20 行**）
-> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅ · CP-5 ✅ · CP-6 ✅**  
+> 更新：2026-10-09（**TD-1 ✅**：§6.2 / §6.4 并入测试分档 / Strip / 客户映射三块；原 §6.8 预定节废止）  
+> 状态：**CP-1 ✅ · CP-2 ✅ · CP-3 ✅ · CP-4 ✅ · CP-5 ✅ · CP-6 ✅ · TD-1 三块 ✅**  
 > **易混：** 客诉包 ≠ YMS；≠ 片级 / SEMI T23；≠ 8D 全流程系统；≠ 跨厂联邦数据
 
 ---
@@ -54,7 +54,7 @@ as-built / 审计证据     → 本包 histories + holds + alarms + scraps
 | # | 约束 | 说明 |
 |---|------|------|
 | A1 | 高内聚 | 圈人、装配、导出、触发遏制的**编排**全部经 `ComplaintPackageFacade`；禁止 Controller / 前端拼装多源当真相。包内可拆 Allocator / Writer / Assembler，不算出界 |
-| A2 | 低耦合 | Facade **只**依赖：`MesLotService`（或 Lot 只读谱系门面）、`HistoryFacade`、`HoldService`、`AlarmFacade`；**零** `mes_tx_log` / `mes_lot_genealogy` / `MesHoldMapper` / `MesAlarmMapper` |
+| A2 | 低耦合 | Facade **只**依赖：`MesLotService`（或 Lot 只读谱系门面）、`HistoryFacade`、`HoldService`、`AlarmFacade`、**`TestFacade`（只读，TD-1）**；**零** `mes_tx_log` / `mes_lot_genealogy` / `MesHoldMapper` / `MesAlarmMapper` / **`mes_test_*` mapper** |
 | A3 | 读 SSOT | 谱系边只认 genealogy；履历只认 HistoryFacade；锁态只认 Hold；禁止本包缓存「是否 held」当写后真相 |
 | A4 | 写正交 | 本包**永不**改 Lot.status / WIP / Route / Track 门禁；遏制**只**经 `HoldService.create` |
 | A5 | 装配无工艺写副作用 | `preview` / 装配 / `export` 不改 Lot.status / WIP / Track；不得因导出隐式 Hold。`build` **只写**本包审计表（包头+成员），不算工艺写 |
@@ -86,9 +86,11 @@ as-built / 审计证据     → 本包 histories + holds + alarms + scraps
 ```
 ComplaintPackageFacade（编排；包内 Allocator / Writer / Assembler / ContainWriter）
   ├── MesLotService.flattenImpact（含已建树）/ genealogy（仅 get 现查）
+  ├── MesLotService.listStripsByLots / listCustomerMapsByLots（TD-1，一次 IN）
   ├── HistoryFacade.listByLot / query（只读）
   ├── HoldService.listByLot 或等价只读 + create（遏制时）
   ├── AlarmFacade.countUnclearedForLots / listUnclearedForLots（只读）
+  ├── TestFacade.listRecordsByLots（TD-1，只读；禁直连 mes_test_*）
   └── 本地：mes_complaint_package + member（包头审计，非履历真相）
 
 Track   = 不感知本包；继续只写 tx_log / genealogy
@@ -249,6 +251,11 @@ Body：preview 字段 + 可选 `reasonCode` / `remark`。
 | `historiesByLot` | 每成员 `HistoryFacade.listByLot`（本侧切尾端） | 每 Lot 最近 **100** 条 |
 | `holdsByLot` | `HoldService.listByLot`，本侧按 `active` / `released` 拆 | 各 20 |
 | `alarmsByLot` | `AlarmFacade.listUnclearedForLots`（一次 IN；`lastRaiseAt DESC, id DESC`） | 每 Lot 未关闭 20 |
+| `testSummaryByLot` | `TestFacade.listRecordsByLots`（TD-1 ✅） | 每 Lot 最近 **20** 条记录，每记录 ≤ **50** 档 |
+| `stripsByLot` | `MesLotService.listStripsByLots`（一次 IN，SQL 按批截断） | 每 Lot **200** |
+| `customerMapsByLot` | `MesLotService.listCustomerMapsByLots`（一次 IN） | 每 Lot **50** |
+
+形状 = `Map<lotId, List>`（与 `historiesByLot` 一致）。范围 = 包内**全部成员**。记录 / 条 / 映射挂在**登记当时的批**，拆批不复制；`direction=both` 时子批锚点可见父批键下数据。失败按块隔离 + WARN。
 
 ### 6.3 Get
 
@@ -277,9 +284,9 @@ Body：preview 字段 + 可选 `reasonCode` / `remark`。
 | entry | 内容 |
 |-------|------|
 | `{packageNo}.json` | 与 `format=json` 同源同 `ObjectMapper`（同一次调用内 `exportedAt` / `exportedBy` 同值） |
-| `README.txt` | 封面：包号 / 锚点批次（`lotNo (id)`）/ 方向 / 深度 / 成员数 / 影响面已截断 / 每 Lot 履历上限 / 每 Lot Hold 各状态上限 / 每 Lot 未关闭告警上限 / 包状态 / `CONTAINING 为遏制进行中，不是结案快照` / 原因码 / 备注 / 生成人（id）/ 生成时间 / 导出人（id）/ 导出时间 / 文件清单 / `空履历 / 空 Hold / genealogy 空表示无数据或装配失败（见服务端 WARN）` / 口径句「本包为客诉调查证据，非 eDHR / Device History，不含良率、OEE 数据」 |
+| `README.txt` | 封面（**24 行项口径**，断言用 contains）：包号 / 锚点批次（`lotNo (id)`）/ 方向 / 深度 / 成员数 / 影响面已截断 / 每 Lot 履历上限 / 每 Lot Hold 各状态上限 / 每 Lot 未关闭告警上限 / **每 Lot 测试记录上限** / **每记录 Bin 档上限** / **每 Lot Strip 上限** / **每 Lot 客户映射上限** / 包状态 / `CONTAINING 为遏制进行中，不是结案快照` / 原因码 / 备注 / 生成人（id）/ 生成时间 / 导出人（id）/ 导出时间 / 文件清单 / `空履历 / 空 Hold / genealogy / 测试分档 / Strip / 客户映射 空表示无数据或装配失败（见服务端 WARN）` / 口径句「本包为客诉调查证据，非 eDHR / Device History，**含测试分档、Strip 条清单、客户批号映射**；三者挂在登记当时的 Lot，拆批后不复制到子批；不含 Wafer Map 图形与良率分析、OEE」 |
 
-实现约束（CP-6 plan K1–K15）：装配只在 `ComplaintPackageExporter`（support，只注入 `ObjectMapper`，零 Mapper / 零 Assembler 依赖）；三个上限值由 Facade 从 `ComplaintPackageAssembler.historyPerLot()`（生效值）/ `holdCap()` / `alarmCap()` 传入，封面**不**写死数字、**不**重复 `@Value`；每 entry 先 `setTimeLocal` 再 `putNextEntry`（ZIP DOS 时间 2 秒粒度、本地头与中央目录需一致）；内存一次写出（无流式、不落盘）；JSON 超 10MB 仅 WARN。
+实现约束（CP-6 plan K1–K15 + TD-1）：装配只在 `ComplaintPackageExporter`（support，只注入 `ObjectMapper`，零 Mapper / 零 Assembler 依赖）；上限值由 Facade 从 `ComplaintPackageAssembler` 访问器传入（履历 / Hold / 告警 + **testRecordCap / binCap / stripCap / customerMapCap**），封面**不**写死数字、**不**重复 `@Value`；每 entry 先 `setTimeLocal` 再 `putNextEntry`（ZIP DOS 时间 2 秒粒度、本地头与中央目录需一致）；内存一次写出（无流式、不落盘）；JSON 超 10MB 仅 WARN。
 
 JSON 根对象 = Get VO + `exportedAt` + `exportedBy`。序列化必须用 Spring 容器 `ObjectMapper`（Long 为字符串、JavaTime 与 `get` 同形）。`exportedAt` 与 `createTime` 同一 JVM 本地时钟。
 
@@ -315,23 +322,11 @@ JSON 根对象 = Get VO + `exportedAt` + `exportedBy`。序列化必须用 Sprin
 
 ### 6.7 说明
 
-build 与 Get 响应**同形**（单一 `ComplaintPackageVO`）；装配块（genealogy / historiesByLot / holdsByLot / alarmsByLot）在 **insert 事务提交后**组装——事务只包包头+成员写入，禁止把装配查询裹进未提交事务（见 §8.1）。
+build 与 Get 响应**同形**（单一 `ComplaintPackageVO`）；装配块（genealogy / historiesByLot / holdsByLot / alarmsByLot / **testSummaryByLot / stripsByLot / customerMapsByLot**）在 **insert 事务提交后**组装——事务只包包头+成员写入，禁止把装配查询裹进未提交事务（见 §8.1）。
 
 写入事务必须落在独立 Writer Bean 的 public `@Transactional` 或 `TransactionTemplate` 上；禁止 Facade 同类自调用 / 私有方法事务 / **`build()` 带 `@Transactional`**（外层事务会使 catch UK 后仍 rollback-only）。UK 冲突必须在 Writer 代理外捕获，只改 `package_no` 再调 Writer public 方法；禁止在 Writer 事务内 catch 后继续插。
 
 **HTTP 成功边界：** 包头+成员提交成功即 build 成功。装配按块、按 Lot 失败隔离（该块/该 Lot 空列表，其它继续）；失败必记 WARN（packageNo + lotId + 块名）。不得因某成员 `listByLot` 404 把已落库的包打成 500（否则客户端按 A9 再 build 会留下孤儿包）。
-
-### 6.8 TD-1 预定增块（未落地）
-
-TD-1 落地前，Get / Export **没有**下列字段，README **仍是 20 行**。契约以 `MES-封测测试数据与Bin回流方案.md` §7 为准，这里只防止把「预定」读成「已经返回」：
-
-| 块 | 来源 | 上限 |
-|----|------|------|
-| `testSummaryByLot` | `TestFacade` | 每 Lot 最近 20 条记录，每记录 ≤ 50 档 |
-| `stripsByLot` | Lot Service，一次 IN | 每 Lot 200 条 |
-| `customerMapsByLot` | Lot Service，一次 IN | 每 Lot 50 条 |
-
-范围 = 包内全部成员批。记录挂在登记当时的批，拆批不复制。`direction=both`（抽屉默认）时，子批锚点的包里父批键带父批记录。落地后 README 行项数为 24，并把本节并入 §6.2 / §6.4。
 
 ---
 

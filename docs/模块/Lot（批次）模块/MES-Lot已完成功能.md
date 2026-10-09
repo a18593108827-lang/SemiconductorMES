@@ -2,16 +2,16 @@
 type: 已完成功能
 module: Lot
 status: done
-slices: []
+slices: [TD-1]
 aligns: []
-updated: 2026-08-10
+updated: 2026-10-09
 ---
 
 # MES 批次（Lot）— 功能查验清单
 
-> 更新：2026-08-10  
-> 状态：**一期已落地**；**二期 Split/Merge/谱系/Scrap/Bonus 已闭环**  
-> 需求依据：`MES-Lot功能文档.md` · `MES-Lot数据库设计.md` · `MES-Lot二期功能清单.md`
+> 更新：2026-10-09（TD-1：Strip + 客户映射 + 详情两区）  
+> 状态：**一期已落地**；**二期 Split/Merge/谱系/Scrap/Bonus 已闭环**；**TD-1 条级/映射 ✅**  
+> 需求依据：`MES-Lot功能文档.md` · `MES-Lot数据库设计.md` · `MES-Lot二期功能清单.md` · `docs/方案/MES-封测测试数据与Bin回流方案.md`
 
 图例：✅ 已完成 · ⏳ 未做 · — 不适用
 
@@ -33,6 +33,9 @@ updated: 2026-08-10
 | Genealogy 谱系 | ✅ `GET /lots/{id}/genealogy` | ✅ 详情谱系简图（直系/影响面） | `lot:list` |
 | 表结构 mes_lot + genealogy | ✅ `migrate_lot_split.sql` | — | — |
 | 权限码 + 菜单种子 | ✅ 220–223；298–301 | ✅ `/app/lots` · `/track` | 见上 |
+| Strip 条级登记 / 列表 | ✅ `/lots/{id}/strips` · `migrate_lot_pkg.sql` | ✅ Lots 详情「Mapping / 条级」（仅 `/app`） | `lot:edit` / `list` |
+| 客户 Lot 映射正反查 | ✅ customer-maps · by-external-lot | ✅ 同区；不写 `customer_lot` 列 | `lot:edit` / `list` |
+| 测试结果区（只读） | ✅ 经 `/test/summary/by-lot` | ✅ Lots 详情（`test:view`） | Test 权限 |
 
 ---
 
@@ -57,10 +60,18 @@ updated: 2026-08-10
 
 ---
 
-## 2. 已知后置
+## 2. TD-1 补记（2026-10-09）
+
+- [x] Strip 批量登记；同请求 / 跨请求撞 UK → `LOT_STRIP_DUPLICATE`  
+- [x] 客户映射 INBOUND/OUTBOUND；撞 UK → `LOT_MAP_DUPLICATE`；软删同键靠 UK 兜底  
+- [x] `merged` / `scrapped` 拒登记 Strip / 映射  
+- [x] 客诉包 `stripsByLot` / `customerMapsByLot`（一次 IN，SQL 按批截断）  
+- [x] 管理端详情两区；现场台 `/track/lots` **不加**  
+
+## 3. 已知后置
 
 - Unscrap / Unbonus / ERP 过账 / NC Disposition  
-- 片级 Wafer、Carrier、ERP 工单下发  
+- 片级 Wafer、条级 Bin 细分、ERP 工单下发  
 - 加工中合批、Future Hold 合批继承  
 
-设计：`MES-LotSplit接口设计.md` · `MES-LotMerge接口设计.md` · `MES-LotGenealogy接口设计.md` · `MES-LotScrap接口设计.md` · `MES-LotBonus接口设计.md`
+设计：`MES-LotSplit接口设计.md` · `MES-LotMerge接口设计.md` · `MES-LotGenealogy接口设计.md` · `MES-LotScrap接口设计.md` · `MES-LotBonus接口设计.md` · Test：`docs/模块/测试数据（Test）模块/`

@@ -2,16 +2,16 @@
 type: 数据库设计
 module: Lot
 status: done
-slices: []
+slices: [TD-1]
 aligns: []
-updated: 2026-08-10
+updated: 2026-10-09
 ---
 
 # MES 批次（Lot）— 数据库设计
 
 > 对齐：`MES-Lot功能文档.md`、`MES-LotSplit接口设计.md`、`MES-LotMerge接口设计.md`、`MES-LotGenealogy接口设计.md`、`MES-LotScrap接口设计.md`、`MES-LotBonus接口设计.md`  
-> 状态：**DDL 已写**（`migrate_lot.sql` / `migrate_lot_split.sql` / `migrate_lot_merge.sql` / `migrate_lot_scrap.sql` / `migrate_lot_bonus.sql` / `schema.sql`）  
-> 更新：2026-08-10
+> 状态：**DDL 已写**（`migrate_lot.sql` / `migrate_lot_split.sql` / `migrate_lot_merge.sql` / `migrate_lot_scrap.sql` / `migrate_lot_bonus.sql` / **`migrate_lot_pkg.sql`（TD-1 Strip + 客户映射）** / `schema.sql`）  
+> 更新：2026-10-09（TD-1：`mes_lot_strip` / `mes_lot_customer_map`）
 
 ---
 
@@ -83,6 +83,33 @@ Track：只读该快照下的 `mes_route_step`。
 脚本：`migrate_lot_split.sql`。
 
 后置：`mes_lot_wafer`（P1）、`mes_lot_carrier`（P1）。
+
+---
+
+## 3.1 `mes_lot_strip`（TD-1 ✅）
+
+| 字段 | 说明 |
+|------|------|
+| lot_id / strip_no | 所属批 + 条号；UK `(lot_id, strip_no)` |
+| seq_no / die_qty | 批内序、本条颗数（可空） |
+| bin_code / status | TD-1 仅登记，条级分档后置 |
+| deleted | TINYINT；UK **不含** deleted |
+
+脚本：`migrate_lot_pkg.sql`。写路径：`POST /lots/{id}/strips`（`lot:edit`）；合批/报废拒写。
+
+---
+
+## 3.2 `mes_lot_customer_map`（TD-1 ✅）
+
+| 字段 | 说明 |
+|------|------|
+| lot_id / map_type / external_lot_no | INBOUND/OUTBOUND；UK 三元 |
+| lot_no | 内部批号快照 |
+| external_source / customer_code / qty | 可空 |
+| deleted | TINYINT；UK **不含** deleted |
+
+**不写** `mes_lot.customer_lot`（旧列便查冗余；映射真相在本表）。  
+正查 `GET /lots/{id}/customer-maps`；反查 `GET /lots/by-external-lot`。
 
 ---
 

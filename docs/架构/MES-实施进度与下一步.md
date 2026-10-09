@@ -4,12 +4,12 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 
 # MES 实施进度与下一步
 
-> 更新：2026-10-08（TD-1：产品补口径 + 架构补口径 D19–D22。plan 仍待批）  
+> 更新：2026-10-09（**TD-1 ✅** 落地：Test 模块 + Lot Strip/映射 + 客诉三块 + 管理端；步骤 a–g）  
 > 用途：记录当前落地进度、下一模块优先级、与业界预期对齐（骨架，后续可补）
 ---
 
@@ -19,7 +19,8 @@ updated: 2026-10-08
 |------|------|------|
 | 权限 / 用户 | ✅ 一期已完成 | 登录、RBAC、菜单、用户中心、申请审批 |
 | Route | ✅ 一期已完成 | 工序/路线/版本、草稿编辑、发布/升版、单草稿 |
-| Lot | ✅ 一期已完成 | 主数据 + 放行绑版本（兼容接口） |
+| Lot | ✅ 一期已完成 + TD-1 扩展 | 主数据 + 放行；**Strip / 客户映射 / 详情两区** ✅ |
+| 测试数据（Test） | ✅ TD-1 | 记录/Bin/守卫/Facade；`/app/test`；见 `docs/模块/测试数据（Test）模块/` |
 | Track | ✅ 一期+二期部分 | Release/In/Out/Move/Abort、Q-Time / ProcessTime；T2-7 EDC 钩子 + 现场提示 ✅ |
 | WIP | ✅ 一期已完成 | 投影表 + 列表/按站汇总 + Admin 页 |
 | Hold | ✅ 最小集 + Future Hold P0 | 即时 Hold；预约锁批 FH-1～3；FH-4/FH-5 后置 |
@@ -27,7 +28,7 @@ updated: 2026-10-08
 | Dispatch | ✅ 最小集前后端 | 候选/推荐、Reserve；已接 Recipe 资格过滤；Admin `/app/dispatch`；APS/规则表后置 |
 | Recipe | ✅ 一期前后端 | 主数据/版本/绑定/Facade+钩子；权限 246–249；Admin `/app/recipe`；RMS 后置 |
 | EDC | ✅ 一期 P0 | 采/判/Facade/拒 Out/现场提示；OOS Auto-Hold / `EDC_COLLECT` 已做；见 `docs/模块/EDC（量测）模块/` |
-| History | ✅ 一期 P0 + 客诉包 CP-1～CP-6 | 写在 Track；`HistoryFacade` + `/app/history`；客诉包 build/get/list/export(JSON+ZIP)/contain ✅；片级后置 |
+| History | ✅ 一期 P0 + 客诉包 CP-1～CP-6 + TD-1 三块 | 写在 Track；客诉包含 **测试分档 / Strip / 客户映射** ✅；片级后置 |
 | SPC | ✅ SPC-1～5 已落地 | 读点/表/判异/HTTP/工艺页；见 `MES-SPC已完成功能.md` |
 | Alarm | ✅ Alarm-1～4 | 落库/HTTP/Admin/STOMP；见一期清单 |
 | Dashboard | ✅ 一期已完成 | overview 真数 + Admin 看板（铺满视口）；见 `docs/模块/Dashboard（看板）模块/` |
@@ -72,8 +73,8 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 
 | 切片 | 交付 | 状态 |
 |------|------|------|
-| TD-1 | Strip 条级 + 测试记录与 Bin 汇总回流 + Bin 独立字典 + 客户 Lot 映射（含管理端界面）+ 客诉包三块（分档 / 条清单 / 客户映射） | ⏳ plan draft（口径已补，未批不动码） |
-| TD-2 | 不良 Bin → Hold / Rework **建议**联动（阈值 + 人工确认 + 既有事务留痕） | ⏳ 待规格 |
+| TD-1 | Strip 条级 + 测试记录与 Bin 汇总回流 + Bin 独立字典 + 客户 Lot 映射（含管理端界面）+ 客诉包三块（分档 / 条清单 / 客户映射） | ✅ 2026-10-09（a–g） |
+| TD-2 | 不良 Bin → Hold / Rework **建议**联动（阈值 + 人工确认 + 既有事务留痕） | ⏳ 待规格（**下一步主线**） |
 | TD-3 | 颗级 Die / 条级 Bin 细分 / STDF 解析 | ⏳ 待规格 |
 
 规格：`docs/方案/MES-封测测试数据与Bin回流方案.md`（跨模块，含 A1–A11 / P1–P9 / D1–D22）。
@@ -117,7 +118,7 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 | Report | `docs/模块/Report（报表）模块/`（架构 · 一期清单） |
 | Carrier | `docs/模块/Carrier（载具）模块/`（架构 · 一期清单；**Car-1～5 ✅**） |
 | History | `docs/模块/History（履历）模块/` |
-| 测试数据（Test） | `docs/模块/测试数据（Test）模块/`（TD-1 plan · 待批） |
+| 测试数据（Test） | `docs/模块/测试数据（Test）模块/`（TD-1 ✅ · 功能/接口/库表/已完成） |
 | WIP | `docs/模块/WIP（在制）模块/` |
 | 架构总册 | `docs/架构/半导MES架构设计.md` |
 | 定时任务 | `docs/架构/MES-SpringScheduled使用.md` |
@@ -138,7 +139,7 @@ Carrier ✅ **C0+C1 与 C2 扫码比对已落地**（Car-1～8；`docs/模块/Ca
 |------|------|------|
 | Doc-1 | 根级 `AGENTS.md` + `docs/_templates/` 四件模板 + `intent/`、`eval/` 目录占位 | ✅ 2026-09-20 |
 | Doc-2 | 存量文档批量补 frontmatter（只加头不动正文）+ `docs/INDEX.md` 总账 | ✅ 2026-09-20 |
-| Doc-3 | 全链试运行：走 INT → 规格 → plan → 交付 | 🔄 进行中（试运行对象 = **INT-0001**：意图已采纳 ✅ → 跨模块规格已出 ✅ → TD-1 plan 待批；实施完即闭环。原定对象 INT-0002 的 L0 可另作第二次试运行） |
+| Doc-3 | 全链试运行：走 INT → 规格 → plan → 交付 | ✅ 首轮闭环（**INT-0001 / TD-1** 2026-10-09）；INT-0002 L0 可另作第二次试运行 |
 | Doc-4 | `src/test` 最小回归网 + `mvn test` + CI 三闸门（后端 test / 文档 INDEX 一致 / 前端 `tsc` + 行为用例） | ✅ 2026-09-23（`docs/架构/Doc-4-plan.md`；后端 12 用例 + 前端 2 用例，零外部依赖） |
 | Doc-5 | eval 启用 ✅ 2026-09-22（首条 `EVAL-0001`）；**CI 挂 frontmatter 状态校验 ✅ 2026-09-23**（`ci.yml` docs job：reindex 后 `git diff --exit-code` 即门禁） | ✅ 已落地 |
 

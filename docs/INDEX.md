@@ -4,13 +4,13 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-10-08 · 共 107 篇
+> 生成：2026-10-09 · 共 111 篇
 
 ## 状态汇总
 
@@ -18,7 +18,7 @@ updated: 2026-10-08
 |------|------|
 | active | 4 |
 | approved | 4 |
-| done | 89 |
+| done | 93 |
 | draft | 8 |
 | in-progress | 2 |
 
@@ -28,7 +28,7 @@ updated: 2026-10-08
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
-| INT-0001 封测颗级追溯与测试数据回流（后道主线） | — | approved | 2026-10-08 | `intent/INT-0001-封测颗级追溯与测试数据回流.md` |
+| INT-0001 封测颗级追溯与测试数据回流（后道主线） | — | approved | 2026-10-09 | `intent/INT-0001-封测颗级追溯与测试数据回流.md` |
 | INT-0002 AI 赋能：只读数据暴露与摘要 / 查数 | — | draft | 2026-09-23 | `intent/INT-0002-AI赋能只读数据暴露与摘要查数.md` |
 
 ### 方案（7 篇）
@@ -62,7 +62,7 @@ updated: 2026-10-08
 | MES 用户中心（账号设置）设计 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户中心设计.md` |
 | MES 菜单权限方案 | 权限用户 | done ✅ | 2026-09-10 | `模块/权限、用户模块/MES-菜单权限方案.md` |
 
-### 功能文档（11 篇）
+### 功能文档（12 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
@@ -71,14 +71,15 @@ updated: 2026-10-08
 | MES 设备（Equipment）功能文档 | Equipment | in-progress | 2026-07-28 | `模块/Equipment（设备）模块/MES-Equipment功能文档.md` |
 | MES 履历追溯（History）功能文档 | History | done ✅ | 2026-08-19 | `模块/History（履历）模块/MES-History功能文档.md` |
 | MES 锁批（Hold）功能文档 | Hold | done ✅ | 2026-07-28 | `模块/Hold（锁批）模块/MES-Hold功能文档.md` |
-| MES 批次（Lot）功能文档 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-Lot功能文档.md` |
+| MES 批次（Lot）功能文档 | Lot | done ✅ | 2026-10-09 | `模块/Lot（批次）模块/MES-Lot功能文档.md` |
 | MES 配方（Recipe）功能文档 | Recipe | done ✅ | 2026-07-30 | `模块/Recipe（配方）模块/MES-Recipe功能文档.md` |
 | MES 工艺路线（Route）功能文档 | Route | done ✅ | 2026-07-24 | `模块/Route（工艺路线）模块/MES-Route功能文档.md` |
+| MES 测试数据（Test）功能文档 | Test | done ✅ | 2026-10-09 | `模块/测试数据（Test）模块/MES-Test功能文档.md` |
 | MES 执行引擎（Track）功能文档 | Track | done ✅ | 2026-08-10 | `模块/Track（执行引擎）模块/MES-Track功能文档.md` |
 | MES 在制（WIP）功能文档 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP功能文档.md` |
 | MES 用户权限功能文档 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户权限功能文档.md` |
 
-### 数据库设计（10 篇）
+### 数据库设计（11 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
@@ -86,20 +87,21 @@ updated: 2026-10-08
 | MES 量测采集（EDC）— 数据库设计 | EDC | done ✅ | 2026-08-12 | `模块/EDC（量测）模块/MES-EDC数据库设计.md` |
 | MES 设备（Equipment）— 数据库设计 | Equipment | done ✅ | 2026-07-28 | `模块/Equipment（设备）模块/MES-Equipment数据库设计.md` |
 | MES 锁批（Hold）— 数据库设计 | Hold | done ✅ | 2026-07-28 | `模块/Hold（锁批）模块/MES-Hold数据库设计.md` |
-| MES 批次（Lot）— 数据库设计 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-Lot数据库设计.md` |
+| MES 批次（Lot）— 数据库设计 | Lot | done ✅ | 2026-10-09 | `模块/Lot（批次）模块/MES-Lot数据库设计.md` |
 | MES 配方（Recipe）— 数据库设计 | Recipe | done ✅ | 2026-07-30 | `模块/Recipe（配方）模块/MES-Recipe数据库设计.md` |
 | MES 工艺路线（Route）数据库设计 | Route | done ✅ | 2026-09-20 | `模块/Route（工艺路线）模块/MES-Route数据库设计.md` |
+| MES 测试数据（Test）— 数据库设计 | Test | done ✅ | 2026-10-09 | `模块/测试数据（Test）模块/MES-Test数据库设计.md` |
 | MES 执行引擎（Track）— 数据库设计（草案） | Track | done ✅ | 2026-08-11 | `模块/Track（执行引擎）模块/MES-Track数据库设计.md` |
 | MES 在制（WIP）— 数据库设计 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP数据库设计.md` |
 | MES 用户权限数据库设计 | 权限用户 | done ✅ | 2026-09-20 | `模块/权限、用户模块/MES-用户权限数据库设计.md` |
 
-### 接口设计（19 篇）
+### 接口设计（20 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
 | EdcFacade — 接口设计（架构） | EDC | done ✅ | 2026-09-02 | `模块/EDC（量测）模块/MES-EdcFacade接口设计.md` |
 | HistoryFacade — 接口设计（架构） | History | done ✅ | 2026-08-19 | `模块/History（履历）模块/MES-History接口设计.md` |
-| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-10-08 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
+| MES 客诉追溯包（Complaint Trace Package）— 接口设计 | History | done ✅ | 2026-10-09 | `模块/History（履历）模块/MES-客诉追溯包接口设计.md` |
 | Future Hold — 接口设计（架构） | Hold | done ✅ | 2026-08-06 | `模块/Hold（锁批）模块/MES-FutureHold接口设计.md` |
 | Lot Bonus 数量调整 — 接口设计（架构） | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-LotBonus接口设计.md` |
 | Lot Genealogy 谱系查询 — 架构设计 | Lot | done ✅ | 2026-09-20 | `模块/Lot（批次）模块/MES-LotGenealogy接口设计.md` |
@@ -113,6 +115,7 @@ updated: 2026-10-08
 | Rework 回流 — 接口设计（架构） | Route | done ✅ | 2026-07-30 | `模块/Route（工艺路线）模块/MES-Rework接口设计.md` |
 | Skip 跳站 — 接口设计（架构） | Route | done ✅ | 2026-08-05 | `模块/Route（工艺路线）模块/MES-Skip接口设计.md` |
 | Step 站属性（eqp_type 强校验）— 接口设计（架构） | Route | done ✅ | 2026-07-31 | `模块/Route（工艺路线）模块/MES-Step站属性接口设计.md` |
+| MES 测试数据（Test）— 接口设计 | Test | done ✅ | 2026-10-09 | `模块/测试数据（Test）模块/MES-Test接口设计.md` |
 | Process Time — 接口设计（架构） | Track | done ✅ | 2026-08-11 | `模块/Track（执行引擎）模块/MES-ProcessTime接口设计.md` |
 | Abort — 接口设计（架构） | Track | done ✅ | 2026-08-12 | `模块/Track（执行引擎）模块/MES-TrackAbort接口设计.md` |
 | Move — 接口设计（架构） | Track | done ✅ | 2026-08-12 | `模块/Track（执行引擎）模块/MES-TrackMove接口设计.md` |
@@ -135,7 +138,7 @@ updated: 2026-10-08
 | MES 量测趋势预警（SPC）— 一期功能清单 | SPC | done ✅ | 2026-09-02 | `模块/SPC（统计过程控制）模块/MES-SPC一期功能清单.md` |
 | MES 执行引擎（Track）— 二期功能清单 | Track | done ✅ | 2026-08-12 | `模块/Track（执行引擎）模块/MES-Track二期功能清单.md` |
 
-### 已完成功能（13 篇）
+### 已完成功能（14 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
@@ -144,11 +147,12 @@ updated: 2026-10-08
 | MES 设备（Equipment）— 功能查验清单 | Equipment | done ✅ | 2026-07-28 | `模块/Equipment（设备）模块/MES-Equipment已完成功能.md` |
 | MES 履历追溯（History）— 已完成功能（查验清单） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/MES-History已完成功能.md` |
 | MES 锁批（Hold）— 功能查验清单 | Hold | done ✅ | 2026-09-21 | `模块/Hold（锁批）模块/MES-Hold已完成功能.md` |
-| MES 批次（Lot）— 功能查验清单 | Lot | done ✅ | 2026-08-10 | `模块/Lot（批次）模块/MES-Lot已完成功能.md` |
+| MES 批次（Lot）— 功能查验清单 | Lot | done ✅ | 2026-10-09 | `模块/Lot（批次）模块/MES-Lot已完成功能.md` |
 | MES 配方（Recipe）— 功能查验清单 | Recipe | done ✅ | 2026-07-30 | `模块/Recipe（配方）模块/MES-Recipe已完成功能.md` |
 | MES 报表（Report）— 已完成功能（查验清单） | Report | done ✅ | 2026-09-10 | `模块/Report（报表）模块/MES-Report已完成功能.md` |
 | MES 工艺路线（Route）— 功能查验清单 | Route | done ✅ | 2026-07-30 | `模块/Route（工艺路线）模块/MES-Route已完成功能.md` |
 | MES SPC — 已完成功能 | SPC | done ✅ | 2026-09-02 | `模块/SPC（统计过程控制）模块/MES-SPC已完成功能.md` |
+| MES 测试数据（Test）— 已完成功能（查验清单） | Test | done ✅ | 2026-10-09 | `模块/测试数据（Test）模块/MES-Test已完成功能.md` |
 | MES 执行引擎（Track）— 功能查验清单 | Track | done ✅ | 2026-08-13 | `模块/Track（执行引擎）模块/MES-Track已完成功能.md` |
 | MES 在制（WIP）— 功能查验清单 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP已完成功能.md` |
 | MES 用户权限 — 已完成功能查验 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户权限已完成功能.md` |
@@ -163,7 +167,7 @@ updated: 2026-10-08
 | CP-4 计划 — export JSON 下载 + Admin 入口（History / Lots） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-4-plan.md` |
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
 | CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
-| TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | approved | 2026-10-08 | `模块/测试数据（Test）模块/TD-1-plan.md` |
+| TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | approved | 2026-10-09 | `模块/测试数据（Test）模块/TD-1-plan.md` |
 
 ### eval（2 篇）
 
@@ -183,7 +187,7 @@ updated: 2026-10-08
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
-| MES 实施进度与下一步 | — | done ✅ | 2026-10-08 | `架构/MES-实施进度与下一步.md` |
+| MES 实施进度与下一步 | — | done ✅ | 2026-10-09 | `架构/MES-实施进度与下一步.md` |
 
 ### 业务清单（2 篇）
 

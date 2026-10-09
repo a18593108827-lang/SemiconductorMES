@@ -9,7 +9,7 @@ slices: [TD-1]
 
 aligns: [MES-封测测试数据与Bin回流方案.md, INT-0001-封测颗级追溯与测试数据回流.md]
 
-updated: 2026-10-08
+updated: 2026-10-09
 ---
 
 # TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流
@@ -409,6 +409,14 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 | 9 | 反向验证 | ① 临时 `true \|\| hard == totalQty` → `v1_hardSumOffByOne` **Failures:1** 后还原；② 临时注释 `insertGuard(guard)` → `v6_guardDuplicate_*` **Failures:1** 后还原 |
 
 **R8 结论：步骤 f 用例与反向验证通过，审查债 R4-C1 / R4-F1 / R5-C1 / R7-F1 / R7-F3 已关。** 可进入步骤 g（文档收尾）。真机 curl 验收仍建议在后端起来后补打。
+
+---
+
+### R9 文档收尾（2026-10-09 · 步骤 g）
+
+> 交付：Test 四件套（功能 / 接口 / 库表 / 已完成）；Lot 功能·库表·已完成补 Strip/映射；客诉 §6.8 并入 §6.2/§6.4；进度表 / INT-0001 切片状态 ✅；`docs/INDEX.md` reindex。
+
+**R9 结论：TD-1 步骤 a–g 闭环。** 下一步主线 = TD-2 规格。
 
 ### 勘误（2026-10-08，R3 之后）
 
