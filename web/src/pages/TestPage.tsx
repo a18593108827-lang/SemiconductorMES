@@ -104,8 +104,12 @@ const emptyBin: BinForm = {
   remark: '',
 }
 
+/** 只合计将提交的硬档（有档号）；空档号行不计入，与 submitCreate 的 filter 口径一致（R7-F3） */
 function hardSum(bins: BinRow[]) {
-  return bins.reduce((s, b) => s + (b.binType === 'HARD' ? Number(b.binQty) || 0 : 0), 0)
+  return bins.reduce((s, b) => {
+    if (b.binType !== 'HARD' || !b.binCode.trim()) return s
+    return s + (Number(b.binQty) || 0)
+  }, 0)
 }
 
 export function TestPage() {
@@ -154,6 +158,7 @@ export function TestPage() {
   const [binForm, setBinForm] = useState<BinForm>(emptyBin)
   const [binError, setBinError] = useState('')
   const [savingBin, setSavingBin] = useState(false)
+  const binGate = useRef(false)
 
   const loadList = useCallback(async () => {
     setLoading(true)
@@ -354,10 +359,12 @@ export function TestPage() {
   }
 
   async function submitBin() {
+    if (binGate.current) return
     if (!binForm.binCode.trim() || !binForm.binName.trim()) {
       setBinError('档号和名称不能为空')
       return
     }
+    binGate.current = true
     setSavingBin(true)
     setBinError('')
     const body = {
@@ -390,6 +397,7 @@ export function TestPage() {
     } catch (err) {
       setBinError(err instanceof ApiError ? err.message : '保存失败')
     } finally {
+      binGate.current = false
       setSavingBin(false)
     }
   }

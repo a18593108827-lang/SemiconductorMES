@@ -354,7 +354,12 @@ public class MesTestRecordServiceImpl implements MesTestRecordService {
         return vos;
     }
 
-    /** 一次查出这些记录的汇总，每条截到 binCap 档 */
+    /**
+     * 一次查出这些记录的汇总，每条截到 binCap 档。
+     * <p>前提（R4-C1 / A11）：调用方必须只传入<strong>未作废</strong>头表 id（本类 5 个入口均先查
+     * {@code deleted=0} 的头，含 {@code selectRecentByLots}）。本方法不 JOIN 头表，故不单独过滤
+     * 已作废记录的汇总行；新增直查 summary 的入口须自行保证或改为 JOIN。
+     */
     private Map<Long, List<MesTestBinSummary>> loadBins(List<Long> recordIds, int binCap) {
         if (recordIds.isEmpty()) {
             return Map.of();

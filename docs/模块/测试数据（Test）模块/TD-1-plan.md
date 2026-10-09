@@ -388,6 +388,28 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 
 **R7 结论：步骤 e 实现与 plan/方案一致，tsc/测试全绿，无阻断问题，可进入步骤 f（测试用例 + 反向验证 + 真机验收）。** f 步骤处置清单累计：R4-C1（loadBins 注释/JOIN）· R4-F1（空 productCode 用例）· R5-C1（注释修正）· R7-F1（submitBin 闸，或即时补）· R7-F3（求和口径）· 前端重入用例。
 
+---
+
+### R8 实施审查轮（2026-10-09 · 步骤 f 测试用例 + 反向验证）
+
+> 审查对象：`MesTestRecordServiceImplTest`（新增 11 例）、`TestPage.test.tsx`（重入 1 例）、`loadBins` / Strip·映射常量注释、`TestPage` R7-F1/F3 补丁。方法：对码 plan f + 反向探针 + `mvn -o test` + `npm test`。
+
+**实测通过项：**
+
+| # | 条款 | 证据 |
+|---|------|------|
+| 1 | V1 对账 | `v1_hardSumEqualsTotal_passes` / `v1_hardSumOffByOne_rejects` |
+| 2 | V2 四级回退 | `v2_picksProgramVersionOverLowerScopes` / `fallsBackToGlobal` / `missingDef` |
+| 3 | V5 档内重复 | `v5_duplicateBinCodeInRequest_rejects`；异类型同码允许 |
+| 4 | V6 守卫转换 | `v6_guardDuplicate_*`：DuplicateKey → `TEST_RECORD_DUPLICATE`，头/汇总/号段零 insert；`verifyNoMoreInteractions` 守卫 mapper |
+| 5 | K7 快照 | `k7_summarySnapshotsBinNameAndShippableAtCreate` 捕获 insert 时 binName/isShippable |
+| 6 | R4-F1 | `r4f1_emptyProductCode_productAndGlobalBothRank2`：空产品时二者同为 rank 2 |
+| 7 | R4-C1 / R5-C1 | `loadBins` javadoc 明示前置；Strip/映射常量注释改为「活行前置 + UK 兜底」 |
+| 8 | 前端重入 + R7 | `TestPage.test.tsx` 连点只 1 次 create；`binGate`；`hardSum` 只计有档号硬档 |
+| 9 | 反向验证 | ① 临时 `true \|\| hard == totalQty` → `v1_hardSumOffByOne` **Failures:1** 后还原；② 临时注释 `insertGuard(guard)` → `v6_guardDuplicate_*` **Failures:1** 后还原 |
+
+**R8 结论：步骤 f 用例与反向验证通过，审查债 R4-C1 / R4-F1 / R5-C1 / R7-F1 / R7-F3 已关。** 可进入步骤 g（文档收尾）。真机 curl 验收仍建议在后端起来后补打。
+
 ### 勘误（2026-10-08，R3 之后）
 
 | 项 | 改法 |

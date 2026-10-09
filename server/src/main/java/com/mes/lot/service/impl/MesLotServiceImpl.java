@@ -82,11 +82,17 @@ public class MesLotServiceImpl implements MesLotService {
     /** 厂内批次号前缀 */
     public static final String LOT_NO_PREFIX = "LOT";
     private static final DateTimeFormatter LOT_DAY = DateTimeFormatter.BASIC_ISO_DATE;
-    /** 同请求内或跨请求条号冲突（含已软删同键） */
+    /**
+     * 条号冲突（活行前置校验 + 跨请求撞 UK）。
+     * 预检查走 MP {@code @TableLogic}（只看 deleted=0）；已软删同键由表 UK 兜底转本码（R5-C1）。
+     */
     private static final String STRIP_DUP = "LOT_STRIP_DUPLICATE: 条号已存在，请改原行";
     /** 同请求内条号重复 */
     private static final String STRIP_DUP_REQ = "LOT_STRIP_DUPLICATE: 同一请求内条号重复";
-    /** 客户映射键冲突（含已软删同键） */
+    /**
+     * 客户映射冲突（活行前置校验 + 跨请求撞 UK）。
+     * 已软删同键同样靠 UK 兜底转本码，不是前置 SELECT（R5-C1）。
+     */
     private static final String MAP_DUP = "LOT_MAP_DUPLICATE: 客户映射已存在，请改原行";
 
     private final MesLotMapper mesLotMapper;
