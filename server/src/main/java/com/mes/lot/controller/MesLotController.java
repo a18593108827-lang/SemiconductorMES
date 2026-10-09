@@ -8,10 +8,14 @@ import com.mes.carrier.vo.CarrierBindingVO;
 import com.mes.common.PageResult;
 import com.mes.common.R;
 import com.mes.common.annotation.OperLog;
+import com.mes.lot.dto.LotCustomerMapSaveDTO;
+import com.mes.lot.dto.LotStripSaveDTO;
 import com.mes.lot.dto.MesLotCreateDTO;
 import com.mes.lot.dto.MesLotQuery;
 import com.mes.lot.dto.MesLotUpdateDTO;
 import com.mes.lot.service.MesLotService;
+import com.mes.lot.vo.LotCustomerMapVO;
+import com.mes.lot.vo.LotStripVO;
 import com.mes.lot.vo.MesLotCreateResultVO;
 import com.mes.lot.vo.MesLotGenealogyNodeVO;
 import com.mes.lot.vo.MesLotVO;
@@ -54,6 +58,13 @@ public class MesLotController {
     @GetMapping
     public R<PageResult<MesLotVO>> page(MesLotQuery query) {
         return R.ok(mesLotService.page(query));
+    }
+
+    /** 按外部批号反查内部批 */
+    @SaCheckPermission("lot:list")
+    @GetMapping("/by-external-lot")
+    public R<List<MesLotVO>> byExternalLot(@RequestParam("no") String no) {
+        return R.ok(mesLotService.findLotsByExternalLot(no));
     }
 
     /** 新建批次（lotNo 空则自动生成） */
@@ -145,5 +156,35 @@ public class MesLotController {
     public R<Void> release(@PathVariable Long id) {
         mesLotService.release(id);
         return R.ok();
+    }
+
+    /** Strip 批量登记 */
+    @SaCheckPermission("lot:edit")
+    @OperLog(module = "Lot", action = "登记Strip")
+    @PostMapping("/{id}/strips")
+    public R<List<LotStripVO>> createStrips(@PathVariable Long id, @RequestBody List<LotStripSaveDTO> lines) {
+        return R.ok(mesLotService.createStrips(id, lines));
+    }
+
+    /** 本批 Strip 列表 */
+    @SaCheckPermission("lot:list")
+    @GetMapping("/{id}/strips")
+    public R<List<LotStripVO>> listStrips(@PathVariable Long id) {
+        return R.ok(mesLotService.listStrips(id));
+    }
+
+    /** 客户 Lot 映射登记 */
+    @SaCheckPermission("lot:edit")
+    @OperLog(module = "Lot", action = "登记客户映射")
+    @PostMapping("/{id}/customer-maps")
+    public R<LotCustomerMapVO> createCustomerMap(@PathVariable Long id, @RequestBody LotCustomerMapSaveDTO dto) {
+        return R.ok(mesLotService.createCustomerMap(id, dto));
+    }
+
+    /** 本批客户映射（正查） */
+    @SaCheckPermission("lot:list")
+    @GetMapping("/{id}/customer-maps")
+    public R<List<LotCustomerMapVO>> listCustomerMaps(@PathVariable Long id) {
+        return R.ok(mesLotService.listCustomerMaps(id));
     }
 }

@@ -4,16 +4,25 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mes.common.AssertUtil;
+import com.mes.common.BusinessException;
 import com.mes.common.PageResult;
+import com.mes.lot.dto.LotCustomerMapSaveDTO;
+import com.mes.lot.dto.LotStripSaveDTO;
 import com.mes.lot.dto.MesLotCreateDTO;
 import com.mes.lot.dto.MesLotQuery;
 import com.mes.lot.dto.MesLotUpdateDTO;
 import com.mes.lot.entity.MesLot;
+import com.mes.lot.entity.MesLotCustomerMap;
 import com.mes.lot.entity.MesLotGenealogy;
+import com.mes.lot.entity.MesLotStrip;
+import com.mes.lot.mapper.MesLotCustomerMapMapper;
 import com.mes.lot.mapper.MesLotGenealogyMapper;
 import com.mes.lot.mapper.MesLotMapper;
 import com.mes.lot.mapper.MesLotNoSeqMapper;
+import com.mes.lot.mapper.MesLotStripMapper;
 import com.mes.lot.service.MesLotService;
+import com.mes.lot.vo.LotCustomerMapVO;
+import com.mes.lot.vo.LotStripVO;
 import com.mes.lot.vo.MesLotCreateResultVO;
 import com.mes.lot.vo.MesLotGenealogyNodeVO;
 import com.mes.lot.vo.MesLotImpactFlatVO;
@@ -31,6 +40,7 @@ import com.mes.route.mapper.MesStepMapper;
 import com.mes.track.service.TrackService;
 import com.mes.wip.service.WipProjectionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,9 +48,11 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -70,10 +82,18 @@ public class MesLotServiceImpl implements MesLotService {
     /** 厂内批次号前缀 */
     public static final String LOT_NO_PREFIX = "LOT";
     private static final DateTimeFormatter LOT_DAY = DateTimeFormatter.BASIC_ISO_DATE;
+    /** 同请求内或跨请求条号冲突（含已软删同键） */
+    private static final String STRIP_DUP = "LOT_STRIP_DUPLICATE: 条号已存在，请改原行";
+    /** 同请求内条号重复 */
+    private static final String STRIP_DUP_REQ = "LOT_STRIP_DUPLICATE: 同一请求内条号重复";
+    /** 客户映射键冲突（含已软删同键） */
+    private static final String MAP_DUP = "LOT_MAP_DUPLICATE: 客户映射已存在，请改原行";
 
     private final MesLotMapper mesLotMapper;
     private final MesLotGenealogyMapper mesLotGenealogyMapper;
     private final MesLotNoSeqMapper mesLotNoSeqMapper;
+    private final MesLotStripMapper mesLotStripMapper;
+    private final MesLotCustomerMapMapper mesLotCustomerMapMapper;
     private final MesRouteMapper mesRouteMapper;
     private final MesRouteVersionMapper mesRouteVersionMapper;
     private final MesRouteStepMapper mesRouteStepMapper;
@@ -568,6 +588,194 @@ public class MesLotServiceImpl implements MesLotService {
             list.add(vo);
         }
         return list;
+    }
+
+    /** 给指定 Lot 一次登记多条 Strip：请求内去重，跨请求撞 UK 转业务码 */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<LotStripVO> createStrips(Long lotId, List<LotStripSaveDTO> lines) {
+        MesLot lot = requireLot(lotId);
+        assertLotWritable(lot);
+        AssertUtil.notEmpty(lines, "Strip 列表不能为空");
+        Set<String> seen = new HashSet<>();
+        List<MesLotStrip> rows = new ArrayList<>(lines.size());
+        long userId = StpUtil.getLoginIdAsLong();
+        for (LotStripSaveDTO line : lines) {
+            AssertUtil.notNull(line, "Strip 不能有空行");
+            String stripNo = requireText(line.getStripNo(), "条号不能为空");
+            AssertUtil.isTrue(seen.add(stripNo), STRIP_DUP_REQ);
+            MesLotStrip row = new MesLotStrip();
+            row.setLotId(lot.getId());
+            row.setStripNo(stripNo);
+            row.setSeqNo(line.getSeqNo());
+            row.setDieQty(line.getDieQty());
+            row.setBinCode(blankToNull(line.getBinCode()));
+            row.setStatus(blankToNull(line.getStatus()));
+            row.setRemark(blankToNull(line.getRemark()));
+            row.setCreateBy(userId);
+            rows.add(row);
+        }
+        List<MesLotStrip> existed = mesLotStripMapper.selectList(new LambdaQueryWrapper<MesLotStrip>()
+                .eq(MesLotStrip::getLotId, lotId)
+                .in(MesLotStrip::getStripNo, seen));
+        AssertUtil.isTrue(existed.isEmpty(), STRIP_DUP);
+        try {
+            for (MesLotStrip row : rows) {
+                mesLotStripMapper.insert(row);
+            }
+        } catch (DuplicateKeyException ex) {
+            throw new BusinessException(STRIP_DUP);
+        }
+        return rows.stream().map(this::toStripVo).toList();
+    }
+
+    /** 本批全部 Strip，按序号与 id */
+    @Override
+    public List<LotStripVO> listStrips(Long lotId) {
+        requireLot(lotId);
+        List<MesLotStrip> rows = mesLotStripMapper.selectList(new LambdaQueryWrapper<MesLotStrip>()
+                .eq(MesLotStrip::getLotId, lotId)
+                .orderByAsc(MesLotStrip::getSeqNo)
+                .orderByAsc(MesLotStrip::getId));
+        return rows.stream().map(this::toStripVo).toList();
+    }
+
+    /** 多批各取上限，SQL 按批截断 */
+    @Override
+    public List<LotStripVO> listStripsByLots(Collection<Long> lotIds, int capPerLot) {
+        if (lotIds == null || lotIds.isEmpty()) {
+            return List.of();
+        }
+        int cap = capPerLot < 1 ? 200 : capPerLot;
+        return mesLotStripMapper.selectByLots(lotIds, cap).stream().map(this::toStripVo).toList();
+    }
+
+    /** 记厂内批和客户/供应商批号的对应关系 */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public LotCustomerMapVO createCustomerMap(Long lotId, LotCustomerMapSaveDTO dto) {
+        MesLot lot = requireLot(lotId);
+        assertLotWritable(lot);
+        AssertUtil.notNull(dto, "参数不能为空");
+        String mapType = requireText(dto.getMapType(), "映射类型不能为空");
+        AssertUtil.isTrue("INBOUND".equals(mapType) || "OUTBOUND".equals(mapType), "映射类型只能是 INBOUND 或 OUTBOUND");
+        String externalLotNo = requireText(dto.getExternalLotNo(), "外部批号不能为空");
+        Long count = mesLotCustomerMapMapper.selectCount(new LambdaQueryWrapper<MesLotCustomerMap>()
+                .eq(MesLotCustomerMap::getLotId, lotId)
+                .eq(MesLotCustomerMap::getMapType, mapType)
+                .eq(MesLotCustomerMap::getExternalLotNo, externalLotNo));
+        AssertUtil.isTrue(count == 0, MAP_DUP);
+        MesLotCustomerMap row = new MesLotCustomerMap();
+        row.setLotId(lot.getId());
+        row.setLotNo(lot.getLotNo());
+        row.setMapType(mapType);
+        row.setExternalLotNo(externalLotNo);
+        row.setExternalSource(blankToNull(dto.getExternalSource()));
+        row.setCustomerCode(blankToNull(dto.getCustomerCode()));
+        row.setQty(dto.getQty());
+        row.setRemark(blankToNull(dto.getRemark()));
+        row.setCreateBy(StpUtil.getLoginIdAsLong());
+        try {
+            mesLotCustomerMapMapper.insert(row);
+        } catch (DuplicateKeyException ex) {
+            throw new BusinessException(MAP_DUP);
+        }
+        return toMapVo(row);
+    }
+
+    /** 本批全部的客户映射 */
+    @Override
+    public List<LotCustomerMapVO> listCustomerMaps(Long lotId) {
+        requireLot(lotId);
+        List<MesLotCustomerMap> rows = mesLotCustomerMapMapper.selectList(new LambdaQueryWrapper<MesLotCustomerMap>()
+                .eq(MesLotCustomerMap::getLotId, lotId)
+                .orderByAsc(MesLotCustomerMap::getId));
+        return rows.stream().map(this::toMapVo).toList();
+    }
+
+    /** 多批各取上限，SQL 按批截断 */
+    @Override
+    public List<LotCustomerMapVO> listCustomerMapsByLots(Collection<Long> lotIds, int capPerLot) {
+        if (lotIds == null || lotIds.isEmpty()) {
+            return List.of();
+        }
+        int cap = capPerLot < 1 ? 50 : capPerLot;
+        return mesLotCustomerMapMapper.selectByLots(lotIds, cap).stream().map(this::toMapVo).toList();
+    }
+
+    /** 按外部批号反查内部批 */
+    @Override
+    public List<MesLotVO> findLotsByExternalLot(String externalLotNo) {
+        String no = requireText(externalLotNo, "外部批号不能为空");
+        List<MesLotCustomerMap> maps = mesLotCustomerMapMapper.selectList(new LambdaQueryWrapper<MesLotCustomerMap>()
+                .eq(MesLotCustomerMap::getExternalLotNo, no)
+                .orderByAsc(MesLotCustomerMap::getId));
+        if (maps.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<Long> lotIds = maps.stream()
+                .map(MesLotCustomerMap::getLotId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        List<MesLot> lots = mesLotMapper.selectBatchIds(lotIds);
+        Map<Long, MesLot> byId = lots.stream().collect(Collectors.toMap(MesLot::getId, l -> l, (a, b) -> a));
+        List<MesLotVO> result = new ArrayList<>();
+        for (Long id : lotIds) {
+            MesLot lot = byId.get(id);
+            if (lot != null) {
+                result.add(toVo(lot, null, null, null));
+            }
+        }
+        return result;
+    }
+
+    /** 校验批次存在并返回实体 */
+    private MesLot requireLot(Long lotId) {
+        AssertUtil.notNull(lotId, "批次不能为空");
+        MesLot lot = mesLotMapper.selectById(lotId);
+        AssertUtil.notNull(lot, "批次不存在");
+        return lot;
+    }
+
+    /** 已合批 / 已报废不可再登记 Strip 或客户映射（对齐 Test V4） */
+    private static void assertLotWritable(MesLot lot) {
+        AssertUtil.isTrue(!"merged".equals(lot.getStatus()) && !"scrapped".equals(lot.getStatus()),
+                "已合批或已报废批次不能登记");
+    }
+
+    private static String requireText(String value, String msg) {
+        AssertUtil.notBlank(value, msg);
+        return value.trim();
+    }
+
+    private LotStripVO toStripVo(MesLotStrip row) {
+        LotStripVO vo = new LotStripVO();
+        vo.setId(row.getId());
+        vo.setLotId(row.getLotId());
+        vo.setStripNo(row.getStripNo());
+        vo.setSeqNo(row.getSeqNo());
+        vo.setDieQty(row.getDieQty());
+        vo.setBinCode(row.getBinCode());
+        vo.setStatus(row.getStatus());
+        vo.setRemark(row.getRemark());
+        vo.setCreateBy(row.getCreateBy());
+        vo.setCreateTime(row.getCreateTime());
+        return vo;
+    }
+
+    private LotCustomerMapVO toMapVo(MesLotCustomerMap row) {
+        LotCustomerMapVO vo = new LotCustomerMapVO();
+        vo.setId(row.getId());
+        vo.setLotId(row.getLotId());
+        vo.setLotNo(row.getLotNo());
+        vo.setMapType(row.getMapType());
+        vo.setExternalLotNo(row.getExternalLotNo());
+        vo.setExternalSource(row.getExternalSource());
+        vo.setCustomerCode(row.getCustomerCode());
+        vo.setQty(row.getQty());
+        vo.setRemark(row.getRemark());
+        vo.setCreateBy(row.getCreateBy());
+        vo.setCreateTime(row.getCreateTime());
+        return vo;
     }
 
     private MesLotVO toVo(MesLot lot, MesRoute route, MesRouteVersion version, List<MesLotStepVO> steps) {

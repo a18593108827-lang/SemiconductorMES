@@ -261,6 +261,74 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 
 **R3 结论：plan 与方案（含 2026-10-08 补口径）一致，可以开工。** 剩余前置：K9 已复核（MAX=332，340–343 可用，2026-10-08）。
 
+---
+
+### R4 实施审查轮（2026-10-09 · 用户完成步骤 a/b 后，架构师视角审查）
+
+> 审查对象：commit `8060574`（步骤 a 建表）+ `e56959c`（步骤 b Test 模块）。方法：逐文件对码到 plan/方案条款 + DB 探针实测落库结果 + `mvn -o -DskipTests compile`（EXIT=0）。
+
+**实测通过项（对码证据）：**
+
+| # | 条款 | 证据 |
+|---|------|------|
+| 1 | K8 分层 | `com.mes.test.{controller,dto,entity,facade,mapper,service,service.impl,vo}` 与现网一致 |
+| 2 | 表结构 7 张 + schema.sql | migrate_test.sql / migrate_lot_pkg.sql 逐字段对上方案 §3.1–§3.5/§3.2.1；探针实测 7 表已建、UK 全不含 `deleted`、守卫/号段表无软删；schema.sql 7 表 DDL 齐 |
+| 3 | M1/K9 + 种子 | 权限 340–343 已落库（列名与表结构实测匹配）；角色绑定 9 行正确（admin=1 全量 / process_eng=3 全量 / supervisor=4 只读 340），无重复授权；bin_def 演示种子 4 行在 |
+| 4 | D19/K12 守卫 | 无先查后插；同事务先插守卫（Impl:95-103）；`window_bucket` SQL 内算（GuardMapper:14）；`DuplicateKeyException`→`TEST_RECORD_DUPLICATE`（Impl:306-315、318-330） |
+| 5 | K15/D21 取号 | bump+lastInsertId 同一 `@Transactional` 同连接（Impl:73、105、333-338）；机制照抄号段先例 |
+| 6 | K13 乐观锁 | `@Version`（MesBinDef:51）+ `updateById` 判 `n>0`（BinDefServiceImpl:74-80），先例 `MesEdcPlanServiceImpl` 同款 |
+| 7 | scope 一致性 | `assertScope`（BinDefServiceImpl:119-128）四档全对上，拒 `TEST_BIN_SCOPE_INCONSISTENT` |
+| 8 | V1–V5 | 校验齐全且顺序正确（Impl:75-93）；V1 只对 HARD 求和（:238-246）；零落库由 `@Transactional(rollbackFor)` 保证 |
+| 9 | K16/D22 | Facade 只读仅 `listRecordsByLots`（TestFacadeImpl:20-22）；`assertBinDef` 留 service；零 `MesLotMapper` 注入（注入 `MesLotService`，与现网 complaint→MesLotService 先例一致）；作废只软删头表（Impl:180-194）；零 `customer_lot` 写入 |
+| 10 | V2/C4 四级回退 | `rank` 4/3/2/1（Impl:286-303）+ 一次 IN 查询内存挑档（:249-265） |
+| 11 | SQL 按批截断 | `selectRecentByLots` 用 `ROW_NUMBER() OVER (PARTITION BY lot_id …)`（Mapper:15-29），MySQL 8.4 支持 |
+| 12 | 汇总实体 | 无 BaseEntity/无软删（MesTestBinSummary），守卫同（MesTestSubmitGuard）；头表 `@TableLogic` 自动过滤 |
+
+**发现项（均不阻断，按处置分类）：**
+
+| # | 级别 | 内容 | 处置 |
+|---|------|------|------|
+| R4-C1 | 建议改进 | **作废记录的档位过滤是「应用层保证」而非「SQL 保证」**：方案 A11 要求「汇总查询一律 join 头表过滤 `deleted`」；当前 `loadBins`（Impl:357-373）只按 `record_id IN` 查，安全性依赖所有入口都先查未删头（现状 5 个入口均满足，含 `selectRecentByLots` 的 `deleted=0`）。将来新增直查 summary 的调用点可能带出已作废记录的档位 | d/e 步骤不动；在 f 步骤为 `loadBins` 补注释明示前提，或改 JOIN；记入验收 17 复核 |
+| R4-C2 | 建议改进 | **作废审计留痕较轻**：原因拼进 `remark`（Impl:187-193），无「作废人」字段（`update_time` 有、`update_by` 无）。方案 A11 未强制字段 → 合规，但审计链弱 | TD-1 接受；TD-2/增强时可加 `void_by`/`void_time`/`void_reason` 列 |
+| R4-C3 | 风格 | **`sys_role_permission` 硬编码小 id**（1154-1157/1349-1352/1433）：该表现网为雪花 id（MAX≈2.08e18）。实测无冲突、内容正确；但若未来 id 被占，`ON DUPLICATE KEY UPDATE role_id=VALUES(role_id)` 会**篡改他人行** | 脚本头加注释警示；后续脚本角色绑定改用 (role_id, permission_id) 判重 |
+| R4-F1 | 事实澄清 | `rank()` 空产品边界：`lot.productCode` 为空串时 PRODUCT 档（rank 2）与 GLOBAL 档（rank 1）的判定条件重叠，同一行会被判 rank 2。行为等价（选中的还是那一行），仅语义歧义 | 不改码；f 步骤用例覆盖空 productCode 即可 |
+| R4-F2 | 实施取舍待定 | 每记录 Bin 档上限 **50 写死在 service**（`BIN_CAP`，Impl:62），而方案 §7 要求该上限属 FacadeImpl 四上限之一（配置 key 或类内常量） | **d 步骤实施时二选一**：提参或引用常量，并写明 |
+| R4-F3 | 信息 | `create()` 强依赖登录态（`StpUtil.getLoginIdAsLong()`，Impl:120），与 `source_type=API/FILE` 的未来接入方式不匹配 | TD-1 手录为主可接受；接入 API/文件时改显式传操作者 |
+| R4-F4 | 风格 | `MesTestSubmitGuard.id` 无 `@TableId` 注解，靠全局 `assign_id` + 手动 `IdWorker.getId()` 双保险（Impl:96） | 可加 `@TableId(type = ASSIGN_ID)` 明示，不强制 |
+| R4-F5 | 性能备忘 | `page()` 的 `lotNo`/`programName` 用 `%like%`（Impl:152-160），量大走不了索引 | 记录即可；测试数据量大前无需动 |
+
+**R4 结论：步骤 a/b 实现与 plan/方案一致，无阻断问题，可进入步骤 c。** C1/C2/F2 在后续步骤处置。
+
+---
+
+### R5 实施审查轮（2026-10-09 · 用户完成步骤 c 后，架构师视角审查）
+
+> 审查对象：工作区未提交改动（`MesLotServiceImpl` +200 行、`MesLotController` +41 行、新增 2 实体 / 2 mapper / 2 DTO / 2 VO）。方法：对码到 plan c 步骤 / K14 / D20 / D22 + DB 探针核对两表实际列 + `mvn -o -DskipTests compile`（EXIT=0）。
+
+**实测通过项：**
+
+| # | 条款 | 证据 |
+|---|------|------|
+| 1 | §2 端点与权限码 | 5 端点全对上：`POST/GET /lots/{id}/strips`、`POST/GET /lots/{id}/customer-maps`、`GET /lots/by-external-lot`；权限 `lot:edit` / `lot:list` 与 plan §2 一致（Controller diff） |
+| 2 | D20/K14 | 请求内前置拒绝（`seen.add` → `STRIP_DUP_REQ`，Impl:599-605）+ 跨请求 `DuplicateKeyException` → `LOT_STRIP_DUPLICATE` / `LOT_MAP_DUPLICATE`（Impl:621-627、676-680），无 500 泄漏 |
+| 3 | K1 不写 tx_log | 新增方法零 Track/Hold/tx_log 调用，纯主数据 |
+| 4 | D22 不写 customer_lot | c 新增路径零 `customer_lot` 写点（既有 `update()` 的写入是存量行为，非本切片引入） |
+| 5 | 软删口径 | 两实体 `@TableLogic`；**`MesLotCustomerMap` 未继承 BaseEntity、自声明 `createTime`/`deleted`，与表列（无 `update_time`）精确对齐**（探针实测列清单）——避免了「BaseEntity 自动填充 update_time → Unknown column」的坑 |
+| 6 | SQL 按批截断 | 两个 `selectByLots` 均 `ROW_NUMBER() OVER (PARTITION BY lot_id …)`；strip 的 `ORDER BY seq_no IS NULL, seq_no ASC` 把空序号沉底（Mapper:21-22），细节到位 |
+| 7 | 反查语义 | `findLotsByExternalLot` 不过滤 lot 状态（召回主路径合理）、软删 map 自动排除、按首次映射序保序（Impl:706-727） |
+| 8 | 上限默认值 | `listStripsByLots` 默认 200 / `listCustomerMapsByLots` 默认 50，与方案 §7 一致 |
+
+**发现项：**
+
+| # | 级别 | 内容 | 处置 |
+|---|------|------|------|
+| R5-C1 | 建议改进 | **预检查查不出已软删同键行**：`createStrips`/`createCustomerMap` 的前置校验走 MP `@TableLogic`（自动 `deleted=0`），软删同键实际由 **UK 兜底**拒绝——行为等价（同码同文案「请改原行」），但 Impl:85-86 常量注释写「含已软删同键」与实现不符；plan 验收 18 的「被前置校验拒」实际走的是 UK 路径 | 改注释；f 步骤验收 18 用例注明「软删同键走 UK 兜底」 |
+| R5-C2 | 提请用户决策 | **Strip/映射登记无 lot 状态校验**：Test 登记拒 `merged`/`scrapped`（V4），但给已报废/已合批批登记 Strip / 映射当前放行——方案未要求，口径不一致 | 二选一：TD-1 对齐 V4 加校验，或显式接受（记遗留，TD-2 统一） |
+| R5-F1 | 信息 | Strip 批量登记为循环单条 insert（N 条 = N 次往返），同事务整体成败保证正确；量大时可换批量插入 | 记录即可 |
+| R5-F2 | 信息 | `listStrips` / `listCustomerMaps`（Lot 详情页）全量无上限——方案未限定，单批 Strip 量级可控；客诉包路径已有 cap | 记录即可 |
+
+**R5 结论：步骤 c 实现与 plan/方案一致，无阻断问题，可进入步骤 d。** R5-C2 待用户拍板；R4-C1（loadBins 注释/JOIN）与 R4-F2（BIN_CAP 上限归属）仍在 d/f 步骤处置清单上。
+
 ### 勘误（2026-10-08，R3 之后）
 
 | 项 | 改法 |
