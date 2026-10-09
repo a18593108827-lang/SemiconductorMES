@@ -357,6 +357,37 @@ R2-C2（绑定实现约束）：号段表 `mes_test_record_no_seq` 照抄 `mes_l
 
 **R6 结论：步骤 d 实现与 plan/方案一致，测试全绿，无阻断问题，可进入步骤 e（前端）。** 待办链：f 步骤处置 R4-C1 + R4-F1（空 productCode 用例）+ R5-C1（注释修正）+ R6 验收项。
 
+---
+
+### R7 实施审查轮（2026-10-09 · 用户完成步骤 e 后，架构师视角审查）
+
+> 审查对象：`web/src/api/test.ts`（新增）、`TestPage.tsx`（新增）、`LotTestMappingSection.tsx`（新增）、`LotsPage.tsx` / `App.tsx` / `AdminShell.tsx` / `api/lot.ts`（改）。方法：对码 plan e 步骤 / A5 / C2 裁决 + `npx tsc -b`（EXIT=0）+ `npm test`（2 用例通过）。
+
+**实测通过项：**
+
+| # | 条款 | 证据 |
+|---|------|------|
+| 1 | §2 端点封装 | `api/test.ts` 8 个函数与后端端点一一对应（records 分页/详情/登记/作废、by-lot 摘要、bins 三维护） |
+| 2 | 重入闸（EVAL-0001 口径） | 登记表单 `createGate` ref + 序号（TestPage:141-142、240-266、300-303）；Strip/映射各有 `stripGate`/`mapGate`（LotTestMappingSection:46/50/95/119）；提交中 Drawer 关闭被禁 |
+| 3 | 权限门禁 | `test:view/create/void/edit-bin` 四码 `hasPermission` 精确匹配（perm_code 不透明串口径 ✓）；字典查看并入 `test:view`（C2 裁决）✓ |
+| 4 | A5 现场台零改动 | `LotTestMappingSection` 仅 `isAdmin`（`/app` 前缀）时渲染；现场台路径 Drawer 保持原 `width=560` 分支 |
+| 5 | Lot 详情两区 | 「测试结果」走 `/test/summary/by-lot`（Test 侧自有端点，A7 ✓）；「Mapping / 条级」读写齐；`writable` 前端挡 merged/scrapped（与后端 V4 对齐双保险） |
+| 6 | Bin 表单 scope 联动 | 按 `binScope` 清空不适用维度（TestPage:365-370），与后端 `assertScope` 口径一致；编辑携带 `version`（乐观锁闭环） |
+| 7 | 路由与侧栏 | `/app/test` 注册（App.tsx）；`AdminShell` iconMap 增 `clipboard`，与权限种子 `icon='clipboard'` 对上（菜单图标可渲染） |
+| 8 | 构建验证 | `npx tsc -b` EXIT=0；`npm test` 2 用例通过 |
+
+**发现项：**
+
+| # | 级别 | 内容 | 处置 |
+|---|------|------|------|
+| R7-F1 | 建议补齐 | **`submitBin` 缺同步重入闸**：四处提交里唯独 Bin 保存没有 ref 闸（只有异步 `savingBin` state）——双击窗口虽小且有 UK/乐观锁兜底（危害仅是多一条报错），但与 EVAL-0001 重入闸口径不一致 | e 步骤补一个 ref 闸（几行），或留 f 步骤与前端重入用例一起补 |
+| R7-F2 | 低 | **批次号解析用 keyword 模糊搜索**（`listLotsApi({keyword, size:20})` 后 find 精确相等）：同关键字命中 >20 条且精确条不在前 20 时会误报「找不到该批次号」拦住登记 | 后续加按 `lotNo` 精确查询端点；不阻断 |
+| R7-F3 | 低 | **前端对账口径与提交口径不一致**：`hardSum` 对全部行求和，提交时 `filter` 掉 binCode 为空的行——填了颗数没填档号的行会让前端显示「合计对得上」但后端拒 `TEST_BIN_SUM_MISMATCH` | 求和改为只算将提交的行 |
+| R7-F4 | 信息 | 手录不解析 `eqpId`（只存 `eqpCode`）→ V6 守卫 `eqp_key` 恒 0：手录场景「同载荷同桶即重复」语义正确；设备选择器（解析 eqpId）后置，API 层验收 16 用 curl 验证 | 记录即可 |
+| R7-F5 | 信息 | 「测试结果」区只展示最近 8 条并链接到 /app/test —— 摘要 UX 合理（端点本就全量） | 记录即可 |
+
+**R7 结论：步骤 e 实现与 plan/方案一致，tsc/测试全绿，无阻断问题，可进入步骤 f（测试用例 + 反向验证 + 真机验收）。** f 步骤处置清单累计：R4-C1（loadBins 注释/JOIN）· R4-F1（空 productCode 用例）· R5-C1（注释修正）· R7-F1（submitBin 闸，或即时补）· R7-F3（求和口径）· 前端重入用例。
+
 ### 勘误（2026-10-08，R3 之后）
 
 | 项 | 改法 |

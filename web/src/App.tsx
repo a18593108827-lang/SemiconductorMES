@@ -21,6 +21,7 @@ import { ReportPage } from './pages/ReportPage'
 import { LoginPage } from './pages/LoginPage'
 import { LotsPage } from './pages/LotsPage'
 import { EdcPage } from './pages/EdcPage'
+import { TestPage } from './pages/TestPage'
 import { RecipePage } from './pages/RecipePage'
 import { SpcPage } from './pages/SpcPage'
 import { RouteEditorPage } from './pages/RouteEditorPage'
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="dispatch" element={<DispatchPage />} />
         <Route path="recipe" element={<RecipePage />} />
         <Route path="edc" element={<EdcPage />} />
+        <Route path="test" element={<TestPage />} />
         <Route path="spc" element={<SpcPage />} />
         <Route path="route">
           <Route index element={<RoutePage />} />

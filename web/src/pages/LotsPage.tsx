@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import gsap from 'gsap'
 import { Flame, GitBranch, Link2, Link2Off, PackagePlus, Pencil, Rocket } from 'lucide-react'
 import {
@@ -22,6 +22,7 @@ import {
 import { getComplaintEnabledApi } from '../api/complaint'
 import { GenealogyTree } from '../components/lot/GenealogyTree'
 import { ComplaintPackageDrawer } from '../components/lot/ComplaintPackageDrawer'
+import { LotTestMappingSection } from '../components/lot/LotTestMappingSection'
 import { listRoutesApi, type MesRouteItem } from '../api/route'
 import { useAuth } from '../auth/AuthContext'
 import { Button } from '../components/ui/Button'
@@ -69,6 +70,8 @@ export function LotsPage() {
   const { hasPermission } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
+  const location = useLocation()
+  const isAdmin = location.pathname.startsWith('/app')
   const rootRef = useRef<HTMLDivElement>(null)
   const [searchParams] = useSearchParams()
   const jumpTried = useRef(false)
@@ -124,6 +127,8 @@ export function LotsPage() {
   const canComplaintView = hasPermission('complaint:view')
   const canComplaintBuild = hasPermission('complaint:build')
   const canComplaintContain = hasPermission('complaint:contain') && hasPermission('hold:create')
+  const canViewTest = hasPermission('test:view')
+  const canListLot = hasPermission('lot:list')
   const totalPages = Math.max(1, Math.ceil(total / size))
   const isCreated = detail?.status === 'created'
   const canEditDetail =
@@ -753,7 +758,8 @@ export function LotsPage() {
         open={!!detail}
         onClose={() => !savingEdit && !releasing && setDetail(null)}
         title={detail ? `维护 · ${detail.lotNo}` : '维护批次'}
-        width={560}
+        size={isAdmin ? 'lg' : 'md'}
+        width={isAdmin ? undefined : 560}
         footer={
           detail && !editing ? (
             <>
@@ -1064,6 +1070,14 @@ export function LotsPage() {
             ) : (
               <p className="text-sm text-muted">放行后显示绑定版本的工序序列。</p>
             )}
+            {isAdmin && canListLot && !editing ? (
+              <LotTestMappingSection
+                lotId={detail.id}
+                status={detail.status}
+                canViewTest={canViewTest}
+                canEditLot={canEdit}
+              />
+            ) : null}
           </div>
         )}
       </Drawer>

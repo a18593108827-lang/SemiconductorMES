@@ -149,3 +149,66 @@ export function updateLotApi(
 export function releaseLotApi(id: number | string) {
   return request<void>(`/lots/${id}/release`, { method: 'POST' })
 }
+
+export interface LotStripItem {
+  id: number | string
+  lotId: number | string
+  stripNo: string
+  seqNo: number | null
+  dieQty: number | null
+  binCode: string | null
+  status: string | null
+  remark: string | null
+  createBy: number | string | null
+  createTime: string | null
+}
+
+export interface LotCustomerMapItem {
+  id: number | string
+  lotId: number | string
+  lotNo: string | null
+  mapType: 'INBOUND' | 'OUTBOUND' | string
+  externalLotNo: string
+  externalSource: string | null
+  customerCode: string | null
+  qty: number | null
+  remark: string | null
+  createBy: number | string | null
+  createTime: string | null
+}
+
+export function listLotStripsApi(lotId: number | string) {
+  return request<LotStripItem[]>(`/lots/${lotId}/strips`, { method: 'GET' })
+}
+
+export function createLotStripsApi(
+  lotId: number | string,
+  lines: Array<{
+    stripNo: string
+    seqNo?: number
+    dieQty?: number
+    binCode?: string
+    status?: string
+    remark?: string
+  }>,
+) {
+  return request<LotStripItem[]>(`/lots/${lotId}/strips`, { method: 'POST', body: lines })
+}
+
+export function listLotCustomerMapsApi(lotId: number | string) {
+  return request<LotCustomerMapItem[]>(`/lots/${lotId}/customer-maps`, { method: 'GET' })
+}
+
+export function createLotCustomerMapApi(
+  lotId: number | string,
+  body: {
+    mapType: 'INBOUND' | 'OUTBOUND'
+    externalLotNo: string
+    externalSource?: string
+    customerCode?: string
+    qty?: number
+    remark?: string
+  },
+) {
+  return request<LotCustomerMapItem>(`/lots/${lotId}/customer-maps`, { method: 'POST', body })
+}
