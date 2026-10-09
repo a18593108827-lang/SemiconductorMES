@@ -38,4 +38,6 @@ Java 21 + Spring Boot（单体模块化）+ MyBatis-Plus + MySQL + Redis + Sa-To
 
 ## 5. 常见错误（AI 犯两次即写入）
 
-- （暂无，随项目演进追加）
+| # | 错误 |
+|---|------|
+| 1 | 注解 `@Select/@Insert` 写动态 SQL（`<if>/<foreach>/<where>`）必须 `<script>` 包裹，`<=` 转义 `&lt;=`（EVAL-0003：缺失时运行时才炸，mock 单测抓不到） |
