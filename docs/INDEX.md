@@ -4,13 +4,13 @@ module:
 status: done
 slices: []
 aligns: []
-updated: 2026-10-09
+updated: 2026-10-10
 ---
 
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-10-09 · 共 112 篇
+> 生成：2026-10-10 · 共 113 篇
 
 ## 状态汇总
 
@@ -19,7 +19,7 @@ updated: 2026-10-09
 | active | 4 |
 | approved | 3 |
 | done | 95 |
-| draft | 8 |
+| draft | 9 |
 | in-progress | 2 |
 
 ## 按类型索引
@@ -31,13 +31,14 @@ updated: 2026-10-09
 | INT-0001 封测颗级追溯与测试数据回流（后道主线） | — | approved | 2026-10-09 | `intent/INT-0001-封测颗级追溯与测试数据回流.md` |
 | INT-0002 AI 赋能：只读数据暴露与摘要 / 查数 | — | draft | 2026-09-23 | `intent/INT-0002-AI赋能只读数据暴露与摘要查数.md` |
 
-### 方案（7 篇）
+### 方案（8 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
 | 半导 MES AI 赋能方案（考察稿） | — | draft | 2026-09-20 | `方案/MES-AI赋能方案.md` |
 | 半导 MES AI 集成 — 产品分析（调研稿） | — | draft | 2026-09-18 | `方案/MES-AI集成产品分析.md` |
 | APS（高级计划与排程）方案 | — | draft | 2026-09-20 | `方案/MES-APS高级计划与排程方案.md` |
+| MES 业界调研 — 测试不良 Bin 处置与 Hold/Rework 联动（TD-2 前置） | — | draft | 2026-10-10 | `方案/MES-业界调研-不良Bin处置与HoldRework联动.md` |
 | MES 厂型选型分析 — 前道 Fab / 后道封测（定稿） | — | done ✅ | 2026-09-23 | `方案/MES-厂型选型分析.md` |
 | MES 封测测试数据与 Bin 回流 — 方案设计（跨模块） | — | draft | 2026-10-08 | `方案/MES-封测测试数据与Bin回流方案.md` |
 | 半导 MES 知识助理（RAG）方案 | — | draft | 2026-09-20 | `方案/MES-知识助理RAG方案.md` |
