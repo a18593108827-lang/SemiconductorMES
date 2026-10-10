@@ -87,7 +87,7 @@ UK：`(product_code, program_name, program_version, bin_type, bin_code)` —— 
 | **release_reason** | varchar(32) 可空 | RELEASED 时必填：ENG_REVIEW_PASS（工程评审通过）/ CUSTOMER_APPROVED（客户同意）/ OTHER（+release_remark 必填）——业界 use-as-is 的落点，**不与忽略混装**（C2） |
 | release_remark | varchar(255) 可空 | — |
 | ignore_reason | varchar(32) 可空 | **人工可选仅 MISJUDGE（误判）/ DUPLICATE（重复建议）**；VOIDED_RECORD 仅系统级联使用、不出现在人工下拉（C2） |
-| ignore_remark | varchar(255) | MISJUDGE 建议必填说明 |
+| ignore_remark | varchar(255) | MISJUDGE 时**必填**说明（C21/C24） |
 | **record_voided** | tinyint | 源记录作废标记：任何终态均可置 1（已执行事务**不回滚**，详情打标，C6） |
 | confirmed_by/at · released_by/at · ignored_by/at | 审计 | — |
 
@@ -127,7 +127,7 @@ UK：`(advice_id, bin_id)`。行数 = 该记录 HARD 汇总行数（验收项）
 2. **匹配**：对记录的每个 HARD 汇总行，按 `product_code, program_name, program_version` 四级回退找 `enabled=1` 的规则（最具体 scope 唯一命中）；无规则 → 无建议（响应 hit=false，**不报错**）。
 3. **口径**：`ratio = qty / total_qty`；`ratio > max_ratio` **严格大于**（恰好等于不举牌，C9）。
 4. **默认动作 = 明细中严重度最高者**：**HOLD > REWORK > RETEST**（C3——「首条明细」顺序无定义，废除该口径）；确认时可改选，改选留痕。
-   **默认原因码预填（C18，第 2 轮）**：取「默认动作对应明细」中 **ratio 最高那条**规则的 `default_reason_code`；对应明细全空则不预填（用户面对字典自选）。
+   **默认原因码预填（C18，第 2 轮）**：取「默认动作对应明细」中 **ratio 最高那条**规则的 `default_reason_code`；**ratio 并列时取 bin_code 字典序最小**（C26，第 3 轮）；对应明细全空则不预填（用户面对字典自选）。
 5. **幂等**：无独立判定 API；判定只挂在记录创建事务内，重入被守卫表 `mes_test_submit_guard` 挡（TD-1 V6）。
 
 ---
@@ -193,7 +193,7 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 |---|------|
 | U1 | `/app/test` 加「处置建议」Tab：**角标 = PENDING 数**；列表默认 PENDING + 生成时间倒序（C1） |
 | U2 | 列表最小列：生成时间、PENDING 时长、批号、产品、命中 bin 摘要、建议动作、批当前站、是否已 Hold、状态（C12——没有这些，时延指标是空的） |
-| U3 | 详情：全 bin 对照表（命中高亮/未命中对照）+ 规则快照 + 动作按钮按 §4.1 矩阵**禁用并显示原因**（C5） |
+| U3 | 详情：全 bin 对照表（命中高亮/未命中对照）+ 规则快照 + 动作按钮按 §4.1 矩阵**禁用并显示原因**（C5）；**放行按钮旁明示「只关闭建议单，不解 Hold」**（C19 的 UI 落点，C25） |
 | U4 | 规则编辑页文案写明「**占比 > 上限才举牌，恰好等于不举牌**」（C9） |
 | U5 | 无生效规则时 Tab 顶部明示「当前无生效规则，不会举牌」（C10） |
 | U6 | **现场台零改动**；处置动作只出现在管理端（A5，C14——这是设计而非漏做） |
@@ -251,7 +251,7 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 2. 角标 = PENDING 数；列表默认 PENDING 倒序；无生效规则时明示「不会举牌」（C1/C10）。
 3. 确认 HOLD → `mes_hold` 新增 active 行、原因码取自既有字典且预填生效、建议单 CONFIRMED 且 hold_id 回写；批已 Hold 时 **HOLD 按钮禁用+原因**，可改 RETEST/放行。
 4. 确认 REWORK → `mes_tx_log` 出现 REWORK 事务，reworkCount 快照回写。
-5. 放行 → RELEASED 且 release_reason 必填生效；忽略仅 MISJUDGE/DUPLICATE 可选，HIST_RELEASE 不再出现在忽略里（C2）。
+5. 放行 → RELEASED 且 release_reason 必填生效；忽略仅 MISJUDGE/DUPLICATE 可选，HIST_RELEASE 不再出现在忽略里（C2）；**MISJUDGE 无 remark → 拒绝**（C27）。
 6. **同一单两人并发确认 → 恰好一人成功，另一人收「该单已被处理」**（C13）。
 7. 规则 2%→20% 修改 → `mes_test_rule_log` 有 before/after，操作人可查（C8）。
 8. 作废源记录：PENDING 单自动 IGNORED/VOIDED_RECORD；**已确认 HOLD 的单保持 CONFIRMED、事务不回滚、详情打「源记录已作废」标**（C6）。
@@ -307,6 +307,17 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 | F20 | MISJUDGE 说明「建议必填」太软，P1 调阈值看板缺料 | C21：改为**必填**，与放行 OTHER 同级（§4.2） |
 | F21 | §0「权限 4 码」与 §2.4「5/6 码」矛盾，plan 会数错种子 | C22：统一口径=5 个业务码 + 菜单复用 `test:view`(340)（§0/§2.4） |
 | F22 | 级联 IGNORED(VOIDED_RECORD) 未置 record_voided，列表两套口径 | C23：级联时同步 record_voided=1（§4.2/验收 14） |
+
+### 审查记录（第 3 轮 · 2026-10-10 · 残留口径收口）
+
+> 审查人：用户。结论：4 项发现**全部成立**（残留口径/表述打架类），正文已按 C24–C27 修订。
+
+| # | 事实修正（F） | 绑定约束（C） |
+|---|---------------|---------------|
+| F23 | §2.2 ignore_remark 仍写「建议必填」，与 C21「必填」打架 | C24：改为「MISJUDGE 时必填」（§2.2/验收 5） |
+| F24 | 已 Hold 时点放行，§4.2 有口径但 U3 只写禁用原因，UI 无提示 | C25：放行按钮旁明示「只关闭建议单，不解 Hold」（§6 U3） |
+| F25 | C18 同动作、同 ratio 并列时取哪条未定义 | C26：并列取 bin_code 字典序最小（§3.4） |
+| F26 | 验收 5 缺「MISJUDGE 无 remark → 拒绝」断言 | C27：验收 5 补齐（验收 5） |
 
 ## 关联
 
