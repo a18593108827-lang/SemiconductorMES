@@ -143,15 +143,17 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 终态不可逆（改判 = 新事实新记录，不翻旧单）
 ```
 
-### 4.1 动作前置禁用矩阵（C5：不可执行的动作在确认前禁用并写原因，而非提交后报错）
+### 4.1 动作前置禁用矩阵（C5；C28/C29 按 plan 实测定版，第 4 轮审查回填正文）
 
-| 批现状 \ 动作 | HOLD | REWORK | RETEST / 放行 / 转报废 |
-|---------------|------|--------|------------------------|
-| 正常在制 | 可 | 可（须有 rework 边，无则禁用+提示） | 可 |
-| 已有活跃 Hold | **禁用**（提示跳原 Hold 单，可改 RETEST/放行） | 以 Track 侧断言为准（plan 实测 Hold×Rework 互斥） | 可 |
-| 已完工 / 已出货 / 已报废 | **禁用** | **禁用** | 可（放行/转报废仍有意义；RETEST 禁用） |
+现网 lot status 枚举（实测，`TrackServiceImpl.java:89-93` + DB DISTINCT 一致）：`created / wait / processing / held / completed / scrapped / merged`——**无 `shipped`**，初稿「已出货」用词作废（C29）；merged 为合批终态（`:93` 不可再 Track），按完工侧禁用。
 
-批现状读取来源：lot 主数据当前状态/当前站（TD-1 读 lot 既有先例）；前端按矩阵禁用按钮 + 原因文案。
+| 批 status | HOLD | REWORK | RETEST / 放行 / 转报废 |
+|-----------|------|--------|------------------------|
+| created / wait / processing | 可 | 可（须有 rework 边，无则禁用+提示） | 可 |
+| held | **禁用**（提示跳原 Hold 单，可改 RETEST/放行） | **禁用**（`rework` 首步 `assertNoActive` 必拒，`TrackServiceImpl.java:1154`） | 可 |
+| completed / scrapped / merged | **禁用** | **禁用** | 可（放行/转报废仍有意义；RETEST 禁用） |
+
+- **服务端与前端双重执行**：confirm/release/ignore 服务端按同一矩阵校验拒绝（**不能只靠前端按钮灰掉**）；详情返回 `actionAvailability` 供前端渲染，rework 边判定复用 `TrackService.context(lotId)` 的 `canRework / reworkOptions`（`TrackServiceImpl.java:1469`）。
 
 ### 4.2 各动作口径
 
@@ -262,12 +264,10 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 13. 多规则命中预填：默认动作对应明细中 ratio 最高者的 `default_reason_code` 生效，全空不预填（C18）。
 14. 已活跃 Hold 的批点放行 → 建议单 RELEASED 但**批仍 Hold**（不解批）；作废级联后 `record_voided=1`（C19/C23）。
 
-## 待 plan 阶段核实（不阻塞规格批准）
+## 待核实 → 已全部收口（TD-2-plan §0 实测，2026-10-10）
 
-- `sys_permission` MAX(id) 实测续接（探针）；现有角色清单与 C7 的映射落点
-- `HoldService.create` 返回 `MesHoldVO.id` 确认；Hold 原因码字典当前可用值（default_reason_code 下拉源）
-- Hold×Rework 互斥行为（Track 侧断言实测，§4.1 矩阵落定）
-- `TrackTxnResultVO` 是否补 txId；`/app/test` Tab 挂载点与角标数据源（独立接口 vs summary 合并）
+- `sys_permission` MAX(id)=343 → **344–348**；`MesHoldVO.id` 存在；`mes_hold_reason` 11 码 + plan 新增 `8012 TEST_BIN_EXCEED`；Hold×Rework 互斥落定（F27/C28，矩阵已回填 §4.1）；角色映射落盘 plan（现网 4 角色实测，新增 quality 种子）；状态枚举校正（无 shipped，F29/C29）。
+- **TrackTxnResultVO 补 txId：本刀不做**（F30/C30）——exec_note 执行快照已满足留痕与稽核；txId 后置评估。
 
 ---
 
@@ -324,6 +324,8 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 | # | 事实修正（F） | 绑定约束（C） |
 |---|---------------|---------------|
 | F27 | §4.1 矩阵「已 Hold → REWORK 以 Track 断言为准」悬而未决 | C28：实测落定——`TrackServiceImpl.rework` 首步即 `holdService.assertNoActive(lotId)`（`TrackServiceImpl.java:1154`），且仅 WAIT/PROCESSING 可返工（:1155）→ **已 Hold 时 HOLD 与 REWORK 均禁用**；矩阵其余格与 `requireExecutableLot` 断言一致。证据与全部 4 项「待核实」收口见 `TD-2-plan.md` §0 |
+| F29 | 矩阵用「已出货」但现网无 shipped 状态（实测 created/wait/processing/held/completed/scrapped/merged） | C29：矩阵按真实枚举重写（§4.1 已回填正文）；merged 按完工侧禁用 |
+| F30 | TrackTxnResultVO 补 txId 悬置 | C30：本刀不做，exec_note 够用；规格待核实节关闭（见上） |
 
 ## 关联
 
