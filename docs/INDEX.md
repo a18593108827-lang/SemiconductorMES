@@ -10,7 +10,7 @@ updated: 2026-10-10
 # MES 文档总账（INDEX）
 
 > 自动生成，手改会被覆盖 · 再生成：`python .workbuddy/scripts/add_frontmatter.py --reindex`
-> 生成：2026-10-10 · 共 115 篇
+> 生成：2026-10-10 · 共 116 篇
 
 ## 状态汇总
 
@@ -19,7 +19,7 @@ updated: 2026-10-10
 | active | 4 |
 | approved | 4 |
 | done | 95 |
-| draft | 10 |
+| draft | 11 |
 | in-progress | 2 |
 
 ## 按类型索引
@@ -160,7 +160,7 @@ updated: 2026-10-10
 | MES 在制（WIP）— 功能查验清单 | WIP | done ✅ | 2026-07-27 | `模块/WIP（在制）模块/MES-WIP已完成功能.md` |
 | MES 用户权限 — 已完成功能查验 | 权限用户 | done ✅ | 2026-07-24 | `模块/权限、用户模块/MES-用户权限已完成功能.md` |
 
-### plan（7 篇）
+### plan（8 篇）
 
 | 文档 | 模块 | 状态 | 更新 | 路径 |
 |------|------|------|------|------|
@@ -171,6 +171,7 @@ updated: 2026-10-10
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
 | CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
 | TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | done ✅ | 2026-10-09 | `模块/测试数据（Test）模块/TD-1-plan.md` |
+| TD-2 计划 — 不良 Bin 处置建议联动 | Test | draft | 2026-10-10 | `模块/测试数据（Test）模块/TD-2-plan.md` |
 
 ### eval（3 篇）
 

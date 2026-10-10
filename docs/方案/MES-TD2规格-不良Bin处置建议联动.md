@@ -319,6 +319,12 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 | F25 | C18 同动作、同 ratio 并列时取哪条未定义 | C26：并列取 bin_code 字典序最小（§3.4） |
 | F26 | 验收 5 缺「MISJUDGE 无 remark → 拒绝」断言 | C27：验收 5 补齐（验收 5） |
 
+### 实测回填（TD-2-plan 起草时 · 2026-10-10 · 只追加）
+
+| # | 事实修正（F） | 绑定约束（C） |
+|---|---------------|---------------|
+| F27 | §4.1 矩阵「已 Hold → REWORK 以 Track 断言为准」悬而未决 | C28：实测落定——`TrackServiceImpl.rework` 首步即 `holdService.assertNoActive(lotId)`（`TrackServiceImpl.java:1154`），且仅 WAIT/PROCESSING 可返工（:1155）→ **已 Hold 时 HOLD 与 REWORK 均禁用**；矩阵其余格与 `requireExecutableLot` 断言一致。证据与全部 4 项「待核实」收口见 `TD-2-plan.md` §0 |
+
 ## 关联
 
 - 边界：`MES-封测测试数据与Bin回流方案.md` §6（A1/P7/A5/P3/D9 等沿用）· `TD-1-plan.md`
