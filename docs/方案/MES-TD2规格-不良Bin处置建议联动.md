@@ -149,11 +149,12 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 
 | 批 status | HOLD | REWORK | RETEST / 放行 / 转报废 |
 |-----------|------|--------|------------------------|
-| created / wait / processing | 可 | 可（须有 rework 边，无则禁用+提示） | 可 |
+| created | **禁用**（`HoldServiceImpl.create:176` 仅 wait/processing 可锁批） | **禁用**（`rework:1155` 同口径） | 放行/转报废可；RETEST 禁（批未进站，C31） |
+| wait / processing | 可 | 可（须有 rework 边；**Off-Flow 中禁**，`:1157`） | 可 |
 | held | **禁用**（提示跳原 Hold 单，可改 RETEST/放行） | **禁用**（`rework` 首步 `assertNoActive` 必拒，`TrackServiceImpl.java:1154`） | 可 |
 | completed / scrapped / merged | **禁用** | **禁用** | 可（放行/转报废仍有意义；RETEST 禁用） |
 
-- **服务端与前端双重执行**：confirm/release/ignore 服务端按同一矩阵校验拒绝（**不能只靠前端按钮灰掉**）；详情返回 `actionAvailability` 供前端渲染，rework 边判定复用 `TrackService.context(lotId)` 的 `canRework / reworkOptions`（`TrackServiceImpl.java:1469`）。
+- **服务端与前端双重执行**：confirm/release/ignore 服务端按同一矩阵校验拒绝（**不能只靠前端按钮灰掉**）；详情返回 `actionAvailability` 供前端渲染，rework 边判定复用 `TrackService.context(lotId)` 的 `reworkOptions`——**忽略 `canRework` 字段**：它内含 `StpUtil.hasPermission("track:rework")` 权限位（`:1620`），quality 角色无此权限会把 REWORK 永远灰掉而服务端又能跑通（F32/C32）；权限闸只认 `test:advice-confirm`（D9）。
 
 ### 4.2 各动作口径
 
@@ -326,6 +327,8 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 | F27 | §4.1 矩阵「已 Hold → REWORK 以 Track 断言为准」悬而未决 | C28：实测落定——`TrackServiceImpl.rework` 首步即 `holdService.assertNoActive(lotId)`（`TrackServiceImpl.java:1154`），且仅 WAIT/PROCESSING 可返工（:1155）→ **已 Hold 时 HOLD 与 REWORK 均禁用**；矩阵其余格与 `requireExecutableLot` 断言一致。证据与全部 4 项「待核实」收口见 `TD-2-plan.md` §0 |
 | F29 | 矩阵用「已出货」但现网无 shipped 状态（实测 created/wait/processing/held/completed/scrapped/merged） | C29：矩阵按真实枚举重写（§4.1 已回填正文）；merged 按完工侧禁用 |
 | F30 | TrackTxnResultVO 补 txId 悬置 | C30：本刀不做，exec_note 够用；规格待核实节关闭（见上） |
+| F31 | plan 审查实测：`HoldServiceImpl.create:176` 仅 wait/processing 可锁批、`rework:1155` 同口径——created 不能 HOLD/REWORK，初稿矩阵把 created 捆进「可」 | C31：矩阵拆出 created 行（上表已回填）；Off-Flow 禁 REWORK（`:1157`）一并写入 |
+| F32 | `TrackContextVO.canRework` 内含 `track:rework` 权限位（`:1620`），quality 无此权限 → 详情永远灰 REWORK 而服务端可跑通 | C32：actionAvailability 忽略 canRework 权限位，只看 reworkOptions 非空 + 状态矩阵 + 非 Off-Flow + 非 hasActive；权限闸只认 `test:advice-confirm`（§4.1 已回填） |
 
 ## 关联
 

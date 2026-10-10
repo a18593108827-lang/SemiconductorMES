@@ -24,6 +24,8 @@ updated: 2026-10-10
 | 7 | **lot status 枚举** | `created / wait / processing / held / completed / scrapped / merged`，**无 shipped**（规格 F29/C29） | 代码 `TrackServiceImpl.java:89-93` + DB DISTINCT |
 | 8 | rework 边判定入口 | `TrackService.context(lotId)` → `TrackContextVO.canRework / reworkOptions`（`:1469`），详情直接复用 | 代码实测 |
 | 9 | 业务错误码先例 | `TEST_BIN_DEF_CONFLICT: 中文`（`MesBinDefServiceImpl.java:60`）——msg 前缀大写枚举+冒号，TD-2 沿用 | 代码实测 |
+| 10 | **created 可否 HOLD/REWORK** | **否**：`HoldServiceImpl.create:176` 仅 wait/processing 可锁批；`rework:1155` 同口径 → 矩阵 created 单列禁用（P-F13） | 代码实测 |
+| 11 | **canRework 权限位** | `:1620` 内含 `StpUtil.hasPermission("track:rework")` → actionAvailability 忽略该字段（P-F14/C14） | 代码实测 |
 
 ## 1. C7 角色映射落盘（**不再「执行时探针」，本节即定稿**）
 
@@ -67,6 +69,7 @@ updated: 2026-10-10
 | `TEST_ADVICE_ALREADY_PROCESSED` | CAS 影响行数=0 / version 过期（已被处理） |
 | `TEST_ADVICE_INVALID_ACTION` | 动作与状态矩阵冲突（服务端禁用矩阵拒绝，§4） |
 | `TEST_ADVICE_MISJUDGE_REMARK_REQUIRED` | MISJUDGE 无 remark |
+| `TEST_ADVICE_TO_SCRAP_REMARK_REQUIRED` | TO_SCRAP 无 remark（P-C15） |
 | `TEST_ADVICE_RELEASE_REASON_REQUIRED` | 放行无原因 / OTHER 无说明 |
 | `TEST_ADVICE_HOLD_REASON_REQUIRED` | HOLD 无 reason_code |
 | `TEST_ADVICE_REWORK_PARAM_REQUIRED` | REWORK 缺 toSortNo/reasonCode |
@@ -83,27 +86,29 @@ updated: 2026-10-10
 | `mes_test_rule_log` | 新建（只追加审计；**无软删、不继承 BaseEntity**，对齐 `mes_test_submit_guard` 先例） |
 | `mes_hold_reason` | +1 行：`8012 / TEST_BIN_EXCEED / 测试Bin超限 / quality` |
 | `sys_permission` | +5 行：344–348（perm_type=3，parent_id 对齐 341–343） |
-| `sys_role` | +1 行：`quality / 质量工程师`（C7） |
+| `sys_role` | +1 行：`quality / 质量工程师`（C7）；**行 id = 探针 `MAX(id)` 续接（现值 4 → 预期 5），脚本按实测续接、不写死**（P-C16） |
 | `sys_role_permission` | 按 §1 映射表落行 |
 
 schema.sql 同步。
 
 ## 4. 服务端禁用矩阵（与前端双重执行，**服务端拒是硬闸**）
 
-confirm/release/ignore 服务端按 §规格 4.1 矩阵校验（真实 status 枚举）：
+confirm/release/ignore 服务端按规格 §4.1 矩阵校验（真实 status 枚举；**created 单列**——`HoldServiceImpl.create:176` 仅 wait/processing 可锁批、`rework:1155` 同口径，P-F13 实测）：
 
 | 批 status | HOLD | REWORK | RETEST/放行/转报废 |
 |-----------|------|--------|--------------------|
-| created/wait/processing | 可 | 可（无 rework 边拒） | 可 |
+| created | `TEST_ADVICE_INVALID_ACTION` | `TEST_ADVICE_INVALID_ACTION` | 放行/转报废可；RETEST 拒（批未进站） |
+| wait/processing | 可 | 可（无 rework 边拒；**Off-Flow 中拒**，`:1157`） | 可 |
 | held | `TEST_ADVICE_INVALID_ACTION` | `TEST_ADVICE_INVALID_ACTION` | 可 |
 | completed/scrapped/merged | `TEST_ADVICE_INVALID_ACTION` | `TEST_ADVICE_INVALID_ACTION` | 可（RETEST 拒） |
 
-hasActive 检查保留为 HOLD 并发兜底（`TEST_ADVICE_LOT_HELD`）。
+hasActive 检查保留为 HOLD 并发兜底（`TEST_ADVICE_LOT_HELD`；`create:175` 自带同款闸）。
 
-### 4.1 事务边界（第 1 轮审查定稿）
+**actionAvailability 口径（P-C14 定稿）**：详情返回的可用性**忽略 `TrackContextVO.canRework`**——它内含 `StpUtil.hasPermission("track:rework")` 权限位（`:1620`），quality 无此权限会把 REWORK 永远灰掉而服务端 confirm 又能跑通。只看：`reworkOptions` 非空 + 状态矩阵 + 非 Off-Flow + 非 hasActive。权限闸只认 `test:advice-confirm`（D9）。
 
-- **拍板与外部写同一 `@Transactional`**：confirm(HOLD) 事务内 = advice CAS 更新 + `holdService.create`；confirm(REWORK) 事务内 = advice CAS 更新 + `trackService.rework`。**任一步失败整体回滚**——不存在「Hold 已建、建议单仍 PENDING」或反向的中间态。
-- 判定同事务（D4）不变；rule_log 与规则 CRUD 同事务。
+### 4.1 事务边界与顺序（P-C15 定稿）
+
+confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 → ②外部写（`HoldService.create` / `TrackService.rework`）→ ③**CAS 收口**（`UPDATE ... SET status='CONFIRMED', action_taken=?, hold_id/exec_note=? WHERE id=? AND status='PENDING' AND version=?`）。CAS 影响行数=0 → 抛 `TEST_ADVICE_ALREADY_PROCESSED` → **同事务整体回滚（含已写的外部写）**——并发双拍时后到者的 Hold/Track 写随事务撤销，不产生孤儿事务。任一步失败同理整体回滚。release/ignore 无外部写，CAS 即终态。
 
 ## 5. 影响的 Facade 与模块
 
@@ -160,6 +165,17 @@ hasActive 检查保留为 HOLD 并发兜底（`TEST_ADVICE_LOT_HELD`）。
 | P-F10 | item/rule_log 软删与 BaseEntity 未定 | P-C10：均无软删、不继承 BaseEntity（对齐守卫表/汇总表） |
 | P-F11 | 步骤 g 缺 INT-0001 与 INDEX reindex | P-C11：已补 |
 | P-F12 | C10 上线条件未进验收 | P-C12：验收 4 之试点规则断言 |
+
+### 审查记录（第 2 轮 · plan · 2026-10-10）
+
+> 审查人：用户。结论：4 项必补 + 4 项顺手**全部成立**（含 2 项代码断言实测坐实），已按 P-C13–P-C16 修订；规格矩阵同步回填 F31/C31、F32/C32。
+
+| # | 事实修正 | 修订 |
+|---|----------|------|
+| P-F13 | created 捆进「可 HOLD/REWORK」——实测 `create:176` 仅 wait/processing、`rework:1155` 同口径，上会即 INVALID_ACTION 或被原样拒 | P-C13：矩阵 created 单列禁 HOLD/REWORK/RETEST（规格 §4.1 已回填，F31/C31） |
+| P-F14 | 直接用 canRework 判可用性——`:1620` 内含 `track:rework` 权限位，quality 无权限 → 详情永远灰 REWORK 而服务端可跑通 | P-C14：actionAvailability 忽略 canRework，只看 reworkOptions 非空+状态矩阵+非 Off-Flow+非 hasActive；权限闸 test:advice-confirm（规格 F32/C32） |
+| P-F15 | Off-Flow 禁 REWORK（`:1157`）未写进矩阵/availability | P-C15：§4 矩阵与 availability 口径已写明 |
+| P-F16 | 事务内顺序未定；TO_SCRAP remark 缺错误码；sys_role 行 id 未写续接 | P-C16：§4.1 定序「矩阵校验→外部写→CAS 收口（带 hold_id/exec_note），CAS=0 整体回滚」；+`TEST_ADVICE_TO_SCRAP_REMARK_REQUIRED`；sys_role id 探针续接不写死 |
 
 ## 实施记录
 
