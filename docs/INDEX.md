@@ -17,9 +17,9 @@ updated: 2026-10-10
 | 状态 | 篇数 |
 |------|------|
 | active | 4 |
-| approved | 3 |
+| approved | 4 |
 | done | 95 |
-| draft | 11 |
+| draft | 10 |
 | in-progress | 2 |
 
 ## 按类型索引
@@ -44,7 +44,7 @@ updated: 2026-10-10
 | MES 封测测试数据与 Bin 回流 — 方案设计（跨模块） | — | draft | 2026-10-08 | `方案/MES-封测测试数据与Bin回流方案.md` |
 | 半导 MES 知识助理（RAG）方案 | — | draft | 2026-09-20 | `方案/MES-知识助理RAG方案.md` |
 | 半导 MES 设备数据采集与分析方案 | — | draft | 2026-09-20 | `方案/MES-设备数采与分析方案.md` |
-| MES TD-2 规格 — 不良 Bin 处置建议联动 | Test | draft | 2026-10-10 | `方案/MES-TD2规格-不良Bin处置建议联动.md` |
+| MES TD-2 规格 — 不良 Bin 处置建议联动 | Test | approved | 2026-10-10 | `方案/MES-TD2规格-不良Bin处置建议联动.md` |
 
 ### 架构（14 篇）
 
