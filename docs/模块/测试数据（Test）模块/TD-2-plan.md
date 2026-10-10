@@ -8,8 +8,8 @@ updated: 2026-10-10
 ---
 # TD-2 计划 — 不良 Bin 处置建议联动
 
-> 对齐：`MES-TD2规格-不良Bin处置建议联动.md`（**approved**，C1–C32）· 状态：draft（**未批不动码**）
-> 规格 3 轮 + plan 1 轮审查已收敛；与规格冲突处以规格为准并按 F# 追加。
+> 对齐：`MES-TD2规格-不良Bin处置建议联动.md`（**approved**，C1–C32）· 状态：**approved**（可动码；顺序 a→g）
+> 规格 3 轮 + plan 2 轮审查已收敛；与规格冲突处以规格为准并按 F# 追加。架构并发/内聚约束见 §5.1（动码红线）。
 
 ## 0. 实测记录（plan 起草与第 1 轮审查收口，全部有证据）
 
@@ -69,7 +69,7 @@ updated: 2026-10-10
 | `TEST_ADVICE_ALREADY_PROCESSED` | CAS 影响行数=0 / version 过期（已被处理） |
 | `TEST_ADVICE_INVALID_ACTION` | 动作与状态矩阵冲突（服务端禁用矩阵拒绝，§4） |
 | `TEST_ADVICE_MISJUDGE_REMARK_REQUIRED` | MISJUDGE 无 remark |
-| `TEST_ADVICE_TO_SCRAP_REMARK_REQUIRED` | TO_SCRAP 无 remark（P-C15） |
+| `TEST_ADVICE_TO_SCRAP_REMARK_REQUIRED` | TO_SCRAP 无 remark（P-C16） |
 | `TEST_ADVICE_RELEASE_REASON_REQUIRED` | 放行无原因 / OTHER 无说明 |
 | `TEST_ADVICE_HOLD_REASON_REQUIRED` | HOLD 无 reason_code |
 | `TEST_ADVICE_REWORK_PARAM_REQUIRED` | REWORK 缺 toSortNo/reasonCode |
@@ -119,14 +119,32 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
 | Test → Lot | 读 lot status/currentSortNo | TD-1 先例 |
 | Hold/Track/Lot → Test | 零反向依赖；`TestFacade` 不变 | TD-1 约束 |
 
+### 5.1 架构实施红线（并发 / 内聚 / 耦合 · 动码必守）
+
+> 来源：2026-10-10 架构审查。违反即返工，不另开规格。
+
+| # | 红线 | 说明 |
+|---|------|------|
+| K1 | **拍板与外部写同一 `@Transactional(REQUIRED)`** | confirm(HOLD/REWORK) 禁止拆事务；**禁止**对 `HoldService.create` / `TrackService.rework` 包一层 `REQUIRES_NEW`（现网 create/rework 本身为 REQUIRED，加入父事务——保持即可） |
+| K2 | **事务顺序固定** | ①矩阵校验 → ②外部写 → ③CAS 收口；禁止「先 CAS 再 Hold」且拆事务；CAS=0 必须整单回滚（含已写 Hold/Rework） |
+| K3 | **三块拆类，禁上帝类** | `MesTestAdviceRuleService`（规则 CRUD+log）/ `TestAdviceEvaluator`（纯计算，无 Spring 写库副作用）/ `MesTestAdviceService`（拍板编排）。**禁止**把判定+拍板堆进 `MesTestRecordServiceImpl`——Record 创建事务内**只调 Evaluator**，落 advice 表可由 Evaluator 协作或极薄 helper，编排逻辑不进 Record |
+| K4 | **零反向依赖** | Hold/Track/Lot **零**改代码、零依赖 `com.mes.test`；`TestFacade` 只读不变 |
+| K5 | **权限委托写死** | `test:advice-confirm` 可调 `TrackService.rework` / `HoldService.create`，**有意绕过**控制器层 `track:rework`；**禁止**给 quality 另授 `track:rework` 来「修」availability |
+| K6 | **availability 忽略 `canRework`** | 只认 `reworkOptions` 非空 + §4 矩阵 + 非 Off-Flow + 非 hasActive；服务端矩阵为真相，前端只消费 `actionAvailability`，禁止前端自造第二套状态判断 |
+| K7 | **同批多单 HOLD** | 先到者 Hold 成功，后到者 `TEST_ADVICE_LOT_HELD` / INVALID，第二张建议单保持 PENDING——属预期产品态，详情须可解释，勿做成「自动连带关闭」 |
+| K8 | **判定无远程 / 无外呼** | Evaluator 仅规则表+汇总只读计算；拉长 create 事务可接受，禁止引入 HTTP/MQ |
+| K9 | **Hold 直注 Service 本刀接受** | 对齐 EDC 先例；本刀不强制 HoldFacade；若升薄封装不得改 K1/K2 事务边界 |
+
 ## 6. 实现步骤
 
+**顺序 a→b→c→d→e→f→g。禁止乱序：c 不得先于 b；d 不得先于 c；e 不得先于 d。**
+
 - **a. 脚本**：`migrate_test_advice.sql`（表 + 权限 344–348 + 原因码 8012 + **角色 quality 与 §1 映射**）+ `schema.sql` 同步 + dev 库执行探针复核（含 §1 合入门槛断言 SQL）。
-- **b. 规则域**：实体/Mapper/Service（CRUD + 四级回退 `findRule`）+ `MesTestRuleLog` 同事务写入；规则乐观锁 @Version+updateById。
-- **c. 判定引擎（依赖 b）**：`TestAdviceEvaluator` 纯计算类；挂接 `MesTestRecordServiceImpl` 创建事务（汇总落库后），异常整体回滚（D4）；响应组 adviceHit/adviceId。
-- **d. 拍板域（依赖 c）**：`TestAdviceService`——confirm/release/ignore：**同一事务内**手写 CAS + §4 服务端矩阵校验 + HOLD/REWORK 分支外部写；详情组装（全 bin 对照 + **VO 计算 defaultAction/defaultReasonCode** + **actionAvailability（reworkOptions + 矩阵，忽略 canRework）** + RETEST 后续链）；作废级联（PENDING→IGNORED/VOIDED_RECORD + record_voided=1，挂既有 void 事务）。
-- **e. 前端（依赖 d）**：`api/test.ts` 扩展；`TestPage.tsx` 处置建议/阈值规则两 Tab——角标、默认 PENDING 倒序、U2 最小列、按 actionAvailability 渲染按钮 + 放行「不解 Hold」提示、`>` 口径文案、无规则提示；提交回执跳详情。
-- **f. 测试与反向验证**：单测（四级回退/严格大于/严重度+并列/服务端矩阵/CAS 并发/事务回滚——mock Hold 失败断言 advice 仍 PENDING/级联/rule_log）；**反向验证**（改坏判定引擎与 CAS 条件确认变红）；前端 vitest（角标/排序/矩阵/回执）。
+- **b. 规则域**：`MesTestAdviceRule` 实体/Mapper/`MesTestAdviceRuleService`（CRUD + 四级回退 `findRule`）+ `MesTestRuleLog` 同事务写入；规则乐观锁 @Version+updateById（K3）。
+- **c. 判定引擎（依赖 b）**：`TestAdviceEvaluator` 纯计算类（K3/K8）；挂接 `MesTestRecordServiceImpl` 创建事务（汇总落库后**只调 Evaluator**），异常整体回滚（D4）；响应组 adviceHit/adviceId。
+- **d. 拍板域（依赖 c）**：`MesTestAdviceService`——confirm/release/ignore：**K1/K2 单事务顺序** + §4 服务端矩阵 + HOLD/REWORK 外部写；详情组装（全 bin 对照 + VO 计算 defaultAction/defaultReasonCode + **actionAvailability（K6）** + RETEST 后续链）；作废级联（PENDING→IGNORED/VOIDED_RECORD + record_voided=1，挂既有 void 事务）。
+- **e. 前端（依赖 d）**：`api/test.ts` 扩展；`TestPage.tsx` 处置建议/阈值规则两 Tab——角标、默认 PENDING 倒序、U2 最小列、**只按 actionAvailability 渲染按钮**（K6）+ 放行「不解 Hold」提示、`>` 口径文案、无规则提示；提交回执跳详情。
+- **f. 测试与反向验证**：单测（四级回退/严格大于/严重度+并列/服务端矩阵/CAS 并发/事务回滚——mock Hold 失败断言 advice 仍 PENDING/级联/rule_log/**K1 无 REQUIRES_NEW 静态核对**）；**反向验证**（改坏判定引擎与 CAS 条件确认变红）；前端 vitest（角标/排序/矩阵/回执）。
 - **g. 文档收尾（同会话）**：Test 模块五件套 + `docs/架构/MES-实施进度与下一步.md` TD-2 状态 + `docs/intent/INT-0001-*.md` TD-2 交付状态 + **`python .workbuddy/scripts/add_frontmatter.py --reindex`（INDEX 零 diff）**。
 
 ## 7. 测试与验收
@@ -136,8 +154,9 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
   2. **服务端矩阵断言**：held 批直接 curl confirm(HOLD/REWORK) → `TEST_ADVICE_INVALID_ACTION`（非仅前端禁用）；
   3. **事务边界断言**：mock/注入 HoldService.create 抛异常 → confirm 请求整体回滚（advice 仍 PENDING、mes_hold 无新行）；
   4. **上线条件（C10）**：验收前 dev 库人工或种子 ≥1 条 enabled 试点规则——「功能上了、防线没上」不算验收通过。
+  5. **架构红线**：`MesTestRecordServiceImpl` 无拍板编排；confirm 调用链无 `REQUIRES_NEW`；quality 角色无 `track:rework` 绑定（K1/K3/K5）。
 - **验证方式**：`cd server && mvn -o test`；`cd web && npm test`；真机 curl 断言；DB 探针。
-- **副作用与并发**：两用户并发拍同一单（CAS 恰好一人成功）；重复提交同批同参（守卫表挡）；作废×拍板并发（级联仅 PENDING）；在途请求收尾不得改写新状态。
+- **副作用与并发**：两用户并发拍同一单（CAS 恰好一人成功）；重复提交同批同参（守卫表挡）；作废×拍板并发（级联仅 PENDING）；同批第二张 HOLD → LOT_HELD 且单仍 PENDING（K7）；在途请求收尾不得改写新状态。
 
 ## 8. 回滚方式
 
@@ -179,4 +198,7 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
 
 ## 实施记录
 
-（执行中登记：环境阻塞 / 验收条目未执行原因 / 实际步骤偏离）
+| 步骤 | 状态 | 登记 |
+|------|------|------|
+| a | ✅ 2026-10-10 | 探针 perm_max=343→344–348；role_max=4→5；rp 小 id 用 3101–3114。已写并执行 `migrate_test_advice.sql`，`schema.sql` 已同步。合入门槛：345–347 仅 role 1+5；role 2/3/4 对 345–347 绑定=0；试点规则 7301 enabled。证据：`.workbuddy/tmp/probe_td2_a.py` / `run_td2_a.py` |
+| b–g | ⏳ | — |

@@ -17,3 +17,6 @@ _bmad-output/
 
 # 一次性验收探针 / 临时产物（保留在磁盘可重跑，但不入库；见 docs/eval/README.md 与各 plan 实施记录）
 .workbuddy/tmp/
+
+# AI 会话工作记忆（个人/工具产物，含本机信息，不入库；本地保留）
+.workbuddy/memory/
