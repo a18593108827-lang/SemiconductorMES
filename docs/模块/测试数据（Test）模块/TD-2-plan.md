@@ -201,4 +201,5 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
 | 步骤 | 状态 | 登记 |
 |------|------|------|
 | a | ✅ 2026-10-10 | 探针 perm_max=343→344–348；role_max=4→5；rp 小 id 用 3101–3114。已写并执行 `migrate_test_advice.sql`，`schema.sql` 已同步。合入门槛：345–347 仅 role 1+5；role 2/3/4 对 345–347 绑定=0；试点规则 7301 enabled。证据：`.workbuddy/tmp/probe_td2_a.py` / `run_td2_a.py` |
-| b–g | ⏳ | — |
+| b | ✅ 2026-10-10 | 规则域 CRUD + rule_log + findRule 四级回退；接口 `/test/rules`；单测 `MesTestAdviceRuleServiceImplTest` |
+| c–g | ⏳ | — |

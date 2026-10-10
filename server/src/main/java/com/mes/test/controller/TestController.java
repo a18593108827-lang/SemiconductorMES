@@ -4,16 +4,21 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.mes.common.PageResult;
 import com.mes.common.R;
 import com.mes.common.annotation.OperLog;
+import com.mes.test.dto.TestAdviceRuleQuery;
+import com.mes.test.dto.TestAdviceRuleSaveDTO;
 import com.mes.test.dto.TestBinQuery;
 import com.mes.test.dto.TestBinSaveDTO;
 import com.mes.test.dto.TestRecordCreateDTO;
 import com.mes.test.dto.TestRecordQuery;
 import com.mes.test.dto.TestRecordVoidDTO;
 import com.mes.test.service.MesBinDefService;
+import com.mes.test.service.MesTestAdviceRuleService;
 import com.mes.test.service.MesTestRecordService;
+import com.mes.test.vo.TestAdviceRuleVO;
 import com.mes.test.vo.TestBinDefVO;
 import com.mes.test.vo.TestRecordVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +37,7 @@ public class TestController {
 
     private final MesTestRecordService mesTestRecordService;
     private final MesBinDefService mesBinDefService;
+    private final MesTestAdviceRuleService mesTestAdviceRuleService;
 
     /** 登记一条测试记录和各档颗数 */
     @SaCheckPermission("test:create")
@@ -92,6 +98,39 @@ public class TestController {
     @PutMapping("/bins/{id}")
     public R<Void> updateBin(@PathVariable Long id, @RequestBody TestBinSaveDTO dto) {
         mesBinDefService.update(id, dto);
+        return R.ok();
+    }
+
+    /** 分页查阈值规则 */
+    @SaCheckPermission("test:advice-view")
+    @GetMapping("/rules")
+    public R<PageResult<TestAdviceRuleVO>> pageRules(TestAdviceRuleQuery query) {
+        return R.ok(mesTestAdviceRuleService.page(query));
+    }
+
+    /** 新建一条阈值规则，并写变更审计 */
+    @SaCheckPermission("test:edit-rule")
+    @OperLog(module = "Test", action = "新增阈值规则")
+    @PostMapping("/rules")
+    public R<TestAdviceRuleVO> createRule(@RequestBody TestAdviceRuleSaveDTO dto) {
+        return R.ok(mesTestAdviceRuleService.create(dto));
+    }
+
+    /** 修改阈值规则（乐观锁），并写变更审计 */
+    @SaCheckPermission("test:edit-rule")
+    @OperLog(module = "Test", action = "修改阈值规则")
+    @PutMapping("/rules/{id}")
+    public R<Void> updateRule(@PathVariable Long id, @RequestBody TestAdviceRuleSaveDTO dto) {
+        mesTestAdviceRuleService.update(id, dto);
+        return R.ok();
+    }
+
+    /** 软删阈值规则，并写变更审计 */
+    @SaCheckPermission("test:edit-rule")
+    @OperLog(module = "Test", action = "删除阈值规则")
+    @DeleteMapping("/rules/{id}")
+    public R<Void> deleteRule(@PathVariable Long id) {
+        mesTestAdviceRuleService.delete(id);
         return R.ok();
     }
 }
