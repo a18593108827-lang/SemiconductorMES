@@ -8,7 +8,7 @@ updated: 2026-10-10
 ---
 # TD-2 计划 — 不良 Bin 处置建议联动
 
-> 对齐：`MES-TD2规格-不良Bin处置建议联动.md`（**approved**，C1–C30）· 状态：draft（**未批不动码**）
+> 对齐：`MES-TD2规格-不良Bin处置建议联动.md`（**approved**，C1–C32）· 状态：draft（**未批不动码**）
 > 规格 3 轮 + plan 1 轮审查已收敛；与规格冲突处以规格为准并按 F# 追加。
 
 ## 0. 实测记录（plan 起草与第 1 轮审查收口，全部有证据）
@@ -22,7 +22,7 @@ updated: 2026-10-10
 | 5 | 前端 Tab 挂载点 | `web/src/pages/TestPage.tsx`（`:463 role="tab"` 自定义 tab）；API `web/src/api/test.ts` | 代码实测 |
 | 6 | **现网角色** | 仅 4 个：`admin(1) / operator(2) / process_eng(3) / supervisor(4)`——**无质量/测试/生产计划角色** → 必须种子新增（见 §1） | DB 探针（`probe_td2_plan2.py`） |
 | 7 | **lot status 枚举** | `created / wait / processing / held / completed / scrapped / merged`，**无 shipped**（规格 F29/C29） | 代码 `TrackServiceImpl.java:89-93` + DB DISTINCT |
-| 8 | rework 边判定入口 | `TrackService.context(lotId)` → `TrackContextVO.canRework / reworkOptions`（`:1469`），详情直接复用 | 代码实测 |
+| 8 | rework 边判定入口 | `TrackService.context(lotId)` → `reworkOptions`（`:1469`）**可用**；`canRework` 内含权限位**不可用**（见 §4，`:1620`） | 代码实测 |
 | 9 | 业务错误码先例 | `TEST_BIN_DEF_CONFLICT: 中文`（`MesBinDefServiceImpl.java:60`）——msg 前缀大写枚举+冒号，TD-2 沿用 | 代码实测 |
 | 10 | **created 可否 HOLD/REWORK** | **否**：`HoldServiceImpl.create:176` 仅 wait/processing 可锁批；`rework:1155` 同口径 → 矩阵 created 单列禁用（P-F13） | 代码实测 |
 | 11 | **canRework 权限位** | `:1620` 内含 `StpUtil.hasPermission("track:rework")` → actionAvailability 忽略该字段（P-F14/C14） | 代码实测 |
@@ -52,7 +52,7 @@ updated: 2026-10-10
 | PUT | `/test/rules/{id}` | `test:edit-rule` | 修改（@Version+updateById）+ rule_log before/after |
 | DELETE | `/test/rules/{id}` | `test:edit-rule` | 软删 + rule_log |
 | GET | `/test/advice` | `test:advice-view` | 分页，默认 PENDING 倒序 |
-| GET | `/test/advice/{id}` | `test:advice-view` | 详情：全 bin 对照 + **defaultAction/defaultReasonCode（VO 计算值）+ actionAvailability**（复用 `TrackService.context` 的 canRework/reworkOptions）+ RETEST 后续链 |
+| GET | `/test/advice/{id}` | `test:advice-view` | 详情：全 bin 对照 + **defaultAction/defaultReasonCode（VO 计算值）+ actionAvailability**（reworkOptions 取自 `TrackService.context`，**忽略 canRework 权限位**）+ RETEST 后续链 |
 | POST | `/test/advice/{id}/confirm` | `test:advice-confirm` | body 带 version；action=HOLD/REWORK/RETEST/TO_SCRAP |
 | POST | `/test/advice/{id}/release` | `test:advice-release` | body 带 version |
 | POST | `/test/advice/{id}/ignore` | `test:advice-ignore` | body 带 version |
@@ -106,7 +106,7 @@ hasActive 检查保留为 HOLD 并发兜底（`TEST_ADVICE_LOT_HELD`；`create:1
 
 **actionAvailability 口径（P-C14 定稿）**：详情返回的可用性**忽略 `TrackContextVO.canRework`**——它内含 `StpUtil.hasPermission("track:rework")` 权限位（`:1620`），quality 无此权限会把 REWORK 永远灰掉而服务端 confirm 又能跑通。只看：`reworkOptions` 非空 + 状态矩阵 + 非 Off-Flow + 非 hasActive。权限闸只认 `test:advice-confirm`（D9）。
 
-### 4.1 事务边界与顺序（P-C15 定稿）
+### 4.1 事务边界与顺序（P-C16 定稿）
 
 confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 → ②外部写（`HoldService.create` / `TrackService.rework`）→ ③**CAS 收口**（`UPDATE ... SET status='CONFIRMED', action_taken=?, hold_id/exec_note=? WHERE id=? AND status='PENDING' AND version=?`）。CAS 影响行数=0 → 抛 `TEST_ADVICE_ALREADY_PROCESSED` → **同事务整体回滚（含已写的外部写）**——并发双拍时后到者的 Hold/Track 写随事务撤销，不产生孤儿事务。任一步失败同理整体回滚。release/ignore 无外部写，CAS 即终态。
 
@@ -115,7 +115,7 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
 | 方向 | 调用 | 先例 |
 |------|------|------|
 | Test → Hold | `HoldService.create` / `hasActive` | EDC（`MesEdcCollectionServiceImpl.java:92,350-358`） |
-| Test → Track | `TrackService.rework` / `TrackService.context`（canRework+reworkOptions） | 方案 D9；`:1469` |
+| Test → Track | `TrackService.rework` / `TrackService.context`（**取 reworkOptions，忽略 canRework 权限位**，见 §4） | 方案 D9；`:1469` |
 | Test → Lot | 读 lot status/currentSortNo | TD-1 先例 |
 | Hold/Track/Lot → Test | 零反向依赖；`TestFacade` 不变 | TD-1 约束 |
 
@@ -124,7 +124,7 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
 - **a. 脚本**：`migrate_test_advice.sql`（表 + 权限 344–348 + 原因码 8012 + **角色 quality 与 §1 映射**）+ `schema.sql` 同步 + dev 库执行探针复核（含 §1 合入门槛断言 SQL）。
 - **b. 规则域**：实体/Mapper/Service（CRUD + 四级回退 `findRule`）+ `MesTestRuleLog` 同事务写入；规则乐观锁 @Version+updateById。
 - **c. 判定引擎（依赖 b）**：`TestAdviceEvaluator` 纯计算类；挂接 `MesTestRecordServiceImpl` 创建事务（汇总落库后），异常整体回滚（D4）；响应组 adviceHit/adviceId。
-- **d. 拍板域（依赖 c）**：`TestAdviceService`——confirm/release/ignore：**同一事务内**手写 CAS + §4 服务端矩阵校验 + HOLD/REWORK 分支外部写；详情组装（全 bin 对照 + **VO 计算 defaultAction/defaultReasonCode** + **actionAvailability（复用 `TrackService.context`）** + RETEST 后续链）；作废级联（PENDING→IGNORED/VOIDED_RECORD + record_voided=1，挂既有 void 事务）。
+- **d. 拍板域（依赖 c）**：`TestAdviceService`——confirm/release/ignore：**同一事务内**手写 CAS + §4 服务端矩阵校验 + HOLD/REWORK 分支外部写；详情组装（全 bin 对照 + **VO 计算 defaultAction/defaultReasonCode** + **actionAvailability（reworkOptions + 矩阵，忽略 canRework）** + RETEST 后续链）；作废级联（PENDING→IGNORED/VOIDED_RECORD + record_voided=1，挂既有 void 事务）。
 - **e. 前端（依赖 d）**：`api/test.ts` 扩展；`TestPage.tsx` 处置建议/阈值规则两 Tab——角标、默认 PENDING 倒序、U2 最小列、按 actionAvailability 渲染按钮 + 放行「不解 Hold」提示、`>` 口径文案、无规则提示；提交回执跳详情。
 - **f. 测试与反向验证**：单测（四级回退/严格大于/严重度+并列/服务端矩阵/CAS 并发/事务回滚——mock Hold 失败断言 advice 仍 PENDING/级联/rule_log）；**反向验证**（改坏判定引擎与 CAS 条件确认变红）；前端 vitest（角标/排序/矩阵/回执）。
 - **g. 文档收尾（同会话）**：Test 模块五件套 + `docs/架构/MES-实施进度与下一步.md` TD-2 状态 + `docs/intent/INT-0001-*.md` TD-2 交付状态 + **`python .workbuddy/scripts/add_frontmatter.py --reindex`（INDEX 零 diff）**。
