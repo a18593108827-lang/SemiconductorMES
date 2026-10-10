@@ -20,7 +20,7 @@ updated: 2026-10-10
 
 | 分期 | 交付 | 出处 |
 |------|------|------|
-| **P0（本规格）** | 阈值规则 CRUD（静态值，四级回退，**默认原因码**，**变更审计**）· 记录落库同步判定 · 建议单主表+明细（快照，**详情带全 bin 对照**）· **终态四拆**（执行 HOLD/REWORK/RETEST/转报废 · 放行 · 忽略）· **提交回执 + 建议角标 + 默认 PENDING 列表** · **动作前置禁用矩阵** · **并发 CAS** · 作废级联（PENDING）与已执行单打标 · 管理端「处置建议」Tab · 权限 4 码 + **角色绑定** | 产品分析 P0 + 审查第 1 轮 C1–C14 |
+| **P0（本规格）** | 阈值规则 CRUD（静态值，四级回退，**默认原因码**，**变更审计**）· 记录落库同步判定 · 建议单主表+明细（**全部 HARD 行快照**）· **终态四拆**（执行 HOLD/REWORK/RETEST/转报废 · 放行 · 忽略）· **提交回执 + 建议角标 + 默认 PENDING 列表** · **动作前置禁用矩阵** · **并发 CAS（body 带 version）** · 作废级联（PENDING，record_voided 同步置 1）与已执行单打标 · 管理端「处置建议」Tab · 权限 5 业务码 + **角色绑定** | 产品分析 P0 + 审查第 1/2 轮 C1–C23 |
 | P1 | 超期升级提醒 · Alarm 复用 raise · 处置统计视图（放行/忽略率） · 二级限值（level） · 默认阈值模板 | J2/J7/R1 |
 | 后置 | SBL 统计限 · 返工次数限额扩展 · Lot Commonality · 重测指定程序重定向 · SOFT bin 规则 | J1/J8/J10 / 调研 §4 |
 
@@ -35,7 +35,7 @@ updated: 2026-10-10
 测试工程师提交测试记录（POST /test/records，TD-1 既有）
   └─ 同一事务：记录+汇总落库成功后 → 判定（§3）
        ├─ 无命中 → 响应 hit=false，流程结束
-       └─ 命中 → 生成建议单（主表 1 张 + 每命中规则 1 条明细，快照）
+       └─ 命中 → 生成建议单（主表 1 张 + 明细=该记录**全部 HARD 汇总行**快照，is_hit=0/1 标记命中，C16）
             └─ 响应 hit=true + adviceId → 前端立即提示「本批命中 N 条阈值规则」可跳详情
                  └─ 质量工程师在「处置建议」Tab（角标 = PENDING 数）拍板：
                       ├─ 执行：HOLD（自动）/ REWORK（既有事务）/ RETEST（留痕）/ 转报废（留痕，走既有流程）
@@ -95,27 +95,29 @@ UK：`(product_code, program_name, program_version, bin_type, bin_code)` —— 
 
 ### 2.3 `mes_test_advice_item`（明细，无软删，随主表生命周期）
 
+> **明细口径定版（C16，第 2 轮）**：触发生成时**快照该记录全部 HARD 汇总行**（不只命中行），`is_hit` 标记命中与否——证据链自洽：拍板时看到的对照就是触发那一刻的完整事实，不依赖「详情时从记录汇总现拼」（记录可能已被作废/字典可能已改）。
+
 | 字段 | 说明 |
 |------|------|
 | advice_id / bin_id | — |
 | bin_type / bin_code / **bin_name** | bin_name 为**触发时快照**（防字典改名污染证据链，J4） |
 | qty / ratio | 该 bin 数量与 `qty/total_qty`，decimal(7,6) |
-| rule_id / rule_scope / **rule_max_ratio** | 规则快照：命中时按哪一级 scope 的哪条规则、上限多少 |
-| **is_hit** | 该行是否命中（详情返回**全部 HARD bin 行**，未超限行作对照，拍板不盲选，C3） |
+| rule_id / rule_scope / **rule_max_ratio** | 规则快照：命中时按哪一级 scope 的哪条规则、上限多少（未命中行置空） |
+| **is_hit** | 0/1：该行是否命中（明细=全部 HARD 行，未命中行作对照，拍板不盲选，C3） |
 
-UK：`(advice_id, bin_id)`。
+UK：`(advice_id, bin_id)`。行数 = 该记录 HARD 汇总行数（验收项）。
 
-### 2.4 权限与角色绑定（4 码 + 绑定是规格正文，C7）
+### 2.4 权限与角色绑定（5 个业务码 + 绑定是规格正文，C7）
+
+> 码数统一口径（C22，第 2 轮）：**业务码 5 个**——`test:advice-view / advice-confirm / advice-release / advice-ignore / edit-rule`；菜单权限**复用既有 `test:view`(340)**，不新增菜单码。id 自 **344** 起——plan 阶段探针实测 `sys_permission MAX(id)` 续接；**种子 SQL 按 C7 绑定授角色，缺角色映射即不合入**。
 
 | perm_code | 授予角色约束（**正文定版，非 plan 探针**） |
 |-----------|------------------------------------------|
-| `test:advice-view` | 质量、生产/计划、工艺（生产只读——看得到进度，拍不了板） |
+| `test:advice-view` | 质量、生产/计划、工艺、**测试工程师**（提交回执跳详情要用的只读权——回执能到、详情 403 就是断头路，C20；生产只读——看得到进度，拍不了板） |
 | `test:advice-confirm` | **仅质量侧角色**（确认执行/转报废） |
 | `test:advice-release` | **仅质量侧角色**（放行，与确认同级敏感） |
 | `test:advice-ignore` | **仅质量侧角色**（忽略——比确认更敏感，单列） |
 | `test:edit-rule` | **工艺工程师或质量主管**（规则=质量资产） |
-
-注：为守 4 码规模，`advice-release`/`advice-ignore` 从 confirm 中拆出后实际为 **6 码**（view / confirm / release / ignore / edit-rule 共 5 个业务码 + 菜单复用 340）。id 自 **344** 起——plan 阶段探针实测 `sys_permission MAX(id)` 续接；**种子 SQL 按 C7 绑定授角色，缺角色映射即不合入**。
 
 ---
 
@@ -125,6 +127,7 @@ UK：`(advice_id, bin_id)`。
 2. **匹配**：对记录的每个 HARD 汇总行，按 `product_code, program_name, program_version` 四级回退找 `enabled=1` 的规则（最具体 scope 唯一命中）；无规则 → 无建议（响应 hit=false，**不报错**）。
 3. **口径**：`ratio = qty / total_qty`；`ratio > max_ratio` **严格大于**（恰好等于不举牌，C9）。
 4. **默认动作 = 明细中严重度最高者**：**HOLD > REWORK > RETEST**（C3——「首条明细」顺序无定义，废除该口径）；确认时可改选，改选留痕。
+   **默认原因码预填（C18，第 2 轮）**：取「默认动作对应明细」中 **ratio 最高那条**规则的 `default_reason_code`；对应明细全空则不预填（用户面对字典自选）。
 5. **幂等**：无独立判定 API；判定只挂在记录创建事务内，重入被守卫表 `mes_test_submit_guard` 挡（TD-1 V6）。
 
 ---
@@ -152,13 +155,14 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 
 ### 4.2 各动作口径
 
-- **HOLD**：`reason_code` 必填，**默认预填规则的 `default_reason_code`**（C11），从 Hold 既有字典选（P3 不混用）；`hasActive` 检查保留为服务端最后防线（EDC 先例 `MesEdcCollectionServiceImpl.java:351`）；成功回写 `hold_id`。
+- **HOLD**：`reason_code` 必填，**预填口径见 §3.4（C18）**，从 Hold 既有字典选（P3 不混用）；`hasActive` 检查保留为服务端最后防线（EDC 先例 `MesEdcCollectionServiceImpl.java:351`）；成功回写 `hold_id`。
 - **REWORK**：`to_sort_no` + `reason_code` 必填；调 `TrackService.rework(lotId, toSortNo, reasonCode, remark)`（`TrackServiceImpl.java:1152`，既有事务 + rework 边 + maxReworkCount 全复用，D9）；回写 `exec_note`。
 - **RETEST（C4，口径写死）**：本刀只证明「**质量决定重测**」，不证明「已经重测」——CONFIRMED(RETEST) **不是**闭环态的伪装。详情页展示同批**后续测试记录**（有则链上可跳，无则明示「重测记录未提交」）；后续记录落库会自动重判、可能产生新建议单（新事实新单）。
 - **TO_SCRAP**：`remark` 必填；系统不执行报废，仅留「质量决定转报废」痕，报废走既有流程。
-- **放行 RELEASED**：`release_reason` 必填；即业界 use-as-is——调查后判定可接受的正式处置记录，稽核可答。
-- **忽略 IGNORED**：仅 MISJUDGE / DUPLICATE；MISJUDGE 须说明（喂给 P1 统计视图调阈值）。
-- **并发（C13）**：全部拍板动作走 version CAS；两人同时拍同一单，恰好一人成功，另一人收「该单已被处理」。
+- **放行 RELEASED**：`release_reason` 必填；即业界 use-as-is——调查后判定可接受的正式处置记录，稽核可答。**只关闭建议单，不调用 Hold release、不解批**——已有活跃 Hold 的批点放行后仍是 Hold 态，解 Hold 走既有 Hold 流程（C19，§4.1 矩阵同款提示）。
+- **忽略 IGNORED**：仅 MISJUDGE / DUPLICATE；MISJUDGE 说明**必填**（C21——放行 OTHER、忽略纪律同级，P1 调阈值看板的数据源）。
+- **并发（C13）**：全部拍板动作走 version CAS；**请求体必带 `version`**（C17），version 过期 → 收「该单已被处理」；两人同时拍同一单恰好一人成功。
+- **作废级联（C23）**：记录作废 → PENDING 建议单置 `IGNORED / VOIDED_RECORD` **同时 `record_voided=1`**（与「任何终态可打标」同一口径，列表不出现两套标记），操作人记 system。
 
 ---
 
@@ -172,9 +176,9 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 | 4 | DELETE `/test/rules/{id}` | `test:edit-rule` | 软删 + 写 rule_log |
 | 5 | GET `/test/advice` | `test:advice-view` | 分页；**默认 status=PENDING、按生成时间倒序**（C1）；过滤 status/lot_no/时间段 |
 | 6 | GET `/test/advice/{id}` | `test:advice-view` | 详情：明细**含全部 HARD bin 对照**（is_hit）+ lot 当前站/是否已 Hold + PENDING 时长 + RETEST 的后续记录链（C3/C4/C12） |
-| 7 | POST `/test/advice/{id}/confirm` | `test:advice-confirm` | `{action: HOLD/REWORK/RETEST/TO_SCRAP, reasonCode?, toSortNo?, remark?}`（按 §4 校验，version CAS） |
-| 8 | POST `/test/advice/{id}/release` | `test:advice-release` | `{releaseReason, releaseRemark?}`（C2 拆出） |
-| 9 | POST `/test/advice/{id}/ignore` | `test:advice-ignore` | `{ignoreReason: MISJUDGE/DUPLICATE, ignoreRemark?}`（C2 收窄） |
+| 7 | POST `/test/advice/{id}/confirm` | `test:advice-confirm` | `{version, action: HOLD/REWORK/RETEST/TO_SCRAP, reasonCode?, toSortNo?, remark?}`（**version 必填**，CAS；按 §4 校验） |
+| 8 | POST `/test/advice/{id}/release` | `test:advice-release` | `{version, releaseReason, releaseRemark?}`（C2 拆出，C17） |
+| 9 | POST `/test/advice/{id}/ignore` | `test:advice-ignore` | `{version, ignoreReason: MISJUDGE/DUPLICATE, ignoreRemark?}`（C2 收窄，C17；MISJUDGE 时 remark 必填 C21） |
 | 10 | GET `/test/advice/pending-count` | `test:advice-view` | 角标数据源（或并入既有 summary 接口，plan 定） |
 
 **提交回执（C1）**：`POST /test/records` 成功响应**扩展** `adviceHit: boolean` + `adviceId: Long?`（向后兼容，TD-1 接口文档同步更新）；前端提交成功后即时提示并可跳建议详情——「提交后立刻知道这批有没有问题」的落点。
@@ -252,8 +256,11 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 7. 规则 2%→20% 修改 → `mes_test_rule_log` 有 before/after，操作人可查（C8）。
 8. 作废源记录：PENDING 单自动 IGNORED/VOIDED_RECORD；**已确认 HOLD 的单保持 CONFIRMED、事务不回滚、详情打「源记录已作废」标**（C6）。
 9. RETEST 详情：无后续记录明示「重测记录未提交」；补提交后新记录出现在链上且自动重判（C4）。
-10. 角色验证：生产角色对 confirm/release/ignore 均 403（C7）；无权限账号 403；现场台代码零 diff。
+10. 角色验证：生产角色对 confirm/release/ignore 均 403；**测试角色 advice-view 可读、拍板 403**（C20）；无权限账号 403；现场台代码零 diff。
 11. 全链权限与回滚：模拟判定异常 → 记录创建整体回滚（D4）。
+12. **明细行数 = 该记录 HARD 汇总行数（含未命中行）**；拍板请求缺 version 或 version 过期 → 拒绝/「该单已被处理」（C16/C17）。
+13. 多规则命中预填：默认动作对应明细中 ratio 最高者的 `default_reason_code` 生效，全空不预填（C18）。
+14. 已活跃 Hold 的批点放行 → 建议单 RELEASED 但**批仍 Hold**（不解批）；作废级联后 `record_voided=1`（C19/C23）。
 
 ## 待 plan 阶段核实（不阻塞规格批准）
 
@@ -285,6 +292,21 @@ PENDING ──源记录作废─> IGNORED(VOIDED_RECORD，系统动作)
 | F13 | 并发确认未防，两人可各拍一次 | C13：主表 version CAS（§2.2/§4.2/D14） |
 | F14 | 现场台定位未声明，可能被当成漏做 | C14：处置只发生管理端，写进非目标与 U6（§0/§6） |
 | — | 分期红线 | C15：超期/Alarm/统计/SBL/二级限/共案/重测定向保持 P1/后置、不算本刀失败；但 C1/C2/C3/C4/C7/C8/C13 不得下放 P1（P8） |
+
+### 审查记录（第 2 轮 · 2026-10-10 · 实施卡点与口径收尾）
+
+> 审查人：用户。结论：8 项发现**全部成立**，正文已按 C16–C23 修订。
+
+| # | 事实修正（F） | 绑定约束（C） |
+|---|---------------|---------------|
+| F15 | 明细口径互斥：§1「每命中规则 1 条」vs §2.3/详情「全部 HARD 行 + is_hit」 | C16：定版=触发时快照**该记录全部 HARD 汇总行**（is_hit=0/1），证据链自洽，不依赖详情时现拼（记录可能已作废/字典可能已改）（§1/§2.3） |
+| F16 | CAS 有锁无入参：confirm/release/ignore body 没写 version，前端无从 CAS | C17：三个拍板接口 body **version 必填**，过期 → 「该单已被处理」（§5/§4.2） |
+| F17 | 多规则命中时 default_reason_code 取哪条未定义 | C18：取「默认动作对应明细」中 ratio 最高那条的 default_reason_code；全空则不预填（§3.4/§4.2） |
+| F18 | 已活跃 Hold 时仍可 RELEASED，质量会误以为点放行=解批 | C19：RELEASED 只关闭建议单，不调 Hold release、不解批；解 Hold 走既有流程（§4.2） |
+| F19 | 测试工程师无 advice-view：回执能跳详情但 403，断头路 | C20：测试角色加 advice-view 只读（§2.4） |
+| F20 | MISJUDGE 说明「建议必填」太软，P1 调阈值看板缺料 | C21：改为**必填**，与放行 OTHER 同级（§4.2） |
+| F21 | §0「权限 4 码」与 §2.4「5/6 码」矛盾，plan 会数错种子 | C22：统一口径=5 个业务码 + 菜单复用 `test:view`(340)（§0/§2.4） |
+| F22 | 级联 IGNORED(VOIDED_RECORD) 未置 record_voided，列表两套口径 | C23：级联时同步 record_voided=1（§4.2/验收 14） |
 
 ## 关联
 
