@@ -17,9 +17,9 @@ updated: 2026-10-10
 | 状态 | 篇数 |
 |------|------|
 | active | 4 |
-| approved | 4 |
+| approved | 5 |
 | done | 95 |
-| draft | 11 |
+| draft | 10 |
 | in-progress | 2 |
 
 ## 按类型索引
@@ -171,7 +171,7 @@ updated: 2026-10-10
 | CP-5 计划 — contain 遏制：对影响面批量 Hold（8D D3） | History | done ✅ | 2026-09-21 | `模块/History（履历）模块/CP-5-plan.md` |
 | CP-6 计划 — ZIP 证据包（JSON 全文 + README.txt 封面） | History | done ✅ | 2026-09-22 | `模块/History（履历）模块/CP-6-plan.md` |
 | TD-1 计划 — Strip 条级 + 测试记录与 Bin 汇总回流 | Test | done ✅ | 2026-10-09 | `模块/测试数据（Test）模块/TD-1-plan.md` |
-| TD-2 计划 — 不良 Bin 处置建议联动 | Test | draft | 2026-10-10 | `模块/测试数据（Test）模块/TD-2-plan.md` |
+| TD-2 计划 — 不良 Bin 处置建议联动 | Test | approved | 2026-10-10 | `模块/测试数据（Test）模块/TD-2-plan.md` |
 
 ### eval（3 篇）
 

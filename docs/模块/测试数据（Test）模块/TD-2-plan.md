@@ -1,7 +1,7 @@
 ---
 type: plan
 module: Test
-status: draft
+status: approved
 slices: [TD-2]
 aligns: [MES-TD2规格-不良Bin处置建议联动.md, MES-封测测试数据与Bin回流方案.md, TD-1-plan.md]
 updated: 2026-10-10
@@ -145,7 +145,7 @@ confirm(HOLD/REWORK) 单事务内**固定顺序**：①服务端矩阵校验 →
 
 ---
 
-**批准记录**：`status` 改为 `approved` 时，在此行写明批准人与日期（该提交即审计轨迹）。
+**批准记录**：2026-10-10 用户批准（经 2 轮审查 P-C1–C16 + 表述对齐；该提交即审计轨迹）。
 
 ## 审查记录（第 1 轮 · plan · 2026-10-10）
 
